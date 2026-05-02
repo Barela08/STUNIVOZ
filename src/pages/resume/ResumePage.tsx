@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { FileText, Upload, Plus, Download, Share, Eye, Edit, Trash2, CheckCircle, AlertCircle, Zap, Sparkles, FileDown, FileInput } from 'lucide-react';
+import { FileText, Upload, Plus, Download, Share, Eye, Edit, Trash2, CheckCircle, AlertCircle, Sparkles, FileDown, FileInput } from 'lucide-react';
 import { Card, CardHeader, CardContent, Button, Input, Textarea } from '../../components/common';
 
 const mockResumes = [
@@ -22,7 +22,6 @@ const mockResumes = [
 export const ResumePage: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'builder' | 'upload'>('builder');
   const [selectedResume, setSelectedResume] = useState(mockResumes[0]);
-  const [editMode, setEditMode] = useState(false);
 
   const resumeForm = {
     summary: 'Passionate web developer with experience in React, TypeScript, and modern frontend technologies.',

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { Plus, Search, Zap, Target, TrendingUp, AlertCircle, CheckCircle, Clock, ChevronRight, Edit, Trash2, FileText } from 'lucide-react';
-import { Card, CardHeader, CardContent, Button, Input, Select } from '../../components/common';
+import { Plus, Search, Zap, Target, AlertCircle, CheckCircle, ChevronRight, Edit, Trash2, FileText } from 'lucide-react';
+import { Card, CardHeader, CardContent, Button, Input } from '../../components/common';
 
 const mockSkills = [
   { name: 'React', level: 'intermediate', progress: 65, lastUpdated: '2024-12-01' },

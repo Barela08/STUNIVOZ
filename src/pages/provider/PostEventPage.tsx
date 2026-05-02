@@ -17,7 +17,7 @@ export const PostEventPage: React.FC = () => {
       </div>
 
       <Card>
-        <CardHeader title="Event Details" icon={<Calendar className="w-5 h-5 text-blue-500"/>} />
+        <CardHeader title="Event Details" />
         <CardContent className="space-y-6">
           <Input label="Event Title" placeholder="e.g. AWS Cloud Masterclass" required />
           

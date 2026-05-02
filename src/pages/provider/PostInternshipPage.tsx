@@ -1,19 +1,8 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { Card, CardHeader, CardContent, Button, Input } from '../../components/common';
 import { Save, Send } from 'lucide-react';
 
 export const PostInternshipPage: React.FC = () => {
-  const [formData, setFormData] = useState({
-    title: '',
-    location: '',
-    type: 'internship',
-    workplace: 'remote',
-    stipend: '',
-    duration: '',
-    description: '',
-    skills: '',
-  });
-
   return (
     <div className="max-w-4xl mx-auto space-y-6 animate-fade-in">
       <div className="flex justify-between items-center">

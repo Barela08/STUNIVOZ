@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Camera, Mail, Phone, MapPin, Linkedin, Github, Globe, Twitter, Edit, Save, Plus, X, Star } from 'lucide-react';
+import { Phone, MapPin, Linkedin, Github, Globe, Twitter, Edit, Save, Plus, X } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { Card, CardHeader, CardContent, Button, Input, Textarea } from '../../components/common';
 
@@ -33,10 +33,6 @@ export const ProfilePage: React.FC = () => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
-  const handleSave = async () => {
-    await updateProfile(formData);
-    setEditing(false);
-  };
 
   const addSkill = () => {
     if (newSkill.trim()) {

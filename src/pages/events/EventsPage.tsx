@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { Calendar, MapPin, Clock, Users, ExternalLink, Search, Filter, Code, Presentation, Lightbulb, Trophy, Heart } from 'lucide-react';
-import { Card, CardHeader, CardContent, Button, Input, Select } from '../../components/common';
+import { Calendar, MapPin, Users, ExternalLink, Search, Filter, Code, Presentation, Lightbulb, Trophy } from 'lucide-react';
+import { Card, CardContent, Button, Input, Select } from '../../components/common';
 
 const mockEvents = [
   {

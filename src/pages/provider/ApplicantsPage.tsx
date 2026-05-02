@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { Card, CardHeader, CardContent, Button } from '../../components/common';
-import { Search, Filter, Download, ExternalLink } from 'lucide-react';
+import { Card, CardContent, Button } from '../../components/common';
+import { Search, Download, ExternalLink } from 'lucide-react';
 
 export const ApplicantsPage: React.FC = () => {
   const [filterStatus, setFilterStatus] = useState('all');

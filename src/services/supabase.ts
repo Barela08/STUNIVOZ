@@ -1,9 +1,5 @@
-// Removed Supabase - migrated to Firebase\nimport { firebase } from './firebase';
-
-const supabaseUrl = 'https://jicqswdntqilvipqmzrd.supabase.co';
-const supabaseKey = 'sb_publishable_xVEt9iPn2j2f64wjAPZ74g_g2tJFD64';
-
-export const supabase = createClient(supabaseUrl, supabaseKey);
+// Removed Supabase - migrated to Firebase
+// This file now only contains database types/models
 
 // Database types
 export interface Profile {

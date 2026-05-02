@@ -2,8 +2,7 @@ import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Sparkles, Mail, ArrowRight, ArrowLeft } from 'lucide-react';
 import { Button, Input } from '../../components/common';
-import { supabase } from '../../services/supabase';
-
+import { resetPassword } from '../../services/firebase';
 export const ForgotPasswordPage: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -17,13 +16,10 @@ export const ForgotPasswordPage: React.FC = () => {
     setSuccess(false);
 
     try {
-      // Direct call to Supabase for password reset
-      // In a real app, this should ideally be in AuthContext
-      const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: `${window.location.origin}/settings`,
-      });
+      // Direct call to Firebase for password reset
+      const result = await resetPassword(email);
 
-      if (error) throw error;
+      if (!result.success) throw result.error;
       setSuccess(true);
     } catch (err: any) {
       setError(err.message || 'An error occurred while sending the reset link.');

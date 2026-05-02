@@ -1,6 +1,6 @@
 import { initializeApp } from 'firebase/app';
 import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, onAuthStateChanged } from 'firebase/auth';
-import { getFirestore, collection, addDoc, getDocs, doc, updateDoc, deleteDoc, query, where, onSnapshot, serverTimestamp } from 'firebase/firestore';
+import { getFirestore, collection, addDoc, getDocs, doc, updateDoc, deleteDoc, serverTimestamp } from 'firebase/firestore';
 import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 
 const firebaseConfig = {
@@ -40,6 +40,16 @@ export const registerUser = async (email: string, password: string) => {
 export const logoutUser = async () => {
   try {
     await signOut(auth);
+    return { success: true };
+  } catch (error) {
+    return { success: false, error };
+  }
+};
+
+export const resetPassword = async (email: string) => {
+  try {
+    const { sendPasswordResetEmail } = await import('firebase/auth');
+    await sendPasswordResetEmail(auth, email);
     return { success: true };
   } catch (error) {
     return { success: false, error };

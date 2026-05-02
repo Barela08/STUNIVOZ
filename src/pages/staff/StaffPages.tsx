@@ -1,6 +1,6 @@
 import React from 'react';
-import { Card, CardHeader, CardContent, Button } from '../../components/common';
-import { Search, CheckCircle, XCircle, AlertTriangle } from 'lucide-react';
+import { Card, CardContent } from '../../components/common';
+import { Search } from 'lucide-react';
 
 export const ManageUsersPage: React.FC = () => (
   <div className="space-y-6 animate-fade-in">

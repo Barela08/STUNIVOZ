@@ -1,6 +1,6 @@
 import React from 'react';
 import { Card, CardHeader, CardContent, Button, ProgressBar } from '../../components/common';
-import { FileText, CheckCircle, AlertTriangle, ArrowRight, Upload } from 'lucide-react';
+import { CheckCircle, AlertTriangle, Upload } from 'lucide-react';
 
 export const ATSPage: React.FC = () => {
   return (

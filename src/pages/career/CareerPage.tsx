@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Compass, ArrowRight, CheckCircle, Clock, BookOpen, Code, Brain, Palette, LineChart, Shield, Lock, DollarSign, MessageCircle, ChevronRight } from 'lucide-react';
+import { CheckCircle, Clock, BookOpen, Code, Brain, Palette, LineChart, Shield, MessageCircle, ChevronRight } from 'lucide-react';
 import { Card, CardHeader, CardContent, Button } from '../../components/common';
 
 const careerPaths = [

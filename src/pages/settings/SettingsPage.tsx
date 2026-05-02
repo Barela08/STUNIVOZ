@@ -1,10 +1,10 @@
 import React, { useState } from 'react';
-import { User, Lock, Bell, Shield, Trash2, Moon, Globe, LogOut, ChevronRight, Check } from 'lucide-react';
+import { User, Trash2, LogOut, ChevronRight } from 'lucide-react';
 import { Card, CardHeader, CardContent, Button, Input } from '../../components/common';
 import { useAuth } from '../../contexts/AuthContext';
 
 export const SettingsPage: React.FC = () => {
-  const { logout } = useAuth();
+  const auth = useAuth();
   const [settings, setSettings] = useState({
     emailNotifications: true,
     pushNotifications: true,

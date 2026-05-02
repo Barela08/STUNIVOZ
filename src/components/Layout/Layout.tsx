@@ -25,7 +25,6 @@ import {
   Globe,
   Moon,
   Sun,
-  BarChart3,
   Award,
   BellRing
 } from 'lucide-react';

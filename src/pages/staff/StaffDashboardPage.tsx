@@ -1,5 +1,5 @@
 import React from 'react';
-import { Card, CardContent } from '../../components/common';
+import { Card } from '../../components/common';
 import { Users, FileCheck, Flag, AlertTriangle } from 'lucide-react';
 
 export const StaffDashboardPage: React.FC = () => {
@@ -19,7 +19,7 @@ export const StaffDashboardPage: React.FC = () => {
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {stats.map((stat, index) => (
-          <Card key={index} className="!p-4 border-l-4" style={{ borderLeftColor: stat.bg.replace('bg-', 'var(--tw-colors-').replace('-100', '-500)') }}>
+          <Card key={index} className="!p-4 border-l-4">
             <div className="flex items-center gap-3">
               <div className={`w-12 h-12 rounded-xl ${stat.bg} flex items-center justify-center`}>
                 <stat.icon className={`w-6 h-6 ${stat.color}`} />

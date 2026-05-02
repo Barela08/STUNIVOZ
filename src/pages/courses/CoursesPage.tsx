@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { Search, Clock, Star, Users, ExternalLink, Play, BookOpen, Heart, Check } from 'lucide-react';
-import { Card, CardHeader, CardContent, Button, Input } from '../../components/common';
+import { Search, Clock, Star, Users, ExternalLink, Play, Heart } from 'lucide-react';
+import { Card, CardContent, Button, Input } from '../../components/common';
 
 const mockCourses = [
   {

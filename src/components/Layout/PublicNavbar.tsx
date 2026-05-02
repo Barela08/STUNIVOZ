@@ -4,7 +4,7 @@ import { Sparkles, Menu, X } from 'lucide-react';
 import { Button } from '../common';
 
 export const PublicNavbar: React.FC = () => {
-  const [isOpen, React_useState] = React.useState(false);
+  const [isOpen, setIsOpen] = React.useState(false);
 
   return (
     <nav className="fixed w-full bg-white/80 backdrop-blur-md z-50 border-b border-gray-100 transition-all duration-300">
@@ -37,7 +37,7 @@ export const PublicNavbar: React.FC = () => {
           {/* Mobile menu button */}
           <div className="flex items-center md:hidden">
             <button
-              onClick={() => React_useState(!isOpen)}
+              onClick={() => setIsOpen(!isOpen)}
               className="text-gray-600 hover:text-gray-900 focus:outline-none p-2 rounded-lg hover:bg-gray-100"
             >
               {isOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}

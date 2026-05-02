@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Search, Filter, MapPin, DollarSign, Clock, Briefcase, Heart, ChevronRight, ExternalLink, Building } from 'lucide-react';
-import { Card, CardHeader, CardContent, Button, Input, Select } from '../../components/common';
+import { Card, CardContent, Button, Input, Select } from '../../components/common';
 
 const mockInternships = [
   {

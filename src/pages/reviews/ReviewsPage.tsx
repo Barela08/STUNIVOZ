@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { Card, CardHeader, CardContent, Button, Input } from '../../components/common';
-import { Star, MessageSquare, Building, BookOpen } from 'lucide-react';
+import { Card, CardContent, Button } from '../../components/common';
+import { Star, Building, BookOpen } from 'lucide-react';
 
 export const ReviewsPage: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'internships' | 'courses'>('internships');

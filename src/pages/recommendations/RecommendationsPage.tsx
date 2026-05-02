@@ -1,6 +1,6 @@
 import React from 'react';
 import { Card, CardHeader, CardContent, Button } from '../../components/common';
-import { Sparkles, Briefcase, BookOpen, Target, ArrowRight } from 'lucide-react';
+import { Sparkles, Briefcase, BookOpen, Target } from 'lucide-react';
 
 export const RecommendationsPage: React.FC = () => {
   return (
@@ -19,7 +19,7 @@ export const RecommendationsPage: React.FC = () => {
 
       <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
         <Card>
-          <CardHeader title="Internships for You" icon={<Briefcase className="w-5 h-5 text-primary-500" />} />
+          <CardHeader title="Internships for You" />
           <CardContent className="space-y-4">
             {[1, 2, 3].map((i) => (
               <div key={i} className="p-4 bg-gray-50 rounded-xl border border-gray-100 hover:border-primary-200 transition-colors">
@@ -36,7 +36,7 @@ export const RecommendationsPage: React.FC = () => {
         </Card>
 
         <Card>
-          <CardHeader title="Recommended Courses" icon={<BookOpen className="w-5 h-5 text-accent-500" />} />
+          <CardHeader title="Recommended Courses" />
           <CardContent className="space-y-4">
             {[1, 2, 3].map((i) => (
               <div key={i} className="p-4 bg-gray-50 rounded-xl border border-gray-100 hover:border-accent-200 transition-colors">
@@ -50,7 +50,7 @@ export const RecommendationsPage: React.FC = () => {
         </Card>
 
         <Card>
-          <CardHeader title="Career Path Next Steps" icon={<Target className="w-5 h-5 text-green-500" />} />
+          <CardHeader title="Career Path Next Steps" />
           <CardContent className="space-y-4">
             <div className="p-4 bg-green-50 rounded-xl border border-green-100">
               <h4 className="font-bold text-gray-900">Master TypeScript</h4>

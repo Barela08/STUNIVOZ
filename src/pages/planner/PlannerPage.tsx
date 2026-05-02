@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Plus, Calendar, CheckCircle, Circle, Clock, Flame, Target, ChevronRight, Edit, Trash2 } from 'lucide-react';
+import { Plus, CheckCircle, Circle, Clock, Flame, Target, Trash2 } from 'lucide-react';
 import { Card, CardHeader, CardContent, Button, Input } from '../../components/common';
 
 const mockTasks = [

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { Code, CheckCircle, XCircle, Clock, Trophy, Target, Play, ChevronRight, Filter, Search, BookOpen, MessageSquare } from 'lucide-react';
-import { Card, CardHeader, CardContent, Button, Input, Select } from '../../components/common';
+import { Code, CheckCircle, Target, Play, ChevronRight, Search, BookOpen, MessageSquare } from 'lucide-react';
+import { Card, CardHeader, CardContent, Button, Input } from '../../components/common';
 
 const mockQuestions = [
   { id: 1, title: 'Two Sum', difficulty: 'easy', category: 'Arrays', solved: true },

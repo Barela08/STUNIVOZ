@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { MessageSquare, Heart, MessageCircle, Share2, MoreHorizontal, Send, Image, Smile, UserPlus, Search } from 'lucide-react';
+import { Heart, MessageCircle, Share2, Image, Smile, UserPlus, Search } from 'lucide-react';
 import { Card, CardHeader, CardContent, Button, Input, Textarea } from '../../components/common';
 
 const mockPosts = [

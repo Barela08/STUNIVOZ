@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowRight, Briefcase, BookOpen, Calendar, Target, Sparkles, TrendingUp, ShieldCheck } from 'lucide-react';
+import { ArrowRight, Briefcase, BookOpen, Target, Sparkles, ShieldCheck } from 'lucide-react';
 import { Button } from '../../components/common';
 import { PublicNavbar } from '../../components/Layout/PublicNavbar';
 

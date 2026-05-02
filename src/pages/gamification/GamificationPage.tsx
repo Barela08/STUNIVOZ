@@ -1,5 +1,5 @@
 import React from 'react';
-import { Card, CardHeader, CardContent, Button } from '../../components/common';
+import { Card, CardHeader, CardContent } from '../../components/common';
 import { Award, Zap, Target, Star, Lock } from 'lucide-react';
 
 export const GamificationPage: React.FC = () => {
