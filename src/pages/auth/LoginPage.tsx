@@ -232,22 +232,12 @@ export const LoginPage: React.FC = () => {
           </div>
           
           <div className="grid grid-cols-2 gap-4 text-left">
-            <div className="bg-white/10 rounded-xl p-4 backdrop-blur-sm">
-              <div className="text-3xl font-bold mb-1">500+</div>
-              <div className="text-primary-100">Internships</div>
-            </div>
-            <div className="bg-white/10 rounded-xl p-4 backdrop-blur-sm">
-              <div className="text-3xl font-bold mb-1">200+</div>
-              <div className="text-primary-100">Companies</div>
-            </div>
-            <div className="bg-white/10 rounded-xl p-4 backdrop-blur-sm">
-              <div className="text-3xl font-bold mb-1">50+</div>
-              <div className="text-primary-100">Courses</div>
-            </div>
-            <div className="bg-white/10 rounded-xl p-4 backdrop-blur-sm">
-              <div className="text-3xl font-bold mb-1">100+</div>
-              <div className="text-primary-100">Events</div>
-            </div>
+            {['Internships', 'Companies', 'Courses', 'Events'].map((item) => (
+              <div key={item} className="bg-white/10 rounded-xl p-4 backdrop-blur-sm">
+                <div className="font-semibold">{item}</div>
+                <div className="text-primary-100 text-sm mt-1">Live data after setup</div>
+              </div>
+            ))}
           </div>
         </div>
       </div>
