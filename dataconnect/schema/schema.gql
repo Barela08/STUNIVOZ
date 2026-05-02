@@ -1,0 +1,58 @@
+type User @table {
+  username: String!
+  passwordHash: String!
+  role: String! # enum: "STUDENT", "FACULTY", "ADMIN"
+  createdAt: Timestamp!
+  firstName: String
+  lastName: String
+  email: String
+  dateOfBirth: Date
+}
+
+type Department @table {
+  name: String!
+  headOfDepartment: User! # references User with role "FACULTY"
+  createdAt: Timestamp!
+  description: String
+}
+
+type Course @table {
+  title: String!
+  courseCode: String!
+  credits: Int!
+  department: Department!
+  createdAt: Timestamp!
+  description: String
+  syllabusUrl: String
+}
+
+type Enrollment @table(key: ["student", "course", "academicYear", "semester"]) {
+  student: User! # student
+  course: Course!
+  enrollmentDate: Date!
+  academicYear: String!
+  semester: String!
+  grade: String # enum: "A", "B", "C", "D", "F", "P", "NP", null
+}
+
+type Assignment @table {
+  title: String!
+  course: Course!
+  faculty: User! # faculty member who created it
+  dueDate: Date!
+  maxScore: Int!
+  createdAt: Timestamp!
+  description: String
+  attachmentUrl: String
+}
+
+type Submission @table(key: ["assignment", "student"]) {
+  assignment: Assignment!
+  student: User! # student
+  submissionDate: Timestamp!
+  createdAt: Timestamp!
+  submissionText: String
+  submissionFileUrl: String
+  score: Int
+  feedback: String
+}
