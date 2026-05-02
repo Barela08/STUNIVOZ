@@ -11,6 +11,7 @@ export interface Profile {
   full_name: string;
   profile_photo?: string;
   phone?: string;
+  role?: 'student' | 'provider' | 'staff' | 'admin';
   location?: string;
   headline?: string;
   bio?: string;
@@ -27,6 +28,9 @@ export interface Profile {
   career_interest?: string;
   preferred_locations?: string[];
   job_type_preference?: string;
+  company_name?: string;
+  company_domain?: string;
+  is_verified?: boolean;
   created_at: string;
   updated_at: string;
 }

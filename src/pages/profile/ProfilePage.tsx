@@ -33,6 +33,10 @@ export const ProfilePage: React.FC = () => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
+  const handleSave = async () => {
+    await updateProfile(formData);
+    setEditing(false);
+  };
 
   const addSkill = () => {
     if (newSkill.trim()) {
@@ -61,7 +65,7 @@ export const ProfilePage: React.FC = () => {
             </div>
           </div>
           <div className="absolute top-4 right-4">
-            <Button variant="secondary" onClick={() => setEditing(!editing)}>
+            <Button variant="secondary" onClick={editing ? handleSave : () => setEditing(true)}>
               {editing ? <Save className="w-4 h-4" /> : <Edit className="w-4 h-4" />}
               {editing ? 'Save' : 'Edit Profile'}
             </Button>

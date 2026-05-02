@@ -1,66 +1,10 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { Calendar, MapPin, Users, ExternalLink, Search, Filter, Code, Presentation, Lightbulb, Trophy } from 'lucide-react';
-import { Card, CardContent, Button, Input, Select } from '../../components/common';
-
-const mockEvents = [
-  {
-    id: '1',
-    title: 'Google Cloud Hackathon 2024',
-    type: 'hackathon',
-    date: 'Dec 15-17, 2024',
-    location: 'Virtual',
-    organizedBy: 'Google',
-    description: '48-hour hackathon to build innovative solutions using Google Cloud.',
-    registrationLink: '#',
-    participants: 500,
-    prize: '$10,000',
-  },
-  {
-    id: '2',
-    title: 'AWS Career Workshop',
-    type: 'webinar',
-    date: 'Dec 18, 2024',
-    location: 'Virtual',
-    organizedBy: 'AWS',
-    description: 'Learn about cloud careers and get resume tips from AWS professionals.',
-    registrationLink: '#',
-    participants: 200,
-  },
-  {
-    id: '3',
-    title: 'React Masterclass',
-    type: 'workshop',
-    date: 'Dec 20, 2024',
-    location: 'Bangalore',
-    organizedBy: 'Udemy',
-    description: 'Advanced React patterns and performance optimization techniques.',
-    registrationLink: '#',
-    participants: 50,
-  },
-  {
-    id: '4',
-    title: 'CodeSprint Championship',
-    type: 'competition',
-    date: 'Jan 5, 2025',
-    location: 'Virtual',
-    organizedBy: 'CodeChef',
-    description: 'Competitive programming championship with exciting prizes.',
-    registrationLink: '#',
-    participants: 1000,
-    prize: '₹50,000',
-  },
-  {
-    id: '5',
-    title: 'Product Design Bootcamp',
-    type: 'workshop',
-    date: 'Jan 10, 2025',
-    location: 'Mumbai',
-    organizedBy: 'Figma',
-    description: 'Intensive bootcamp covering all aspects of product design.',
-    registrationLink: '#',
-    participants: 30,
-  },
-];
+import { Card, CardContent, Button, Input, Select, EmptyState, Loading } from '../../components/common';
+import { addDocument, deleteDocument } from '../../services/firebase';
+import { useAuth } from '../../contexts/AuthContext';
+import { useCollection } from '../../hooks/useCollection';
+import type { Event, EventRegistration } from '../../types';
 
 const eventTypeIcons = {
   hackathon: Code,
@@ -77,51 +21,59 @@ const eventTypeColors = {
 };
 
 export const EventsPage: React.FC = () => {
+  const { user } = useAuth();
+  const events = useCollection<Event>('events');
+  const registrations = useCollection<EventRegistration>('event_registrations');
   const [searchTerm, setSearchTerm] = useState('');
   const [typeFilter, setTypeFilter] = useState('');
-  const [registered, setRegistered] = useState<string[]>([]);
 
-  const registerForEvent = (id: string) => {
-    if (registered.includes(id)) {
-      setRegistered(registered.filter(r => r !== id));
+  const filteredEvents = useMemo(() => {
+    const term = searchTerm.toLowerCase();
+    return events.data
+      .filter((event) => event.title.toLowerCase().includes(term) || event.description.toLowerCase().includes(term))
+      .filter((event) => !typeFilter || event.type === typeFilter);
+  }, [events.data, searchTerm, typeFilter]);
+
+  const registeredIds = registrations.data
+    .filter((registration) => registration.user_id === user?.uid)
+    .map((registration) => registration.event_id);
+
+  const toggleRegistration = async (id: string) => {
+    if (!user) return;
+    const existing = registrations.data.find((registration) => registration.user_id === user.uid && registration.event_id === id);
+    if (existing) {
+      await deleteDocument('event_registrations', existing.id);
     } else {
-      setRegistered([...registered, id]);
+      await addDocument('event_registrations', {
+        user_id: user.uid,
+        event_id: id,
+        registered_at: new Date().toISOString()
+      });
     }
+    registrations.refresh();
   };
 
   return (
     <div className="space-y-6 animate-fade-in">
-      {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div>
-          <h1 className="font-display text-2xl font-bold text-gray-900">
-            Events
-          </h1>
-          <p className="text-gray-500">
-            Hackathons, workshops, webinars and more
-          </p>
+          <h1 className="font-display text-2xl font-bold text-gray-900">Events</h1>
+          <p className="text-gray-500">Hackathons, workshops, webinars and competitions from real providers.</p>
         </div>
-        <Button variant="primary">
-          <Calendar className="w-4 h-4" />
-          My Calendar
-        </Button>
       </div>
 
-      {/* Filters */}
       <Card>
         <CardContent>
           <div className="flex flex-col md:flex-row gap-4">
-            <div className="flex-1">
-              <Input
-                placeholder="Search events..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                icon={<Search className="w-5 h-5" />}
-              />
-            </div>
+            <Input
+              placeholder="Search events..."
+              value={searchTerm}
+              onChange={(event) => setSearchTerm(event.target.value)}
+              icon={<Search className="w-5 h-5" />}
+            />
             <Select
               value={typeFilter}
-              onChange={(e) => setTypeFilter(e.target.value)}
+              onChange={(event) => setTypeFilter(event.target.value)}
               options={[
                 { value: '', label: 'All Types' },
                 { value: 'hackathon', label: 'Hackathons' },
@@ -130,82 +82,62 @@ export const EventsPage: React.FC = () => {
                 { value: 'competition', label: 'Competitions' },
               ]}
             />
-            <Button variant="secondary">
-              <Filter className="w-4 h-4" />
-              More Filters
-            </Button>
+            <Button variant="secondary"><Filter className="w-4 h-4" /> Filters</Button>
           </div>
         </CardContent>
       </Card>
 
-      {/* Events Grid */}
-      <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {mockEvents
-          .filter(event => 
-            event.title.toLowerCase().includes(searchTerm.toLowerCase()) &&
-            (typeFilter === '' || event.type === typeFilter)
-          )
-          .map((event) => {
-            const Icon = eventTypeIcons[event.type as keyof typeof eventTypeIcons];
+      {events.loading ? (
+        <Loading text="Loading events..." />
+      ) : filteredEvents.length === 0 ? (
+        <Card>
+          <EmptyState
+            icon={<Calendar className="w-6 h-6" />}
+            title="No events yet"
+            description="When companies or admins publish real events, students can register from here."
+          />
+        </Card>
+      ) : (
+        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {filteredEvents.map((event) => {
+            const Icon = eventTypeIcons[event.type];
+            const color = eventTypeColors[event.type];
             return (
               <Card key={event.id} hover className="!p-0">
-                <div className={`h-2 ${eventTypeColors[event.type as keyof typeof eventTypeColors].split(' ')[0].replace('bg-', 'bg-')}`} />
                 <div className="p-4">
                   <div className="flex items-start justify-between mb-3">
-                    <div className={`w-10 h-10 rounded-lg ${eventTypeColors[event.type as keyof typeof eventTypeColors]} flex items-center justify-center`}>
+                    <div className={`w-10 h-10 rounded-lg ${color} flex items-center justify-center`}>
                       <Icon className="w-5 h-5" />
                     </div>
-                    <span className="text-xs text-gray-500 uppercase font-medium">
-                      {event.type}
-                    </span>
+                    <span className="text-xs text-gray-500 uppercase font-medium">{event.type}</span>
                   </div>
-
-                  <h3 className="font-semibold text-gray-900 mb-2">
-                    {event.title}
-                  </h3>
-
+                  <h3 className="font-semibold text-gray-900 mb-2">{event.title}</h3>
                   <div className="space-y-2 text-sm text-gray-500 mb-4">
-                    <div className="flex items-center gap-2">
-                      <Calendar className="w-4 h-4" />
-                      {event.date}
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <MapPin className="w-4 h-4" />
-                      {event.location}
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Users className="w-4 h-4" />
-                      {event.participants} participants
-                    </div>
+                    <div className="flex items-center gap-2"><Calendar className="w-4 h-4" />{new Date(event.date).toLocaleString()}</div>
+                    <div className="flex items-center gap-2"><MapPin className="w-4 h-4" />{event.virtual ? 'Virtual' : event.location}</div>
+                    <div className="flex items-center gap-2"><Users className="w-4 h-4" />{registrations.data.filter((item) => item.event_id === event.id).length} registered</div>
                   </div>
-
-                  <p className="text-sm text-gray-600 mb-4 line-clamp-2">
-                    {event.description}
-                  </p>
-
-                  {event.prize && (
-                    <div className="text-sm font-medium text-green-600 mb-4">
-                      Prize: {event.prize}
-                    </div>
-                  )}
-
+                  <p className="text-sm text-gray-600 mb-4 line-clamp-2">{event.description}</p>
                   <div className="flex gap-2">
-                    <Button 
-                      variant={registered.includes(event.id) ? 'secondary' : 'primary'}
+                    <Button
+                      variant={registeredIds.includes(event.id) ? 'secondary' : 'primary'}
                       className="flex-1"
-                      onClick={() => registerForEvent(event.id)}
+                      onClick={() => toggleRegistration(event.id)}
                     >
-                      {registered.includes(event.id) ? 'Registered' : 'Register'}
+                      {registeredIds.includes(event.id) ? 'Registered' : 'Register'}
                     </Button>
-                    <Button variant="ghost">
-                      <ExternalLink className="w-4 h-4" />
-                    </Button>
+                    {event.registration_link && (
+                      <a href={event.registration_link} target="_blank" rel="noreferrer">
+                        <Button variant="ghost"><ExternalLink className="w-4 h-4" /></Button>
+                      </a>
+                    )}
                   </div>
                 </div>
               </Card>
             );
           })}
-      </div>
+        </div>
+      )}
     </div>
   );
 };

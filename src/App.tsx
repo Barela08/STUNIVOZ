@@ -50,7 +50,6 @@ import {
 
 import { Loading } from './components/common';
 
-// Protected Route wrapper
 const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { user, loading } = useAuth();
   
@@ -66,6 +65,28 @@ const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) =
     return <Navigate to="/login" replace />;
   }
   
+  return <>{children}</>;
+};
+
+const RoleRoute: React.FC<{ children: React.ReactNode; allowedRoles: string[] }> = ({ children, allowedRoles }) => {
+  const { user, profile, loading } = useAuth();
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <Loading size="lg" text="Loading..." />
+      </div>
+    );
+  }
+
+  if (!user) {
+    return <Navigate to="/login" replace />;
+  }
+
+  if (!profile || !allowedRoles.includes(profile.role)) {
+    return <Navigate to="/dashboard" replace />;
+  }
+
   return <>{children}</>;
 };
 
@@ -315,45 +336,45 @@ const AppRoutes: React.FC = () => {
         }
       />
       
-      {/* Provider Routes (Would normally have a separate Auth guard checking role) */}
+      {/* Provider Routes */}
       <Route
         path="/provider"
         element={
-          <ProtectedRoute>
+          <RoleRoute allowedRoles={['provider', 'admin']}>
             <ProviderLayout>
               <ProviderDashboardPage />
             </ProviderLayout>
-          </ProtectedRoute>
+          </RoleRoute>
         }
       />
       <Route
         path="/provider/internships/new"
         element={
-          <ProtectedRoute>
+          <RoleRoute allowedRoles={['provider', 'admin']}>
             <ProviderLayout>
               <PostInternshipPage />
             </ProviderLayout>
-          </ProtectedRoute>
+          </RoleRoute>
         }
       />
       <Route
         path="/provider/events/new"
         element={
-          <ProtectedRoute>
+          <RoleRoute allowedRoles={['provider', 'admin']}>
             <ProviderLayout>
               <PostEventPage />
             </ProviderLayout>
-          </ProtectedRoute>
+          </RoleRoute>
         }
       />
       <Route
         path="/provider/applicants"
         element={
-          <ProtectedRoute>
+          <RoleRoute allowedRoles={['provider', 'admin']}>
             <ProviderLayout>
               <ApplicantsPage />
             </ProviderLayout>
-          </ProtectedRoute>
+          </RoleRoute>
         }
       />
       
@@ -361,62 +382,62 @@ const AppRoutes: React.FC = () => {
       <Route
         path="/staff"
         element={
-          <ProtectedRoute>
+          <RoleRoute allowedRoles={['staff', 'admin']}>
             <StaffLayout>
               <StaffDashboardPage />
             </StaffLayout>
-          </ProtectedRoute>
+          </RoleRoute>
         }
       />
       <Route
         path="/staff/users"
         element={
-          <ProtectedRoute>
+          <RoleRoute allowedRoles={['staff', 'admin']}>
             <StaffLayout>
               <ManageUsersPage />
             </StaffLayout>
-          </ProtectedRoute>
+          </RoleRoute>
         }
       />
       <Route
         path="/staff/verify"
         element={
-          <ProtectedRoute>
+          <RoleRoute allowedRoles={['staff', 'admin']}>
             <StaffLayout>
               <VerifyContentPage />
             </StaffLayout>
-          </ProtectedRoute>
+          </RoleRoute>
         }
       />
       <Route
         path="/staff/moderation"
         element={
-          <ProtectedRoute>
+          <RoleRoute allowedRoles={['staff', 'admin']}>
             <StaffLayout>
               <ModerationPage />
             </StaffLayout>
-          </ProtectedRoute>
+          </RoleRoute>
         }
       />
-      <Route path="/staff/reports" element={<ProtectedRoute><StaffLayout><ReportsPage /></StaffLayout></ProtectedRoute>} />
+      <Route path="/staff/reports" element={<RoleRoute allowedRoles={['staff', 'admin']}><StaffLayout><ReportsPage /></StaffLayout></RoleRoute>} />
 
       {/* Admin Routes */}
-      <Route path="/admin" element={<ProtectedRoute><AdminLayout><AdminDashboardPage /></AdminLayout></ProtectedRoute>} />
-      <Route path="/admin/users" element={<ProtectedRoute><AdminLayout><UserManagementPage /></AdminLayout></ProtectedRoute>} />
-      <Route path="/admin/companies" element={<ProtectedRoute><AdminLayout><CompanyManagementPage /></AdminLayout></ProtectedRoute>} />
-      <Route path="/admin/internships" element={<ProtectedRoute><AdminLayout><InternshipManagementPage /></AdminLayout></ProtectedRoute>} />
-      <Route path="/admin/events" element={<ProtectedRoute><AdminLayout><EventManagementPage /></AdminLayout></ProtectedRoute>} />
-      <Route path="/admin/courses" element={<ProtectedRoute><AdminLayout><CourseManagementPage /></AdminLayout></ProtectedRoute>} />
-      <Route path="/admin/api" element={<ProtectedRoute><AdminLayout><APISystemPage /></AdminLayout></ProtectedRoute>} />
-      <Route path="/admin/ai" element={<ProtectedRoute><AdminLayout><AIControlPage /></AdminLayout></ProtectedRoute>} />
-      <Route path="/admin/staff" element={<ProtectedRoute><AdminLayout><StaffManagementPage /></AdminLayout></ProtectedRoute>} />
-      <Route path="/admin/ads" element={<ProtectedRoute><AdminLayout><AdsSystemPage /></AdminLayout></ProtectedRoute>} />
-      <Route path="/admin/ui" element={<ProtectedRoute><AdminLayout><UIControlPage /></AdminLayout></ProtectedRoute>} />
-      <Route path="/admin/features" element={<ProtectedRoute><AdminLayout><FeatureControlPage /></AdminLayout></ProtectedRoute>} />
-      <Route path="/admin/notifications" element={<ProtectedRoute><AdminLayout><AdminNotificationsPage /></AdminLayout></ProtectedRoute>} />
-      <Route path="/admin/analytics" element={<ProtectedRoute><AdminLayout><AnalyticsPage /></AdminLayout></ProtectedRoute>} />
-      <Route path="/admin/security" element={<ProtectedRoute><AdminLayout><SecurityPage /></AdminLayout></ProtectedRoute>} />
-      <Route path="/admin/backup" element={<ProtectedRoute><AdminLayout><BackupPage /></AdminLayout></ProtectedRoute>} />
+      <Route path="/admin" element={<RoleRoute allowedRoles={['admin']}><AdminLayout><AdminDashboardPage /></AdminLayout></RoleRoute>} />
+      <Route path="/admin/users" element={<RoleRoute allowedRoles={['admin']}><AdminLayout><UserManagementPage /></AdminLayout></RoleRoute>} />
+      <Route path="/admin/companies" element={<RoleRoute allowedRoles={['admin']}><AdminLayout><CompanyManagementPage /></AdminLayout></RoleRoute>} />
+      <Route path="/admin/internships" element={<RoleRoute allowedRoles={['admin']}><AdminLayout><InternshipManagementPage /></AdminLayout></RoleRoute>} />
+      <Route path="/admin/events" element={<RoleRoute allowedRoles={['admin']}><AdminLayout><EventManagementPage /></AdminLayout></RoleRoute>} />
+      <Route path="/admin/courses" element={<RoleRoute allowedRoles={['admin']}><AdminLayout><CourseManagementPage /></AdminLayout></RoleRoute>} />
+      <Route path="/admin/api" element={<RoleRoute allowedRoles={['admin']}><AdminLayout><APISystemPage /></AdminLayout></RoleRoute>} />
+      <Route path="/admin/ai" element={<RoleRoute allowedRoles={['admin']}><AdminLayout><AIControlPage /></AdminLayout></RoleRoute>} />
+      <Route path="/admin/staff" element={<RoleRoute allowedRoles={['admin']}><AdminLayout><StaffManagementPage /></AdminLayout></RoleRoute>} />
+      <Route path="/admin/ads" element={<RoleRoute allowedRoles={['admin']}><AdminLayout><AdsSystemPage /></AdminLayout></RoleRoute>} />
+      <Route path="/admin/ui" element={<RoleRoute allowedRoles={['admin']}><AdminLayout><UIControlPage /></AdminLayout></RoleRoute>} />
+      <Route path="/admin/features" element={<RoleRoute allowedRoles={['admin']}><AdminLayout><FeatureControlPage /></AdminLayout></RoleRoute>} />
+      <Route path="/admin/notifications" element={<RoleRoute allowedRoles={['admin']}><AdminLayout><AdminNotificationsPage /></AdminLayout></RoleRoute>} />
+      <Route path="/admin/analytics" element={<RoleRoute allowedRoles={['admin']}><AdminLayout><AnalyticsPage /></AdminLayout></RoleRoute>} />
+      <Route path="/admin/security" element={<RoleRoute allowedRoles={['admin']}><AdminLayout><SecurityPage /></AdminLayout></RoleRoute>} />
+      <Route path="/admin/backup" element={<RoleRoute allowedRoles={['admin']}><AdminLayout><BackupPage /></AdminLayout></RoleRoute>} />
 
       {/* Default redirect */}
       <Route path="/" element={<HomePage />} />

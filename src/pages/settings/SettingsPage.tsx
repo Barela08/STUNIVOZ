@@ -4,7 +4,7 @@ import { Card, CardHeader, CardContent, Button, Input } from '../../components/c
 import { useAuth } from '../../contexts/AuthContext';
 
 export const SettingsPage: React.FC = () => {
-  const auth = useAuth();
+  const { profile, user } = useAuth();
   const [settings, setSettings] = useState({
     emailNotifications: true,
     pushNotifications: true,
@@ -37,15 +37,15 @@ export const SettingsPage: React.FC = () => {
               <div className="space-y-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Full Name</label>
-                  <Input placeholder="Your name" defaultValue="John Doe" />
+                  <Input placeholder="Your name" defaultValue={profile?.full_name || ''} />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
-                  <Input placeholder="Your email" defaultValue="john@example.com" />
+                  <Input placeholder="Your email" defaultValue={profile?.email || user?.email || ''} />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Phone</label>
-                  <Input placeholder="Your phone" defaultValue="+91 9876543210" />
+                  <Input placeholder="Your phone" defaultValue={profile?.phone || ''} />
                 </div>
                 <Button variant="primary">Save Changes</Button>
               </div>

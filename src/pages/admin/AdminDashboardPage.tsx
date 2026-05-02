@@ -1,96 +1,106 @@
 import React from 'react';
-import { Card, CardHeader, CardContent } from '../../components/common';
-import { Users, Building2, Briefcase, Eye } from 'lucide-react';
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import { Card, CardHeader, CardContent, EmptyState, Loading } from '../../components/common';
+import { Users, Building2, Briefcase, Calendar, Database, ShieldCheck } from 'lucide-react';
+import { useCollection } from '../../hooks/useCollection';
+import type { Event, Internship, Profile } from '../../types';
 
 export const AdminDashboardPage: React.FC = () => {
-  const stats = [
-    { label: 'Total Users', value: '12,450', icon: Users, color: 'text-blue-500', bg: 'bg-blue-100' },
-    { label: 'Active Companies', value: '245', icon: Building2, color: 'text-purple-500', bg: 'bg-purple-100' },
-    { label: 'Live Internships', value: '890', icon: Briefcase, color: 'text-green-500', bg: 'bg-green-100' },
-    { label: 'Platform Views (Today)', value: '45.2k', icon: Eye, color: 'text-red-500', bg: 'bg-red-100' },
-  ];
+  const users = useCollection<Profile>('profiles');
+  const internships = useCollection<Internship>('internships');
+  const events = useCollection<Event>('events');
 
-  const chartData = [
-    { name: 'Mon', users: 4000, active: 2400 },
-    { name: 'Tue', users: 4500, active: 2800 },
-    { name: 'Wed', users: 5000, active: 3200 },
-    { name: 'Thu', users: 6200, active: 4000 },
-    { name: 'Fri', users: 6800, active: 4500 },
-    { name: 'Sat', users: 7000, active: 4800 },
-    { name: 'Sun', users: 7500, active: 5200 },
+  const loading = users.loading || internships.loading || events.loading;
+  const companies = users.data.filter((profile) => profile.role === 'provider');
+  const activeInternships = internships.data.filter((item) => item.status !== 'closed');
+  const upcomingEvents = events.data.filter((event) => new Date(event.date).getTime() >= Date.now());
+
+  const stats = [
+    { label: 'Users', value: users.data.length, icon: Users, color: 'text-blue-600', bg: 'bg-blue-50' },
+    { label: 'Companies', value: companies.length, icon: Building2, color: 'text-purple-600', bg: 'bg-purple-50' },
+    { label: 'Active Internships', value: activeInternships.length, icon: Briefcase, color: 'text-green-600', bg: 'bg-green-50' },
+    { label: 'Upcoming Events', value: upcomingEvents.length, icon: Calendar, color: 'text-amber-600', bg: 'bg-amber-50' },
   ];
 
   return (
     <div className="space-y-6 animate-fade-in">
       <div>
         <h1 className="font-display text-2xl font-bold text-gray-900">Admin Dashboard</h1>
-        <p className="text-gray-500">Global overview of platform metrics and health.</p>
+        <p className="text-gray-500">Live platform overview from Firebase.</p>
       </div>
 
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        {stats.map((stat, index) => (
-          <Card key={index} className="!p-4">
-            <div className="flex items-center gap-3">
-              <div className={`w-12 h-12 rounded-xl ${stat.bg} flex items-center justify-center`}>
-                <stat.icon className={`w-6 h-6 ${stat.color}`} />
-              </div>
-              <div>
-                <div className="text-2xl font-bold text-gray-900">{stat.value}</div>
-                <div className="text-sm text-gray-500">{stat.label}</div>
-              </div>
-            </div>
-          </Card>
-        ))}
-      </div>
+      {loading ? (
+        <Loading text="Loading platform data..." />
+      ) : (
+        <>
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+            {stats.map((stat) => (
+              <Card key={stat.label} className="!p-4">
+                <div className="flex items-center gap-3">
+                  <div className={`w-12 h-12 rounded-lg ${stat.bg} flex items-center justify-center`}>
+                    <stat.icon className={`w-6 h-6 ${stat.color}`} />
+                  </div>
+                  <div>
+                    <div className="text-2xl font-bold text-gray-900">{stat.value}</div>
+                    <div className="text-sm text-gray-500">{stat.label}</div>
+                  </div>
+                </div>
+              </Card>
+            ))}
+          </div>
 
-      <div className="grid lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2">
-          <Card className="h-[400px]">
-            <CardHeader title="User Growth (This Week)" />
-            <CardContent className="h-[300px]">
-              <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={chartData} margin={{ top: 5, right: 20, bottom: 5, left: 0 }}>
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e5e7eb" />
-                  <XAxis dataKey="name" stroke="#9ca3af" fontSize={12} tickLine={false} axisLine={false} />
-                  <YAxis stroke="#9ca3af" fontSize={12} tickLine={false} axisLine={false} />
-                  <Tooltip 
-                    contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
+          <div className="grid lg:grid-cols-3 gap-6">
+            <Card className="lg:col-span-2">
+              <CardHeader title="Recent Users" subtitle="Latest profiles created in Firestore" />
+              <CardContent>
+                {users.data.length === 0 ? (
+                  <EmptyState
+                    icon={<Users className="w-6 h-6" />}
+                    title="No users yet"
+                    description="New student, company, staff, and admin profiles will appear here after registration."
                   />
-                  <Line type="monotone" dataKey="users" stroke="#0ea5e9" strokeWidth={3} dot={{ r: 4 }} activeDot={{ r: 6 }} />
-                  <Line type="monotone" dataKey="active" stroke="#10b981" strokeWidth={3} dot={{ r: 4 }} />
-                </LineChart>
-              </ResponsiveContainer>
-            </CardContent>
-          </Card>
-        </div>
+                ) : (
+                  <div className="divide-y divide-gray-100">
+                    {users.data.slice(0, 8).map((profile) => (
+                      <div key={profile.id} className="py-3 flex items-center justify-between gap-4">
+                        <div>
+                          <p className="font-medium text-gray-900">{profile.full_name || profile.email}</p>
+                          <p className="text-sm text-gray-500">{profile.email}</p>
+                        </div>
+                        <span className="px-2.5 py-1 rounded-full bg-gray-100 text-gray-700 text-xs font-medium capitalize">
+                          {profile.role || 'student'}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
 
-        <div className="lg:col-span-1 space-y-6">
-          <Card>
-            <CardHeader title="System Status" />
-            <CardContent>
-              <div className="space-y-4">
+            <Card>
+              <CardHeader title="System Health" />
+              <CardContent className="space-y-4">
                 <div className="flex items-center justify-between">
-                  <span className="text-sm text-gray-600">Database Engine</span>
-                  <span className="px-2 py-1 bg-green-100 text-green-700 text-xs font-bold rounded-full">Healthy</span>
+                  <span className="flex items-center gap-2 text-sm text-gray-600">
+                    <Database className="w-4 h-4 text-green-600" />
+                    Firestore
+                  </span>
+                  <span className="px-2 py-1 bg-green-100 text-green-700 text-xs font-bold rounded-full">Connected</span>
                 </div>
                 <div className="flex items-center justify-between">
-                  <span className="text-sm text-gray-600">AI Recommendation API</span>
-                  <span className="px-2 py-1 bg-green-100 text-green-700 text-xs font-bold rounded-full">Healthy</span>
+                  <span className="flex items-center gap-2 text-sm text-gray-600">
+                    <ShieldCheck className="w-4 h-4 text-green-600" />
+                    Role Guards
+                  </span>
+                  <span className="px-2 py-1 bg-green-100 text-green-700 text-xs font-bold rounded-full">Enabled</span>
                 </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-gray-600">Storage Service</span>
-                  <span className="px-2 py-1 bg-yellow-100 text-yellow-700 text-xs font-bold rounded-full">92% Full</span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-gray-600">Last Backup</span>
-                  <span className="text-xs text-gray-500 font-medium">2 hours ago</span>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-      </div>
+                <p className="text-sm text-gray-500">
+                  Metrics are calculated from live collections. Empty values mean no records have been created yet.
+                </p>
+              </CardContent>
+            </Card>
+          </div>
+        </>
+      )}
     </div>
   );
 };
