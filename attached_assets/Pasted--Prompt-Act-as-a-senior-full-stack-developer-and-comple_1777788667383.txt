@@ -1,0 +1,123 @@
+**Prompt:**
+
+"Act as a senior full-stack developer and completely debug, fix, and optimize the entire web application so that every feature works properly without any failure.
+
+Current critical issues (fix ALL of them):
+
+1. **Form & Click Issues**
+
+* All buttons are clickable but not performing any action
+* onClick events are triggering visually but no backend/frontend logic is executing
+* Fix all event handlers and ensure proper functionality
+
+2. **File Upload Not Working**
+
+* File upload is not happening at all
+* Fix full upload flow:
+
+  * File selection
+  * Validation
+  * API request
+  * Server handling
+  * Response handling
+* Ensure files actually upload and confirm success
+
+3. **New Resume Button**
+
+* Clicking "New Resume" does nothing
+* It should open a form or create a new resume properly
+* Fix navigation, modal, or route handling
+
+4. **Download Video Feature**
+
+* Clicking download does nothing
+* Fix download logic:
+
+  * Ensure file/video is fetched correctly
+  * Proper response handling
+  * Browser download trigger
+
+5. **Old Data Issue**
+
+* Existing unwanted data is already present
+* Remove all unnecessary default/demo/old data
+* Keep only required clean structure
+
+6. **Recommendation Section**
+
+* "View Details" button does not work
+* Fix navigation or modal so details are shown correctly
+
+7. **AI Career Advisor**
+
+* User can type a question
+* Clicking "Send" does nothing
+* Fix:
+
+  * Input handling
+  * API request to AI
+  * Response rendering
+  * Loading and error states
+
+8. **Planner / Task System**
+
+* Tasks are not getting added
+* Fix:
+
+  * Add task functionality
+  * State update
+  * Backend/API sync (if applicable)
+  * UI refresh after adding
+
+9. **Overall Application Issue**
+
+* Almost all features are non-functional
+* Fix full frontend-backend integration
+* Ensure data flow works correctly
+
+10. **Admin Dashboard API Control**
+
+* Admin dashboard should allow changing API settings
+* Implement:
+
+  * API endpoint management
+  * Editable configurations
+  * Save & update functionality
+  * Proper validation
+
+---
+
+**Now perform these steps:**
+
+1. Identify all broken logic (frontend + backend)
+2. Fix all event handlers, API calls, and integrations
+3. Ensure each feature performs its real function (not just UI click)
+4. Remove unused, broken, or unnecessary code
+5. Optimize clean architecture and structure
+
+---
+
+**Testing Requirements:**
+
+* Test every button individually
+* Test file upload with real files
+* Test resume creation flow
+* Test video download functionality
+* Test AI input and response system
+* Test planner task creation
+* Test recommendation detail view
+* Ensure no feature is "click-only" without action
+
+---
+
+**Final Output Should Include:**
+
+* List of all issues found
+* Fixes applied for each issue
+* Clean and working code (if needed)
+* Confirmation that all features are fully functional
+* Suggestions for improving stability and performance
+
+---
+
+Do NOT skip anything. Ensure the application works like a real production-ready system where every button, form, and feature performs its intended function."

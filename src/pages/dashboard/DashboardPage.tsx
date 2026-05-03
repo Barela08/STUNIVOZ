@@ -1,94 +1,37 @@
 import React from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import {
-  Briefcase,
-  Calendar,
-  BookOpen,
-  FileText,
-  TrendingUp,
-  Target,
-  Sparkles,
-  ArrowRight,
-  Clock,
-  CheckCircle,
-  Star,
-  Users,
-  Award,
-  Zap,
+  Briefcase, Calendar, BookOpen, FileText, TrendingUp, Target,
+  Sparkles, ArrowRight, Clock, CheckCircle, Star, Users, Award, Zap,
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { Card, CardHeader, CardContent, Button, ProgressBar } from '../../components/common';
 
 export const DashboardPage: React.FC = () => {
   const { profile } = useAuth();
+  const navigate = useNavigate();
 
   const stats = [
-    { label: 'Applications', value: 12, icon: FileText, color: 'text-primary-500', bg: 'bg-primary-100' },
-    { label: 'Interviews', value: 3, icon: Calendar, color: 'text-accent-500', bg: 'bg-accent-100' },
-    { label: 'Saved', value: 8, icon: Star, color: 'text-yellow-500', bg: 'bg-yellow-100' },
-    { label: 'Points', value: 1250, icon: Zap, color: 'text-orange-500', bg: 'bg-orange-100' },
+    { label: 'Applications', value: 12, icon: FileText, color: 'text-primary-500', bg: 'bg-primary-100', to: '/internships' },
+    { label: 'Interviews', value: 3, icon: Calendar, color: 'text-accent-500', bg: 'bg-accent-100', to: '/planner' },
+    { label: 'Saved', value: 8, icon: Star, color: 'text-yellow-500', bg: 'bg-yellow-100', to: '/internships' },
+    { label: 'Points', value: 1250, icon: Zap, color: 'text-orange-500', bg: 'bg-orange-100', to: '/gamification' },
   ];
 
   const recommendedInternships = [
-    {
-      id: '1',
-      company: 'Google',
-      role: 'Frontend Developer Intern',
-      location: 'Bangalore',
-      stipend: '₹50,000/month',
-      skills: ['React', 'TypeScript', 'CSS'],
-      posted: '2 days ago',
-    },
-    {
-      id: '2',
-      company: 'Microsoft',
-      role: 'Full Stack Developer',
-      location: 'Hyderabad',
-      stipend: '₹45,000/month',
-      skills: ['Node.js', 'React', 'SQL'],
-      posted: '3 days ago',
-    },
-    {
-      id: '3',
-      company: 'Amazon',
-      role: 'SDE Intern',
-      location: 'Bangalore',
-      stipend: '₹40,000/month',
-      skills: ['Python', 'AWS', 'Data Structures'],
-      posted: '5 days ago',
-    },
+    { id: '1', company: 'Google', role: 'Frontend Developer Intern', location: 'Bangalore', stipend: '₹50,000/month', skills: ['React', 'TypeScript', 'CSS'], posted: '2 days ago' },
+    { id: '2', company: 'Microsoft', role: 'Full Stack Developer', location: 'Hyderabad', stipend: '₹45,000/month', skills: ['Node.js', 'React', 'SQL'], posted: '3 days ago' },
+    { id: '3', company: 'Amazon', role: 'SDE Intern', location: 'Bangalore', stipend: '₹40,000/month', skills: ['Python', 'AWS', 'Data Structures'], posted: '5 days ago' },
   ];
 
   const upcomingEvents = [
-    {
-      id: '1',
-      title: 'Google Cloud Hackathon',
-      date: 'Dec 15, 2024',
-      type: 'Hackathon',
-    },
-    {
-      id: '2',
-      title: 'AWS Career Workshop',
-      date: 'Dec 18, 2024',
-      type: 'Webinar',
-    },
+    { id: '1', title: 'Google Cloud Hackathon', date: 'May 15, 2026', type: 'Hackathon' },
+    { id: '2', title: 'AWS Career Workshop', date: 'May 18, 2026', type: 'Webinar' },
   ];
 
   const recommendedCourses = [
-    {
-      id: '1',
-      title: 'Complete Web Development Bootcamp',
-      platform: 'Udemy',
-      rating: 4.8,
-      duration: '48 hours',
-    },
-    {
-      id: '2',
-      title: 'React - The Complete Guide',
-      platform: 'Udemy',
-      rating: 4.7,
-      duration: '52 hours',
-    },
+    { id: '1', title: 'Complete Web Development Bootcamp', platform: 'Udemy', rating: 4.8, duration: '48 hours' },
+    { id: '2', title: 'React - The Complete Guide', platform: 'Udemy', rating: 4.7, duration: '52 hours' },
   ];
 
   return (
@@ -108,6 +51,7 @@ export const DashboardPage: React.FC = () => {
             <Button
               variant="secondary"
               className="bg-white text-primary-600 hover:bg-primary-50"
+              onClick={() => navigate('/career')}
             >
               <Sparkles className="w-5 h-5" />
               AI Career Guide
@@ -119,17 +63,19 @@ export const DashboardPage: React.FC = () => {
       {/* Stats Grid */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {stats.map((stat, index) => (
-          <Card key={index} className="!p-4">
-            <div className="flex items-center gap-3">
-              <div className={`w-12 h-12 rounded-xl ${stat.bg} flex items-center justify-center`}>
-                <stat.icon className={`w-6 h-6 ${stat.color}`} />
+          <Link key={index} to={stat.to}>
+            <Card className="!p-4 hover:shadow-md transition-shadow cursor-pointer">
+              <div className="flex items-center gap-3">
+                <div className={`w-12 h-12 rounded-xl ${stat.bg} flex items-center justify-center`}>
+                  <stat.icon className={`w-6 h-6 ${stat.color}`} />
+                </div>
+                <div>
+                  <div className="text-2xl font-bold text-gray-900">{stat.value}</div>
+                  <div className="text-sm text-gray-500">{stat.label}</div>
+                </div>
               </div>
-              <div>
-                <div className="text-2xl font-bold text-gray-900">{stat.value}</div>
-                <div className="text-sm text-gray-500">{stat.label}</div>
-              </div>
-            </div>
-          </Card>
+            </Card>
+          </Link>
         ))}
       </div>
 
@@ -148,8 +94,7 @@ export const DashboardPage: React.FC = () => {
                 </div>
                 <Link to="/internships">
                   <Button variant="ghost" size="sm">
-                    View All
-                    <ArrowRight className="w-4 h-4" />
+                    View All <ArrowRight className="w-4 h-4" />
                   </Button>
                 </Link>
               </div>
@@ -160,38 +105,22 @@ export const DashboardPage: React.FC = () => {
                   <div className="flex-1">
                     <div className="flex items-center gap-2 mb-1">
                       <h3 className="font-semibold text-gray-900">{internship.role}</h3>
-                      <span className="px-2 py-0.5 bg-green-100 text-green-700 text-xs rounded-full">
-                        Active
-                      </span>
+                      <span className="px-2 py-0.5 bg-green-100 text-green-700 text-xs rounded-full">Active</span>
                     </div>
                     <p className="text-gray-600">{internship.company}</p>
                     <div className="flex flex-wrap items-center gap-3 mt-2 text-sm text-gray-500">
-                      <span className="flex items-center gap-1">
-                        <Briefcase className="w-4 h-4" />
-                        {internship.location}
-                      </span>
-                      <span className="flex items-center gap-1">
-                        <TrendingUp className="w-4 h-4" />
-                        {internship.stipend}
-                      </span>
-                      <span className="flex items-center gap-1">
-                        <Clock className="w-4 h-4" />
-                        {internship.posted}
-                      </span>
+                      <span className="flex items-center gap-1"><Briefcase className="w-4 h-4" />{internship.location}</span>
+                      <span className="flex items-center gap-1"><TrendingUp className="w-4 h-4" />{internship.stipend}</span>
+                      <span className="flex items-center gap-1"><Clock className="w-4 h-4" />{internship.posted}</span>
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
                     <div className="flex gap-1">
                       {internship.skills.map((skill) => (
-                        <span
-                          key={skill}
-                          className="px-2 py-1 bg-gray-100 text-gray-600 text-xs rounded-lg"
-                        >
-                          {skill}
-                        </span>
+                        <span key={skill} className="px-2 py-1 bg-gray-100 text-gray-600 text-xs rounded-lg">{skill}</span>
                       ))}
                     </div>
-                    <Button variant="primary" size="sm">
+                    <Button variant="primary" size="sm" onClick={() => navigate('/internships')}>
                       Apply
                     </Button>
                   </div>
@@ -210,25 +139,9 @@ export const DashboardPage: React.FC = () => {
               <div className="flex items-center justify-center mb-4">
                 <div className="relative w-32 h-32">
                   <svg className="w-32 h-32 transform -rotate-90">
-                    <circle
-                      cx="64"
-                      cy="64"
-                      r="56"
-                      stroke="#e5e7eb"
-                      strokeWidth="8"
-                      fill="none"
-                    />
-                    <circle
-                      cx="64"
-                      cy="64"
-                      r="56"
-                      stroke="#0ea5e9"
-                      strokeWidth="8"
-                      fill="none"
-                      strokeDasharray="351.86"
-                      strokeDashoffset="87.96"
-                      strokeLinecap="round"
-                    />
+                    <circle cx="64" cy="64" r="56" stroke="#e5e7eb" strokeWidth="8" fill="none" />
+                    <circle cx="64" cy="64" r="56" stroke="#0ea5e9" strokeWidth="8" fill="none"
+                      strokeDasharray="351.86" strokeDashoffset="87.96" strokeLinecap="round" />
                   </svg>
                   <div className="absolute inset-0 flex items-center justify-center">
                     <div className="text-center">
@@ -238,9 +151,8 @@ export const DashboardPage: React.FC = () => {
                   </div>
                 </div>
               </div>
-              <Button variant="outline" className="w-full">
-                Improve Resume
-                <ArrowRight className="w-4 h-4" />
+              <Button variant="outline" className="w-full" onClick={() => navigate('/resume')}>
+                Improve Resume <ArrowRight className="w-4 h-4" />
               </Button>
             </CardContent>
           </Card>
@@ -251,15 +163,13 @@ export const DashboardPage: React.FC = () => {
               <div className="flex items-center justify-between">
                 <CardHeader title="Upcoming Events" />
                 <Link to="/events">
-                  <Button variant="ghost" size="sm">
-                    View All
-                  </Button>
+                  <Button variant="ghost" size="sm">View All</Button>
                 </Link>
               </div>
             </div>
             <div className="divide-y divide-gray-100">
               {upcomingEvents.map((event) => (
-                <div key={event.id} className="p-4 flex items-center gap-3 hover:bg-gray-50">
+                <div key={event.id} className="p-4 flex items-center gap-3 hover:bg-gray-50 cursor-pointer" onClick={() => navigate('/events')}>
                   <div className="w-10 h-10 rounded-lg bg-accent-100 flex items-center justify-center">
                     <Calendar className="w-5 h-5 text-accent-500" />
                   </div>
@@ -267,9 +177,7 @@ export const DashboardPage: React.FC = () => {
                     <div className="font-medium text-gray-900">{event.title}</div>
                     <div className="text-xs text-gray-500">{event.date}</div>
                   </div>
-                  <span className="px-2 py-1 bg-gray-100 text-gray-600 text-xs rounded-lg">
-                    {event.type}
-                  </span>
+                  <span className="px-2 py-1 bg-gray-100 text-gray-600 text-xs rounded-lg">{event.type}</span>
                 </div>
               ))}
             </div>
@@ -281,27 +189,22 @@ export const DashboardPage: React.FC = () => {
               <div className="flex items-center justify-between">
                 <CardHeader title="Recommended Courses" />
                 <Link to="/courses">
-                  <Button variant="ghost" size="sm">
-                    View All
-                  </Button>
+                  <Button variant="ghost" size="sm">View All</Button>
                 </Link>
               </div>
             </div>
             <div className="divide-y divide-gray-100">
               {recommendedCourses.map((course) => (
-                <div key={course.id} className="p-4 flex items-center gap-3 hover:bg-gray-50">
+                <div key={course.id} className="p-4 flex items-center gap-3 hover:bg-gray-50 cursor-pointer" onClick={() => navigate('/courses')}>
                   <div className="w-10 h-10 rounded-lg bg-primary-100 flex items-center justify-center">
                     <BookOpen className="w-5 h-5 text-primary-500" />
                   </div>
                   <div className="flex-1">
                     <div className="font-medium text-gray-900">{course.title}</div>
-                    <div className="text-xs text-gray-500">
-                      {course.platform} • {course.duration}
-                    </div>
+                    <div className="text-xs text-gray-500">{course.platform} · {course.duration}</div>
                   </div>
                   <div className="flex items-center gap-1 text-sm text-yellow-500">
-                    <Star className="w-4 h-4 fill-current" />
-                    {course.rating}
+                    <Star className="w-4 h-4 fill-current" />{course.rating}
                   </div>
                 </div>
               ))}
@@ -316,9 +219,8 @@ export const DashboardPage: React.FC = () => {
           title="Your Career Path"
           subtitle="Web Development"
           action={
-            <Button variant="ghost" size="sm">
-              View Roadmap
-              <ArrowRight className="w-4 h-4" />
+            <Button variant="ghost" size="sm" onClick={() => navigate('/career')}>
+              View Roadmap <ArrowRight className="w-4 h-4" />
             </Button>
           }
         />
@@ -348,63 +250,50 @@ export const DashboardPage: React.FC = () => {
       {/* Badges & Achievements */}
       <div className="grid md:grid-cols-2 gap-6">
         <Card>
-          <CardHeader title="Recent Badges" action={<Button variant="ghost" size="sm">View All</Button>} />
+          <CardHeader
+            title="Recent Badges"
+            action={<Button variant="ghost" size="sm" onClick={() => navigate('/gamification')}>View All</Button>}
+          />
           <CardContent>
             <div className="flex gap-4">
-              <div className="flex flex-col items-center gap-2 p-4 bg-yellow-50 rounded-xl">
-                <Award className="w-8 h-8 text-yellow-500" />
-                <span className="text-xs font-medium">First Apply</span>
-              </div>
-              <div className="flex flex-col items-center gap-2 p-4 bg-green-50 rounded-xl">
-                <CheckCircle className="w-8 h-8 text-green-500" />
-                <span className="text-xs font-medium">Profile</span>
-              </div>
-              <div className="flex flex-col items-center gap-2 p-4 bg-primary-50 rounded-xl">
-                <Users className="w-8 h-8 text-primary-500" />
-                <span className="text-xs font-medium">Community</span>
-              </div>
-              <div className="flex flex-col items-center gap-2 p-4 bg-gray-100 rounded-xl opacity-50">
-                <Target className="w-8 h-8 text-gray-400" />
-                <span className="text-xs font-medium">Locked</span>
-              </div>
+              {[
+                { icon: Award, label: 'First Apply', bg: 'bg-yellow-50', color: 'text-yellow-500' },
+                { icon: CheckCircle, label: 'Profile', bg: 'bg-green-50', color: 'text-green-500' },
+                { icon: Users, label: 'Community', bg: 'bg-primary-50', color: 'text-primary-500' },
+                { icon: Target, label: 'Locked', bg: 'bg-gray-100', color: 'text-gray-400', locked: true },
+              ].map((badge, i) => (
+                <div
+                  key={i}
+                  onClick={() => !badge.locked && navigate('/gamification')}
+                  className={`flex flex-col items-center gap-2 p-4 ${badge.bg} rounded-xl cursor-pointer hover:scale-105 transition-transform ${badge.locked ? 'opacity-50 cursor-default' : ''}`}
+                >
+                  <badge.icon className={`w-8 h-8 ${badge.color}`} />
+                  <span className="text-xs font-medium">{badge.label}</span>
+                </div>
+              ))}
             </div>
           </CardContent>
         </Card>
 
         <Card>
-          <CardHeader title="Leaderboard" action={<Button variant="ghost" size="sm">View All</Button>} />
+          <CardHeader
+            title="Leaderboard"
+            action={<Button variant="ghost" size="sm" onClick={() => navigate('/gamification')}>View All</Button>}
+          />
           <CardContent>
             <div className="space-y-3">
-              <div className="flex items-center gap-3">
-                <span className="w-6 h-6 rounded-full bg-yellow-400 text-white text-sm flex items-center justify-center">
-                  1
-                </span>
-                <div className="w-8 h-8 rounded-full bg-primary-100 flex items-center justify-center text-primary-600 font-semibold">
-                  A
+              {[
+                { rank: '1', name: 'Alex Johnson', pts: '2,450', rankBg: 'bg-yellow-400', avatarBg: 'bg-primary-100', avatarColor: 'text-primary-600', letter: 'A', ptsColor: 'text-primary-600' },
+                { rank: '2', name: 'Sarah Chen', pts: '2,120', rankBg: 'bg-gray-400', avatarBg: 'bg-accent-100', avatarColor: 'text-accent-600', letter: 'S', ptsColor: 'text-accent-600' },
+                { rank: '3', name: 'Mike Smith', pts: '1,980', rankBg: 'bg-orange-400', avatarBg: 'bg-green-100', avatarColor: 'text-green-600', letter: 'M', ptsColor: 'text-green-600' },
+              ].map((entry) => (
+                <div key={entry.rank} className="flex items-center gap-3">
+                  <span className={`w-6 h-6 rounded-full ${entry.rankBg} text-white text-sm flex items-center justify-center font-bold`}>{entry.rank}</span>
+                  <div className={`w-8 h-8 rounded-full ${entry.avatarBg} flex items-center justify-center ${entry.avatarColor} font-semibold`}>{entry.letter}</div>
+                  <span className="flex-1 font-medium text-gray-800">{entry.name}</span>
+                  <span className={`font-semibold ${entry.ptsColor}`}>{entry.pts} pts</span>
                 </div>
-                <span className="flex-1 font-medium">Alex Johnson</span>
-                <span className="text-primary-600 font-semibold">2,450 pts</span>
-              </div>
-              <div className="flex items-center gap-3">
-                <span className="w-6 h-6 rounded-full bg-gray-400 text-white text-sm flex items-center justify-center">
-                  2
-                </span>
-                <div className="w-8 h-8 rounded-full bg-accent-100 flex items-center justify-center text-accent-600 font-semibold">
-                  S
-                </div>
-                <span className="flex-1 font-medium">Sarah Chen</span>
-                <span className="text-accent-600 font-semibold">2,120 pts</span>
-              </div>
-              <div className="flex items-center gap-3">
-                <span className="w-6 h-6 rounded-full bg-orange-400 text-white text-sm flex items-center justify-center">
-                  3
-                </span>
-                <div className="w-8 h-8 rounded-full bg-green-100 flex items-center justify-center text-green-600 font-semibold">
-                  M
-                </div>
-                <span className="flex-1 font-medium">Mike Smith</span>
-                <span className="text-green-600 font-semibold">1,980 pts</span>
-              </div>
+              ))}
             </div>
           </CardContent>
         </Card>

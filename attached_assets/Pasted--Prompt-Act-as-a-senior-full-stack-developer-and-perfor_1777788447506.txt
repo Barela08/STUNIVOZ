@@ -1,0 +1,54 @@
+**Prompt:**
+
+"Act as a senior full-stack developer and perform a complete debugging, fixing, and optimization of the given website/application.
+
+The main issues to fix:
+
+* File upload is not working
+* Buttons are clickable but not performing their intended actions
+* Some features appear functional in UI but do nothing in reality
+
+Start by identifying all problems in detail:
+
+* Detect broken event handlers (onClick, submit, etc.)
+* Check API calls (whether they are triggered, failing, or missing)
+* Inspect file upload logic (frontend + backend handling, validation, request format)
+* Identify JavaScript errors, console issues, or network failures
+* Verify routing, state management, and data flow
+
+Then FIX everything step by step:
+
+* Repair all button functionalities so each action performs correctly
+* Fix file upload system (ensure proper file selection, validation, server handling, and response)
+* Ensure all API integrations are working properly
+* Reconnect broken logic between frontend and backend
+* Add proper error handling and user feedback (loading states, success, failure messages)
+
+Clean up the project:
+
+* Remove unused, duplicate, or dead code
+* Delete unnecessary components, scripts, and styles
+* Optimize structure for maintainability and performance
+
+Then TEST everything thoroughly:
+
+* Test every button individually and confirm it performs its intended action
+* Test file upload with different file types and sizes
+* Validate all forms and user inputs
+* Check responsiveness and cross-browser compatibility
+* Simulate real user interactions and edge cases
+
+Improve the system:
+
+* Add logs where necessary for debugging
+* Improve performance where possible
+* Ensure proper UX feedback for all actions
+
+Finally provide:
+
+* A list of all issues found
+* A list of fixes applied
+* Clean, corrected code snippets (if needed)
+* Suggestions to prevent such issues in the future
+
+Do not skip anything. Ensure every interactive element works perfectly before finishing. Treat this like a real production bug-fixing task."

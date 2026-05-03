@@ -396,7 +396,7 @@ export function UIAudit() {
               <FindingRow icon="⚠️" title="No breadcrumb navigation in admin deep pages" detail="At /admin/users/{id}/applications the user loses context. Adding breadcrumbs (Admin > Users > Priya Sharma > Applications) improves orientation." type="bad" />
               <FindingRow icon="✅" title="3-step internship wizard is friction-free" detail="Progress indicator, clear step titles, and a preview before publish make the company onboarding flow excellent. Best-in-class wizard UX." type="good" />
               <FindingRow icon="✅" title="Role-specific login pages eliminate confusion" detail="Each portal has a clearly branded, distinct login page. Users always know which environment they are in. Reduces mis-login errors to near zero." type="good" />
-              <FindingRow icon="💡" title="Empty states need illustration" detail="Empty states (no applications, no internships) show only text. Adding a simple SVG illustration with a CTA (\"Explore Internships →\") would dramatically improve perceived quality." type="note" />
+              <FindingRow icon="💡" title="Empty states need illustration" detail="Empty states (no applications, no internships) show only text. Adding a simple SVG illustration with a CTA button would dramatically improve perceived quality." type="note" />
             </div>
           </Card>
 

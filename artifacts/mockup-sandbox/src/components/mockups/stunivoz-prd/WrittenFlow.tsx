@@ -13,7 +13,7 @@ const flows = [
         icon: "1",
         steps: [
           "User opens STUNIVOZ homepage ( / )",
-          "Clicks "Get Started" → routed to /signup",
+          'Clicks "Get Started" → routed to /signup',
           "Fills name, email, password → account created in Firebase Auth",
           "Profile document created in Firestore under users/{uid}",
           "Redirected to /dashboard (first login shows welcome tour)",
@@ -23,12 +23,12 @@ const flows = [
         title: "Internship Discovery & Apply",
         icon: "2",
         steps: [
-          "From Dashboard, clicks "Find Internships" → /internships",
+          'From Dashboard, clicks "Find Internships" → /internships',
           "Searches by keyword; filters by domain, location, stipend, remote",
           "Clicks internship card → detail modal opens",
-          "Clicks "Apply Now" → application saved to applications/{id} in Firestore",
+          'Clicks "Apply Now" → application saved to applications/{id} in Firestore',
           "Status set to applied; confirmation toast shown",
-          "Returns to /dashboard → "My Applications" section updates",
+          'Returns to /dashboard → "My Applications" section updates',
         ],
       },
       {
@@ -38,7 +38,7 @@ const flows = [
           "Navigates to /resume from sidebar",
           "Option A — Upload PDF: file stored in Firebase Storage",
           "Option B — Build from scratch: fills personal info, education, skills, projects",
-          "Clicks "Analyze Resume" → Cloud Function runs ATS scoring",
+          'Clicks "Analyze Resume" → Cloud Function runs ATS scoring',
           "Receives score (0–100), keyword matches, and improvement suggestions",
           "Downloads polished PDF or shares public link",
         ],
@@ -63,7 +63,7 @@ const flows = [
           "Platform reads profile: skills, career interest, past applications",
           "AI engine returns ranked internship + course suggestions",
           "User saves or applies directly from recommendation card",
-          "Feedback loop: "Not Relevant" button improves future suggestions",
+          'Feedback loop: "Not Relevant" button improves future suggestions',
         ],
       },
       {
@@ -71,7 +71,7 @@ const flows = [
         icon: "6",
         steps: [
           "Events: /events → filter by type (hackathon/webinar/workshop)",
-          "Clicks "Register" → EventRegistration document created in Firestore",
+          'Clicks "Register" → EventRegistration document created in Firestore',
           "Community: /community → sees post feed from all students",
           "Writes a post, adds image, publishes → visible to all",
           "Likes/comments on others' posts in real time",
@@ -103,11 +103,11 @@ const flows = [
         title: "Post an Internship (3-Step Wizard)",
         icon: "2",
         steps: [
-          "Clicks "Post New Internship" → /provider/post-internship",
+          'Clicks "Post New Internship" → /provider/post-internship',
           "Step 1 — Basic Info: role title, domain, stipend, duration, remote toggle",
           "Step 2 — Requirements: skills required, description, responsibilities",
           "Step 3 — Preview: full preview of listing before publish",
-          "Clicks "Publish" → internship document created in Firestore",
+          'Clicks "Publish" → internship document created in Firestore',
           "Internship appears on student portal immediately",
         ],
       },
@@ -129,7 +129,7 @@ const flows = [
         steps: [
           "Navigates to /provider/post-event",
           "Fills event title, type, date, location, virtual toggle, registration link",
-          "Clicks "Publish" → event document added to Firestore",
+          'Clicks "Publish" → event document added to Firestore',
           "Event appears in student /events feed",
         ],
       },
@@ -249,8 +249,8 @@ const flows = [
         steps: [
           "Opens /staff/verification → pending student and company accounts",
           "Checks submitted documents (college ID, company registration, etc.)",
-          "Clicks "Verify" → user.verified = true; verified badge shown on profile",
-          "Clicks "Reject" with reason → user notified to resubmit",
+          'Clicks "Verify" → user.verified = true; verified badge shown on profile',
+          'Clicks "Reject" with reason → user notified to resubmit',
         ],
       },
       {
@@ -401,14 +401,14 @@ export function WrittenFlow() {
                 from: "🎓 Student",
                 action: "submits application",
                 to: "🏢 Company",
-                result: "Applicant card appears in company Kanban board under "Applied"",
+                result: 'Applicant card appears in company Kanban board under "Applied"',
                 color: "#2563EB",
               },
               {
                 from: "🏢 Company",
                 action: "moves applicant to Shortlisted",
                 to: "🎓 Student",
-                result: "Student receives real-time notification: "You've been shortlisted!"",
+                result: `Student receives real-time notification: "You've been shortlisted!"`,
                 color: "#7C3AED",
               },
               {
