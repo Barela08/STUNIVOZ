@@ -1,0 +1,213 @@
+**Prompt:**
+
+"Act as a senior full-stack developer and completely fix, rebuild, and optimize the entire Admin Panel so that every feature works properly in real functionality (not just UI clicks). Ensure full backend integration, real data flow, and production-level performance.
+
+---
+
+### 🔴 DASHBOARD ISSUES
+
+* Dashboard opens correctly but:
+
+  * Alerts → Clicking shows nothing → FIX: Show full alert details with proper data
+  * Store Warning → “Manage” button does nothing → FIX: Open management panel with actionable controls
+
+---
+
+### 👤 USERS MODULE
+
+* Export button is not working → FIX: Enable proper export (CSV/Excel)
+* Action buttons not working → FIX all:
+
+  * Show full details (Full Name, Email, College, Role, Status, Verified, etc.)
+  * Activate / Block / Verify / Delete must work properly
+
+---
+
+### 🏢 COMPANIES MODULE
+
+* Action → Edit button not working → FIX
+* On Edit:
+
+  * Show complete company profile:
+
+    * All posts
+    * Verification status
+    * Activity history
+* Add AI-based verification:
+
+  * Detect if company is real or scam
+  * Auto-flag suspicious data
+
+---
+
+### 🎯 INTERNSHIPS / OPPORTUNITIES
+
+* Before publishing:
+
+  * AI must verify:
+
+    * Is it genuine or fake?
+    * Content validation
+* On Activate:
+
+  * Auto add verified tag
+  * Auto update database
+
+---
+
+### 📅 EVENTS MODULE
+
+* Edit button not working → FIX
+* Show full event details
+* AI Verification:
+
+  * Check event authenticity
+  * Mark as real or scam
+* Add AI Auto-Fetch Feature:
+
+  * On click → AI finds events online → verifies → adds to system
+
+---
+
+### 📚 COURSES MODULE
+
+* Same as Events:
+
+  * Edit working
+  * Full details
+  * AI verification (real/fake)
+  * Auto-fetch + add system
+
+---
+
+### 🔌 API & CONTROL SYSTEM
+
+* API status is visible but:
+
+  * Edit not working → FIX
+  * Refresh not working → FIX
+* Admin should:
+
+  * Change API endpoints
+  * Update permissions
+  * Modify configs
+* Changes must reflect in real user system
+
+---
+
+### 👥 STAFF MANAGEMENT
+
+* Staff list exists but:
+
+  * Clicking profile shows nothing → FIX
+* Add:
+
+  * Full staff profile details
+  * Role & permission control
+  * Assign permissions (granular)
+  * Give warning system to staff
+
+---
+
+### 📢 ADS SYSTEM
+
+* Add system should:
+
+  * Show ads when website opens
+  * Display for 10 seconds
+  * Include Skip button
+* Admin can add:
+
+  * Image / Video / Link / Button
+
+---
+
+### 🎨 UI CONTROL PANEL
+
+Admin should control:
+
+* Colors
+* Logo
+* Fonts
+* Banner
+* Email templates
+* Dark Mode toggle
+* Maintenance Mode toggle
+
+---
+
+### ⚙️ FEATURES SYSTEM
+
+* Existing ON/OFF works but:
+
+  * Add new feature option → IMPLEMENT
+  * Dynamic feature creation + toggle
+
+---
+
+### 🔔 NOTIFICATIONS SYSTEM
+
+* Admin can:
+
+  * Send notifications to:
+
+    * All users
+    * Specific audience
+    * Single user
+* Channels:
+
+  * In-app
+  * Email
+* Must be fully functional
+
+---
+
+### 🔐 SECURITY SYSTEM
+
+Implement strong security:
+
+* Authentication & authorization
+* Role-based access control
+* Activity logs
+* Admin action tracking
+* Data protection
+* Backup system
+* Restore system
+* Maintenance mode (full site lock)
+
+---
+
+### 🔁 CORE REQUIREMENT
+
+* Everything must be:
+  ✅ Fully functional
+  ✅ Connected to backend
+  ✅ Real data working (no dummy UI)
+  ✅ Synced between Admin, User, and Company
+
+---
+
+### 🧪 TESTING REQUIREMENTS
+
+* Test every button (no click-only behavior)
+* Test all CRUD operations
+* Test AI verification systems
+* Test export, upload, edit, delete
+* Test permissions (admin vs staff)
+* Ensure zero broken features
+
+---
+
+### 📦 FINAL OUTPUT
+
+Provide:
+
+* List of all issues fixed
+* Features implemented
+* Clean optimized code
+* Confirmation: “All admin panel features are fully working”
+* Suggestions for future improvements
+
+---
+
+Do NOT skip anything. Treat this as a real production admin system where every feature must work perfectly."

@@ -69,11 +69,122 @@ const CUSTOM_TOOLTIP_STYLE = {
   fontSize: '12px',
 };
 
+const systemAlerts = [
+  { id: 1, type: 'warning', title: 'Storage at 92% capacity', detail: 'Firebase Storage is nearly full. Estimated 3 days until limit. Clean up old resumes or upgrade plan.', time: '1 hour ago', link: '/admin/backup', linkLabel: 'Manage Storage', icon: '🗄️' },
+  { id: 2, type: 'error', title: '5 community posts flagged', detail: 'Staff team has flagged 5 community posts for review. Urgent: 2 posts contain potentially harmful content.', time: '2 hours ago', link: '/admin/security', linkLabel: 'Review Now', icon: '🚨' },
+  { id: 3, type: 'info', title: 'LinkedIn API nearing limit', detail: 'LinkedIn Jobs API has used 64% of monthly quota (320/500). Consider reducing fetch frequency.', time: '3 hours ago', link: '/admin/api', linkLabel: 'View API', icon: '⚡' },
+];
+
+const AlertsModal: React.FC<{ onClose: () => void }> = ({ onClose }) => (
+  <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+    <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-2xl w-full max-w-lg border border-gray-200 dark:border-gray-700">
+      <div className="flex items-center justify-between p-5 border-b border-gray-100 dark:border-gray-800">
+        <div className="flex items-center gap-2">
+          <Bell className="w-5 h-5 text-red-500" />
+          <h2 className="text-lg font-bold text-gray-900 dark:text-white">System Alerts</h2>
+          <span className="ml-1 w-5 h-5 rounded-full bg-red-600 text-white text-xs font-bold flex items-center justify-center">{systemAlerts.length}</span>
+        </div>
+        <button onClick={onClose} className="p-2 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
+          <span className="text-gray-500 text-lg leading-none">×</span>
+        </button>
+      </div>
+      <div className="p-4 space-y-3 max-h-[70vh] overflow-y-auto">
+        {systemAlerts.map(alert => (
+          <div key={alert.id} className={`p-4 rounded-xl border ${
+            alert.type === 'error' ? 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800' :
+            alert.type === 'warning' ? 'bg-yellow-50 dark:bg-yellow-900/20 border-yellow-200 dark:border-yellow-800' :
+            'bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800'
+          }`}>
+            <div className="flex items-start gap-3">
+              <span className="text-xl shrink-0">{alert.icon}</span>
+              <div className="flex-1">
+                <div className="flex items-start justify-between gap-2">
+                  <p className={`font-semibold text-sm ${alert.type === 'error' ? 'text-red-800 dark:text-red-300' : alert.type === 'warning' ? 'text-yellow-800 dark:text-yellow-300' : 'text-blue-800 dark:text-blue-300'}`}>{alert.title}</p>
+                  <span className="text-xs text-gray-400 whitespace-nowrap">{alert.time}</span>
+                </div>
+                <p className="text-xs text-gray-600 dark:text-gray-400 mt-1 leading-relaxed">{alert.detail}</p>
+                <a href={alert.link} onClick={onClose} className="inline-block mt-2 text-xs font-semibold text-blue-600 dark:text-blue-400 hover:underline">{alert.linkLabel} →</a>
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+      <div className="p-4 border-t border-gray-100 dark:border-gray-800 flex justify-between items-center">
+        <span className="text-xs text-gray-400">Auto-refreshes every 5 minutes</span>
+        <button onClick={onClose} className="px-4 py-2 rounded-xl bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 text-sm font-medium hover:bg-gray-200 dark:hover:bg-gray-700 transition-all">Dismiss All</button>
+      </div>
+    </div>
+  </div>
+);
+
+const StorageModal: React.FC<{ onClose: () => void }> = ({ onClose }) => {
+  const [cleaning, setCleaning] = useState(false);
+  const [cleaned, setCleaned] = useState(false);
+  const handleClean = () => {
+    setCleaning(true);
+    setTimeout(() => { setCleaning(false); setCleaned(true); }, 2000);
+  };
+  return (
+    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+      <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-2xl w-full max-w-md border border-gray-200 dark:border-gray-700">
+        <div className="flex items-center justify-between p-5 border-b border-gray-100 dark:border-gray-800">
+          <h2 className="text-lg font-bold text-gray-900 dark:text-white">Storage Management</h2>
+          <button onClick={onClose} className="p-2 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"><span className="text-gray-500 text-lg leading-none">×</span></button>
+        </div>
+        <div className="p-5 space-y-4">
+          <div>
+            <div className="flex justify-between text-sm mb-2">
+              <span className="font-medium text-gray-700 dark:text-gray-300">Storage Used</span>
+              <span className="font-bold text-yellow-600">9.2 GB / 10 GB (92%)</span>
+            </div>
+            <div className="h-3 bg-gray-100 dark:bg-gray-800 rounded-full overflow-hidden">
+              <div className="h-full bg-gradient-to-r from-yellow-500 to-red-500 rounded-full" style={{ width: '92%' }} />
+            </div>
+          </div>
+          <div className="space-y-2">
+            {[
+              { label: 'Student Resumes', size: '4.2 GB', pct: 46, color: 'bg-blue-500' },
+              { label: 'Company Logos & Assets', size: '2.1 GB', pct: 23, color: 'bg-purple-500' },
+              { label: 'Profile Photos', size: '1.8 GB', pct: 20, color: 'bg-green-500' },
+              { label: 'Event Banners', size: '1.1 GB', pct: 12, color: 'bg-orange-500' },
+            ].map(item => (
+              <div key={item.label} className="flex items-center gap-3">
+                <div className={`w-3 h-3 rounded-full ${item.color} shrink-0`} />
+                <span className="text-xs text-gray-600 dark:text-gray-400 flex-1">{item.label}</span>
+                <span className="text-xs font-medium text-gray-700 dark:text-gray-300">{item.size}</span>
+                <span className="text-xs text-gray-400 w-8 text-right">{item.pct}%</span>
+              </div>
+            ))}
+          </div>
+          {cleaned && <div className="flex items-center gap-2 p-3 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-xl"><span className="text-green-600 text-sm">✓</span><span className="text-sm text-green-700 dark:text-green-400 font-medium">Cleaned 1.2 GB of old temp files!</span></div>}
+          <div className="flex gap-3 pt-2">
+            <button onClick={handleClean} disabled={cleaning || cleaned} className="flex-1 py-2.5 rounded-xl bg-yellow-600 hover:bg-yellow-700 disabled:opacity-60 text-white font-semibold text-sm transition-all flex items-center justify-center gap-2">
+              {cleaning ? <><RefreshCw className="w-4 h-4 animate-spin" /> Cleaning...</> : cleaned ? '✓ Cleaned' : '🧹 Auto Clean Temp Files'}
+            </button>
+            <a href="/admin/backup" onClick={onClose} className="flex-1 py-2.5 rounded-xl bg-red-600 hover:bg-red-700 text-white font-semibold text-sm transition-all text-center flex items-center justify-center">Manage Backups</a>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 export const AdminDashboardPage: React.FC = () => {
   const [chartPeriod, setChartPeriod] = useState<'7d' | '30d' | '90d'>('7d');
+  const [showAlerts, setShowAlerts] = useState(false);
+  const [showStorage, setShowStorage] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
+
+  const handleRefresh = () => {
+    setRefreshing(true);
+    setTimeout(() => setRefreshing(false), 1500);
+  };
 
   return (
     <div className="space-y-6 animate-fade-in">
+      {showAlerts && <AlertsModal onClose={() => setShowAlerts(false)} />}
+      {showStorage && <StorageModal onClose={() => setShowStorage(false)} />}
+
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
@@ -81,11 +192,12 @@ export const AdminDashboardPage: React.FC = () => {
           <p className="text-gray-500 dark:text-gray-400 mt-0.5">Full system overview — STUNIVOZ Platform</p>
         </div>
         <div className="flex items-center gap-3">
-          <button className="flex items-center gap-2 px-3 py-2 text-sm text-gray-600 dark:text-gray-300 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700 transition-all">
-            <RefreshCw className="w-4 h-4" /> Refresh
+          <button onClick={handleRefresh} className="flex items-center gap-2 px-3 py-2 text-sm text-gray-600 dark:text-gray-300 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700 transition-all">
+            <RefreshCw className={`w-4 h-4 ${refreshing ? 'animate-spin' : ''}`} /> {refreshing ? 'Refreshing...' : 'Refresh'}
           </button>
-          <button className="flex items-center gap-2 px-3 py-2 text-sm text-white bg-red-600 rounded-xl hover:bg-red-700 transition-all shadow-sm">
-            <Bell className="w-4 h-4" /> Alerts (3)
+          <button onClick={() => setShowAlerts(true)} className="flex items-center gap-2 px-3 py-2 text-sm text-white bg-red-600 rounded-xl hover:bg-red-700 transition-all shadow-sm relative">
+            <Bell className="w-4 h-4" /> Alerts
+            <span className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-yellow-500 text-xs font-bold text-white flex items-center justify-center border-2 border-white">3</span>
           </button>
         </div>
       </div>
@@ -97,7 +209,7 @@ export const AdminDashboardPage: React.FC = () => {
           <p className="text-sm font-semibold text-yellow-800 dark:text-yellow-300">Storage Warning</p>
           <p className="text-xs text-yellow-600 dark:text-yellow-400">Storage service is at 92% capacity. Consider expanding or cleaning up old files.</p>
         </div>
-        <button className="text-xs text-yellow-700 dark:text-yellow-300 font-medium hover:underline">Manage</button>
+        <button onClick={() => setShowStorage(true)} className="text-xs text-yellow-700 dark:text-yellow-300 font-bold hover:underline px-2 py-1 rounded-lg hover:bg-yellow-100 dark:hover:bg-yellow-900/30 transition-all">Manage →</button>
       </div>
 
       {/* Top Stats */}
