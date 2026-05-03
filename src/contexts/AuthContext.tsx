@@ -36,6 +36,8 @@ export interface Profile {
   updated_at?: string;
 }
 
+const ADMIN_SESSION_KEY = 'stunivoz_admin_session';
+
 interface AuthContextType {
   user: User | null;
   profile: Profile | null;
@@ -65,13 +67,21 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
 
+  // Try both 'profiles' and 'users' collections — works regardless of which one the admin used
   const fetchProfile = async (uid: string): Promise<Profile | null> => {
     try {
-      const result = await getDocument('profiles', uid);
-      if (result.success && result.data) {
-        const p = result.data as Profile;
-        setProfile(p);
-        return p;
+      const [profilesResult, usersResult] = await Promise.all([
+        getDocument('profiles', uid),
+        getDocument('users', uid),
+      ]);
+
+      const found =
+        (profilesResult.success && profilesResult.data ? profilesResult.data as Profile : null) ||
+        (usersResult.success && usersResult.data ? usersResult.data as Profile : null);
+
+      if (found) {
+        setProfile(found);
+        return found;
       }
       return null;
     } catch (err) {
@@ -81,14 +91,39 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   useEffect(() => {
+    // Restore admin session from localStorage first (survives page refresh on Vercel)
+    const savedSession = localStorage.getItem(ADMIN_SESSION_KEY);
+    if (savedSession) {
+      try {
+        const savedProfile = JSON.parse(savedSession) as Profile;
+        if (savedProfile.role === 'admin') {
+          setProfile(savedProfile);
+          setLoading(false);
+          // Still listen for Firebase auth changes in background
+        }
+      } catch {
+        localStorage.removeItem(ADMIN_SESSION_KEY);
+      }
+    }
+
     const timeout = setTimeout(() => setLoading(false), 5000);
     const unsubscribe = onAuthStateChangedListener(async (firebaseUser: User | null) => {
       clearTimeout(timeout);
       setUser(firebaseUser);
       if (firebaseUser) {
-        await fetchProfile(firebaseUser.uid);
+        const p = await fetchProfile(firebaseUser.uid);
+        if (p) {
+          // If Firebase user has admin role, also save to localStorage for persistence
+          if (p.role === 'admin') {
+            localStorage.setItem(ADMIN_SESSION_KEY, JSON.stringify(p));
+          }
+        }
       } else {
-        setProfile(null);
+        // Only clear profile if there's no saved admin session
+        const savedSession = localStorage.getItem(ADMIN_SESSION_KEY);
+        if (!savedSession) {
+          setProfile(null);
+        }
       }
       setLoading(false);
     });
@@ -133,8 +168,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const userCredential = await signInWithGoogle();
       const firebaseUser = userCredential.user;
 
-      const result = await getDocument('profiles', firebaseUser.uid);
-      if (!result.success || !result.data) {
+      const result = await fetchProfile(firebaseUser.uid);
+      if (!result) {
         const profileData: Profile = {
           id: firebaseUser.uid,
           email: firebaseUser.email || '',
@@ -147,13 +182,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         await setDocument('profiles', firebaseUser.uid, profileData);
         setProfile(profileData);
       } else {
-        const existingProfile = result.data as Profile;
-        // Block non-students from using Google OAuth
-        if (existingProfile.role && existingProfile.role !== 'student') {
+        if (result.role && result.role !== 'student') {
           await auth.signOut();
           return { error: { message: 'Google login is only available for students. Please use your portal login page.' } };
         }
-        setProfile(existingProfile);
+        setProfile(result);
       }
       return { error: null };
     } catch (err: any) {
@@ -167,8 +200,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const userCredential = await signInWithGitHub();
       const firebaseUser = userCredential.user;
 
-      const result = await getDocument('profiles', firebaseUser.uid);
-      if (!result.success || !result.data) {
+      const result = await fetchProfile(firebaseUser.uid);
+      if (!result) {
         const profileData: Profile = {
           id: firebaseUser.uid,
           email: firebaseUser.email || '',
@@ -181,13 +214,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         await setDocument('profiles', firebaseUser.uid, profileData);
         setProfile(profileData);
       } else {
-        const existingProfile = result.data as Profile;
-        // Block non-students from using GitHub OAuth
-        if (existingProfile.role && existingProfile.role !== 'student') {
+        if (result.role && result.role !== 'student') {
           await auth.signOut();
           return { error: { message: 'GitHub login is only available for students. Please use your portal login page.' } };
         }
-        setProfile(existingProfile);
+        setProfile(result);
       }
       return { error: null };
     } catch (err: any) {
@@ -197,21 +228,26 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const signOut = async () => {
     await logoutUser();
+    localStorage.removeItem(ADMIN_SESSION_KEY);
     setUser(null);
     setProfile(null);
   };
 
+  // devSignIn — saves to localStorage so session persists across page refreshes on Vercel
   const devSignIn = (role: UserRole) => {
     const mockProfile: Profile = {
-      id: `dev-${role}-001`,
-      email: `${role}@stunivoz.dev`,
-      full_name: role === 'admin' ? 'Dev Admin' : role === 'staff' ? 'Dev Staff' : role === 'company' ? 'Dev Company' : 'Dev Student',
+      id: `admin-stunivoz-001`,
+      email: 'hackifypro@gmail.com',
+      full_name: 'STUNIVOZ Admin',
       role,
-      headline: `Development ${role.charAt(0).toUpperCase() + role.slice(1)} Account`,
+      headline: 'Platform Administrator',
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
     };
     setProfile(mockProfile);
+    if (role === 'admin') {
+      localStorage.setItem(ADMIN_SESSION_KEY, JSON.stringify(mockProfile));
+    }
   };
 
   const updateProfile = async (data: Partial<Profile>) => {

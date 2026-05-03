@@ -9,7 +9,7 @@ const ADMIN_PASSWORD = 'Nilu@2006';
 
 export const AdminLoginPage: React.FC = () => {
   const navigate = useNavigate();
-  const { devSignIn } = useAuth();
+  const { signIn, devSignIn } = useAuth();
   const { isDark, toggleTheme } = useTheme();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -26,14 +26,58 @@ export const AdminLoginPage: React.FC = () => {
     setLoading(true);
     setError('');
 
-    if (formData.email !== ADMIN_EMAIL || formData.password !== ADMIN_PASSWORD) {
+    // Step 1: Validate email matches admin email
+    if (formData.email.trim().toLowerCase() !== ADMIN_EMAIL.toLowerCase()) {
       setError('Access denied. Invalid administrator credentials.');
       setLoading(false);
       return;
     }
 
-    devSignIn('admin');
-    navigate('/admin');
+    // Step 2: Try Firebase Authentication first (works when domain is authorized)
+    const { error: firebaseError } = await signIn(formData.email, formData.password);
+
+    if (!firebaseError) {
+      // Firebase login success — onAuthStateChanged will fetch profile from Firestore
+      navigate('/admin');
+      return;
+    }
+
+    // Step 3: Firebase failed — check if it's a domain/config issue, fall back to local credential check
+    const code = (firebaseError as any)?.code || '';
+    const isInfraError = [
+      'auth/unauthorized-domain',
+      'auth/operation-not-allowed',
+      'auth/network-request-failed',
+      'auth/internal-error',
+    ].includes(code);
+
+    if (isInfraError || !code) {
+      // Domain not authorized in Firebase or network issue — use local credential verification
+      if (formData.password === ADMIN_PASSWORD) {
+        devSignIn('admin');
+        navigate('/admin');
+        return;
+      } else {
+        setError('Access denied. Invalid administrator credentials.');
+        setLoading(false);
+        return;
+      }
+    }
+
+    // Step 4: Explicit auth failures (wrong password, user not found)
+    if (code === 'auth/wrong-password' || code === 'auth/invalid-credential' || code === 'auth/user-not-found') {
+      setError('Access denied. Invalid administrator credentials.');
+    } else {
+      // Unknown Firebase error — fall back to local check
+      if (formData.password === ADMIN_PASSWORD) {
+        devSignIn('admin');
+        navigate('/admin');
+        return;
+      }
+      setError('Access denied. Invalid administrator credentials.');
+    }
+
+    setLoading(false);
   };
 
   return (
