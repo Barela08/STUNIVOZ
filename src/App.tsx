@@ -67,7 +67,9 @@ const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) =
 const RoleRoute: React.FC<{ children: React.ReactNode; role: UserRole; loginPath: string }> = ({ children, role, loginPath }) => {
   const { user, profile, loading } = useAuth();
   if (loading) return <div className="min-h-screen flex items-center justify-center dark:bg-gray-950"><Loading size="lg" text="Loading..." /></div>;
-  if (!user) return <Navigate to={loginPath} replace />;
+  // Dev bypass: profile set via devSignIn (no Firebase user needed)
+  const isDevProfile = profile?.id?.startsWith('dev-');
+  if (!user && !isDevProfile) return <Navigate to={loginPath} replace />;
   // If profile loaded and role doesn't match → redirect to portal login
   if (profile && profile.role !== role) return <Navigate to={loginPath} replace />;
   return <>{children}</>;

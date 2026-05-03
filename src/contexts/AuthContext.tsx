@@ -47,6 +47,7 @@ interface AuthContextType {
   signOut: () => Promise<void>;
   updateProfile: (data: Partial<Profile>) => Promise<{ error: any }>;
   fetchProfile: (uid: string) => Promise<Profile | null>;
+  devSignIn: (role: UserRole) => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -200,6 +201,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setProfile(null);
   };
 
+  const devSignIn = (role: UserRole) => {
+    const mockProfile: Profile = {
+      id: `dev-${role}-001`,
+      email: `${role}@stunivoz.dev`,
+      full_name: role === 'admin' ? 'Dev Admin' : role === 'staff' ? 'Dev Staff' : role === 'company' ? 'Dev Company' : 'Dev Student',
+      role,
+      headline: `Development ${role.charAt(0).toUpperCase() + role.slice(1)} Account`,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    };
+    setProfile(mockProfile);
+  };
+
   const updateProfile = async (data: Partial<Profile>) => {
     if (!user) return { error: new Error('No user logged in') };
     try {
@@ -224,7 +238,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       signIn, signUp,
       signInWithGoogleOAuth,
       signInWithGitHubOAuth,
-      signOut, updateProfile, fetchProfile
+      signOut, updateProfile, fetchProfile, devSignIn
     }}>
       {children}
     </AuthContext.Provider>
