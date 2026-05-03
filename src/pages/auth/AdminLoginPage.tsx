@@ -4,7 +4,7 @@ import { ShieldCheck, Mail, Lock, ArrowRight, Eye, EyeOff, Moon, Sun, AlertTrian
 import { useAuth } from '../../contexts/AuthContext';
 import { useTheme } from '../../contexts/ThemeContext';
 
-const ADMIN_EMAIL = 'hackifyoro@gmail.com';
+const ADMIN_EMAIL = 'hackifypro@gmail.com';
 const ADMIN_PASSWORD = 'Nilu@2006';
 
 export const AdminLoginPage: React.FC = () => {
