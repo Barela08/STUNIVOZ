@@ -7,7 +7,7 @@ import { getFirestore, collection, addDoc, getDocs, doc, updateDoc, deleteDoc, s
 import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 
 const firebaseConfig = {
-  apiKey: import.meta.env.VITE_FIREBASE_API_KEY || "AIzaSyplaceholder",
+  apiKey: "AIzaSyAgN7evtASc7zyyD8FUVwXbsgwUBYejZmE",
   authDomain: "stunivoz.firebaseapp.com",
   projectId: "stunivoz",
   storageBucket: "stunivoz.firebasestorage.app",
