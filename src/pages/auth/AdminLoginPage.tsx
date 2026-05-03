@@ -18,7 +18,7 @@ export const AdminLoginPage: React.FC = () => {
     setError('');
   };
 
-  const ADMIN_EMAIL = 'hackifypro@gmail.com';
+  const ADMIN_EMAIL = 'hackifyoro@gmail.com';
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
