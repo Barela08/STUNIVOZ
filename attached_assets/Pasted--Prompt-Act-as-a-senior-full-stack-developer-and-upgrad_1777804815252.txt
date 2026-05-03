@@ -1,0 +1,150 @@
+**Prompt:**
+
+"Act as a senior full-stack developer and upgrade the Admin Panel, Staff System, Ads System, and AI Integration to be fully dynamic, flexible, and production-ready.
+
+---
+
+### 👥 STAFF SYSTEM (FULL DETAILS + PERMISSIONS)
+
+Fix and implement:
+
+1. When clicking on any Staff member:
+
+   * Show FULL profile details:
+
+     * Name
+     * Email
+     * Role
+     * Status (Active/Inactive)
+     * Activity history
+     * Assigned permissions
+
+2. Add PERMISSION CONTROL SYSTEM:
+   Admin should be able to:
+
+   * Select staff member
+   * Assign/revoke permissions using toggle/checkbox
+
+Permissions include:
+
+* View / Edit Users
+* Manage Companies
+* Manage Internships
+* Manage Events
+* Manage Courses
+* Access AI features
+* Send Notifications
+* Access Admin Settings
+
+Ensure:
+
+* Permissions are enforced in backend
+* Staff only sees allowed features
+
+---
+
+### 📢 ADS SYSTEM (FULLY DYNAMIC - NO CODE CHANGE REQUIRED)
+
+Upgrade Ads feature:
+
+Admin should be able to create ads with:
+
+* Image / Video upload
+
+* Title & Description
+
+* Button text (customizable)
+
+* Button action type:
+
+  * Open Link (URL input)
+  * Redirect to page
+  * Trigger feature
+
+* Duration (e.g., 10 seconds)
+
+* Skip button enable/disable
+
+Ensure:
+
+* Ads show on website open
+* Fully controlled via admin panel
+* No hardcoding required
+
+---
+
+### 🤖 AI CAREER GUIDE (DASHBOARD INTEGRATION)
+
+Fix and upgrade:
+
+* AI Career Guide should open directly INSIDE dashboard (no redirect)
+* Should work like a live chat interface
+
+Features:
+
+* User enters question
+* Click "Send" → AI responds instantly
+* Show chat history
+* Loading animation
+
+---
+
+### 🔌 AI API CONTROL (ADMIN PANEL)
+
+Add in Admin:
+
+* Field to add/update AI API key
+* Ability to:
+
+  * Enable/Disable AI feature
+  * Change API endpoint
+  * Monitor usage (optional)
+
+Ensure:
+
+* AI system uses API from admin panel dynamically
+* No need to change code when API changes
+
+---
+
+### 🔄 DYNAMIC SYSTEM (IMPORTANT)
+
+Everything must be:
+
+* Controlled via Admin Panel
+* No hardcoded values
+* Database-driven system
+
+---
+
+### 🔐 SECURITY & VALIDATION
+
+* Staff cannot access unauthorized pages
+* API keys secured
+* Proper validation on all inputs
+
+---
+
+### 🧪 TESTING
+
+Test:
+
+* Staff click → full profile opens
+* Permission restriction works
+* Ads display correctly with button actions
+* AI chat works properly
+* API change reflects instantly
+
+---
+
+### ✅ FINAL RESULT
+
+* Staff system fully functional with permissions
+* Ads system fully dynamic
+* AI integrated in dashboard
+* Admin controls everything
+* No need for code changes in future
+
+---
+
+Do NOT skip anything. Build a scalable, flexible, real-world admin system."

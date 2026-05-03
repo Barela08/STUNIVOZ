@@ -1,0 +1,117 @@
+**Prompt:**
+
+"Act as a senior full-stack developer and fix the UI, authentication, and data issues in the deployed web application.
+
+---
+
+### 🖼️ TOP BAR LOGO FIX (VERY IMPORTANT)
+
+* In the top navigation bar (browser-like header area), currently default/blank icons are visible
+* Replace them with the provided custom logo
+
+Requirements:
+
+* Logo should be clearly visible (center portion visible)
+* Crop the logo properly (remove extra empty space)
+* Maintain aspect ratio
+* Place logo in:
+
+  * Top navbar/header
+  * Any tab/icon placeholder area
+* Ensure:
+
+  * Clean alignment
+  * Proper spacing
+  * Not blurry or stretched
+  * Looks professional
+
+---
+
+### 🧹 REMOVE PRE-FILLED / OLD DATA
+
+* Currently, after login:
+
+  * Some data is already auto-filled / pre-existing → REMOVE IT
+
+Fix:
+
+* Clear all dummy/default data from:
+
+  * User dashboard
+  * Admin panel
+* Ensure:
+
+  * Fresh empty state for new users
+  * No old/demo/test data visible
+
+---
+
+### 🔐 ADMIN LOGIN SECURITY (CRITICAL)
+
+Current issue:
+
+* Admin login ho raha hai bina ID/password ke ❌
+
+Fix:
+
+* Enforce strict authentication
+
+Only allow login with:
+
+* Email: [hackifypro@gmail.com](mailto:hackifypro@gmail.com)
+* Password: Nilu@2006
+
+Ensure:
+
+* Without correct credentials → login fail
+* Add validation + error messages
+* Protect admin routes (no direct access without login)
+
+---
+
+### 🧼 ADMIN DATA RESET
+
+* Admin panel me jo existing data hai → REMOVE ALL
+
+After fix:
+
+* Clean, empty dashboard
+* No previous records
+* Fresh system state
+
+---
+
+### ⚙️ ADDITIONAL FIXES
+
+* Ensure:
+
+  * Login system works properly
+  * Session handling correct
+  * No auto-login bug
+  * No bypass possible
+
+---
+
+### 🧪 TESTING (MANDATORY)
+
+Test:
+
+* Admin login (correct vs wrong credentials)
+* User login
+* Check no old data appears
+* Logo visible correctly
+* UI clean and aligned
+
+---
+
+### ✅ FINAL RESULT
+
+* Logo properly placed and visible
+* No default/old data
+* Admin login fully secured
+* Clean fresh system
+* All features working correctly
+
+---
+
+Do NOT skip anything. Ensure everything is secure, clean, and production-ready."

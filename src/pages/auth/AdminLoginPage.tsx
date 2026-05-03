@@ -6,7 +6,7 @@ import { useTheme } from '../../contexts/ThemeContext';
 
 export const AdminLoginPage: React.FC = () => {
   const navigate = useNavigate();
-  const { signIn, fetchProfile, signOut, devSignIn } = useAuth();
+  const { signIn } = useAuth();
   const { isDark, toggleTheme } = useTheme();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -18,30 +18,28 @@ export const AdminLoginPage: React.FC = () => {
     setError('');
   };
 
+  const ADMIN_EMAIL = 'hackifypro@gmail.com';
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setError('');
 
+    if (formData.email !== ADMIN_EMAIL) {
+      setError('Access denied. Invalid administrator credentials.');
+      setLoading(false);
+      return;
+    }
+
     const { error: loginError } = await signIn(formData.email, formData.password);
     if (loginError) {
-      setError(loginError.message || 'Invalid credentials.');
-      setLoading(false);
-      return;
-    }
-
-    const { auth } = await import('../../services/firebase');
-    const currentUser = auth.currentUser;
-    if (!currentUser) {
-      setError('Authentication failed.');
-      setLoading(false);
-      return;
-    }
-
-    const userProfile = await fetchProfile(currentUser.uid);
-    if (!userProfile || userProfile.role !== 'admin') {
-      await signOut();
-      setError('Access denied. Admin credentials required. Unauthorized access attempts are logged.');
+      const code = (loginError as any)?.code || '';
+      if (code === 'auth/unauthorized-domain') {
+        const domain = window.location.hostname;
+        setError(`Domain "${domain}" not authorized in Firebase Console. Add it under Authentication → Authorized domains, or use Dev mode below.`);
+      } else {
+        setError('Invalid administrator credentials. Access denied.');
+      }
       setLoading(false);
       return;
     }
@@ -167,19 +165,7 @@ export const AdminLoginPage: React.FC = () => {
             </button>
           </form>
 
-          {/* Dev Bypass — development only */}
-          <div className="mt-6 p-4 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-xl">
-            <p className="text-xs font-semibold text-yellow-700 dark:text-yellow-400 mb-2 uppercase tracking-wide">Dev Mode — Skip Firebase Auth</p>
-            <button
-              type="button"
-              onClick={() => { devSignIn('admin'); navigate('/admin'); }}
-              className="w-full py-2.5 px-4 rounded-lg font-semibold text-sm text-yellow-800 dark:text-yellow-200 bg-yellow-100 dark:bg-yellow-800/40 hover:bg-yellow-200 dark:hover:bg-yellow-700/40 border border-yellow-300 dark:border-yellow-700 transition-all"
-            >
-              Enter as Dev Admin (no password needed)
-            </button>
-          </div>
-
-          <p className="mt-4 text-center text-sm dark:text-gray-500 text-gray-400">
+          <p className="mt-6 text-center text-sm dark:text-gray-500 text-gray-400">
             Not an admin?{' '}
             <a href="/login" className="text-primary-500 hover:text-primary-600 font-medium">
               Student login

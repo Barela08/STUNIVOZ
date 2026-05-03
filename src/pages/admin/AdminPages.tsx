@@ -11,7 +11,8 @@ import {
   TrendingUp, ArrowUpRight, X, Save, Mail, Phone, MapPin, UserCog, AlertTriangle,
   Globe, Link, Image, Video, Bell, Palette, Type, LayoutTemplate, Briefcase,
   Bot, Sparkles, FileText, ExternalLink, Copy, Calendar, Tag, Filter, SlidersHorizontal,
-  BarChart2, PieChart as PieChartIcon, Info, ChevronDown, ChevronRight, Wrench
+  BarChart2, PieChart as PieChartIcon, Info, ChevronDown, ChevronRight, Wrench,
+  ShieldCheck, User as UserIcon
 } from 'lucide-react';
 import { AssignRoleModal } from './RolesPage';
 
@@ -342,15 +343,7 @@ export const UserManagementPage: React.FC = () => {
 
   const showToast = (msg: string) => { setToast(msg); setTimeout(() => setToast(''), 3000); };
 
-  const [users, setUsers] = useState<UserRecord[]>([
-    { id: 1, name: 'Ananya Sharma', email: 'ananya@iitd.ac.in', role: 'Student', college: 'IIT Delhi', joined: 'Jan 12, 2025', status: 'Active', ats: 94, logins: 48 },
-    { id: 2, name: 'Rahul Mehta', email: 'rahul@nitt.edu', role: 'Student', college: 'NIT Trichy', joined: 'Feb 3, 2025', status: 'Active', ats: 87, logins: 32 },
-    { id: 3, name: 'Priya Patel', email: 'priya@techcorp.com', role: 'company', college: 'TechCorp HR', joined: 'Nov 20, 2024', status: 'Verified', ats: null, logins: 112 },
-    { id: 4, name: 'Suresh Kumar', email: 'suresh@vit.ac.in', role: 'Student', college: 'VIT Vellore', joined: 'Mar 1, 2025', status: 'Blocked', ats: 55, logins: 3 },
-    { id: 5, name: 'Meera Nair', email: 'meera@stunivoz.com', role: 'staff', college: 'STUNIVOZ HQ', joined: 'Dec 5, 2024', status: 'Active', ats: null, logins: 280, assignedRoleId: 'staff' },
-    { id: 6, name: 'Arjun Singh', email: 'arjun@bits.ac.in', role: 'Student', college: 'BITS Pilani', joined: 'Apr 15, 2025', status: 'Active', ats: 81, logins: 19 },
-    { id: 7, name: 'Kavya Menon', email: 'kavya@iiit.ac.in', role: 'Student', college: 'IIIT Hyderabad', joined: 'Apr 20, 2025', status: 'Active', ats: 91, logins: 27 },
-  ]);
+  const [users, setUsers] = useState<UserRecord[]>([]);
 
   const toggleBlock = (id: number) => {
     setUsers(prev => prev.map(u => u.id === id ? { ...u, status: u.status === 'Blocked' ? 'Active' : 'Blocked' } : u));
@@ -680,13 +673,7 @@ const CompanyEditModal: React.FC<{
 };
 
 export const CompanyManagementPage: React.FC = () => {
-  const [companies, setCompanies] = useState<CompanyRecord[]>([
-    { id: 1, name: 'TechCorp India', type: 'Technology', listings: 5, applicants: 156, verified: true, status: 'Verified', plan: 'Premium', joined: 'Jan 2025' },
-    { id: 2, name: 'StartupHub', type: 'Startup', listings: 2, applicants: 43, verified: false, status: 'Pending', plan: 'Free', joined: 'Mar 2025' },
-    { id: 3, name: 'Infosys Ltd.', type: 'IT Services', listings: 12, applicants: 890, verified: true, status: 'Verified', plan: 'Enterprise', joined: 'Oct 2024' },
-    { id: 4, name: 'CreativeAgency', type: 'Design', listings: 1, applicants: 28, verified: false, status: 'Active', plan: 'Free', joined: 'Apr 2025' },
-    { id: 5, name: 'FinTech Solutions', type: 'Finance', listings: 7, applicants: 312, verified: true, status: 'Verified', plan: 'Premium', joined: 'Nov 2024' },
-  ]);
+  const [companies, setCompanies] = useState<CompanyRecord[]>([]);
   const [editingCompany, setEditingCompany] = useState<CompanyRecord | null>(null);
   const [aiVerifying, setAiVerifying] = useState<number | null>(null);
   const [toast, setToast] = useState('');
@@ -870,13 +857,7 @@ const InternshipEditModal: React.FC<{ item: InternshipRecord; onSave: (i: Intern
 
 // ── Internship Management ────────────────────────────────────────────────────
 export const InternshipManagementPage: React.FC = () => {
-  const [listings, setListings] = useState<InternshipRecord[]>([
-    { id: 1, title: 'Frontend Developer Intern', company: 'Google', location: 'Bangalore', type: 'Remote', posted: 'May 1', applicants: 156, status: 'Published' },
-    { id: 2, title: 'Data Science Intern', company: 'Netflix', location: 'Mumbai', type: 'On-site', posted: 'Apr 28', applicants: 89, status: 'Published' },
-    { id: 3, title: 'SDE Intern', company: 'Amazon', location: 'Bangalore', type: 'Hybrid', posted: 'Apr 25', applicants: 234, status: 'Draft' },
-    { id: 4, title: 'ML Research Intern', company: 'OpenAI', location: 'Remote', type: 'Remote', posted: 'May 2', applicants: 412, status: 'Published' },
-    { id: 5, title: 'UI/UX Design Intern', company: 'Figma', location: 'San Francisco', type: 'Remote', posted: 'Apr 30', applicants: 98, status: 'Draft' },
-  ]);
+  const [listings, setListings] = useState<InternshipRecord[]>([]);
   const [editingItem, setEditingItem] = useState<InternshipRecord | null>(null);
   const [aiVerifying, setAiVerifying] = useState<number | null>(null);
   const [deletingId, setDeletingId] = useState<number | null>(null);
@@ -1061,12 +1042,7 @@ const EventEditModal: React.FC<{ item: EventRecord; onSave: (e: EventRecord) => 
 };
 
 export const EventManagementPage: React.FC = () => {
-  const [events, setEvents] = useState<EventRecord[]>([
-    { id: 1, title: 'AWS Cloud Masterclass', host: 'Amazon', date: 'May 10, 2025', type: 'Webinar', registrations: 320, status: 'Published' },
-    { id: 2, title: 'React Hackathon 2025', host: 'Meta', date: 'May 20, 2025', type: 'Hackathon', registrations: 540, status: 'Published' },
-    { id: 3, title: 'AI Workshop', host: 'Google', date: 'Jun 1, 2025', type: 'Workshop', registrations: 210, status: 'Draft' },
-    { id: 4, title: 'Campus Drive — Infosys', host: 'Infosys', date: 'Jun 15, 2025', type: 'Drive', registrations: 890, status: 'Published' },
-  ]);
+  const [events, setEvents] = useState<EventRecord[]>([]);
   const [editingItem, setEditingItem] = useState<EventRecord | null>(null);
   const [aiVerifying, setAiVerifying] = useState<number | null>(null);
   const [deletingId, setDeletingId] = useState<number | null>(null);
@@ -1653,20 +1629,150 @@ const AddStaffModal: React.FC<{ onAdd: (s: StaffRecord) => void; onClose: () => 
   );
 };
 
+// ── Staff Profile Modal ───────────────────────────────────────────────────────
+const PERMISSION_LIST = [
+  { id: 'view_users', label: 'View Users', group: 'Users' },
+  { id: 'edit_users', label: 'Edit Users', group: 'Users' },
+  { id: 'block_users', label: 'Block/Unblock Users', group: 'Users' },
+  { id: 'view_content', label: 'View Content', group: 'Content' },
+  { id: 'moderate_content', label: 'Moderate Content', group: 'Content' },
+  { id: 'delete_content', label: 'Delete Content', group: 'Content' },
+  { id: 'view_companies', label: 'View Companies', group: 'Companies' },
+  { id: 'verify_companies', label: 'Verify Companies', group: 'Companies' },
+  { id: 'manage_ads', label: 'Manage Ads', group: 'Ads' },
+  { id: 'view_analytics', label: 'View Analytics', group: 'Analytics' },
+  { id: 'manage_events', label: 'Manage Events', group: 'Events' },
+  { id: 'manage_internships', label: 'Manage Internships', group: 'Internships' },
+];
+
+const ROLE_DEFAULT_PERMISSIONS: Record<string, string[]> = {
+  super_admin: PERMISSION_LIST.map(p => p.id),
+  admin: ['view_users', 'edit_users', 'block_users', 'view_content', 'moderate_content', 'view_companies', 'verify_companies', 'view_analytics', 'manage_events', 'manage_internships'],
+  moderator: ['view_users', 'view_content', 'moderate_content', 'delete_content', 'view_analytics'],
+  staff: ['view_users', 'view_content', 'view_analytics'],
+};
+
+const StaffProfileModal: React.FC<{ staff: StaffRecord; onClose: () => void; onUpdate: (s: StaffRecord) => void }> = ({ staff: s, onClose, onUpdate }) => {
+  const [permissions, setPermissions] = useState<string[]>(ROLE_DEFAULT_PERMISSIONS[s.assignedRoleId || 'staff'] || []);
+  const [saved, setSaved] = useState(false);
+
+  const toggle = (id: string) => setPermissions(prev => prev.includes(id) ? prev.filter(p => p !== id) : [...prev, id]);
+
+  const handleSave = () => {
+    setSaved(true);
+    onUpdate({ ...s });
+    setTimeout(() => { setSaved(false); onClose(); }, 1200);
+  };
+
+  const groups = Array.from(new Set(PERMISSION_LIST.map(p => p.group)));
+  const roleColors: Record<string, string> = {
+    super_admin: 'bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400',
+    admin: 'bg-orange-100 dark:bg-orange-900/30 text-orange-600 dark:text-orange-400',
+    staff: 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400',
+    moderator: 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-400',
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+      <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-2xl w-full max-w-lg border border-gray-200 dark:border-gray-700 max-h-[90vh] overflow-y-auto">
+        <div className="flex items-center justify-between p-5 border-b border-gray-100 dark:border-gray-800 sticky top-0 bg-white dark:bg-gray-900 z-10">
+          <div className="flex items-center gap-3">
+            <div className="w-12 h-12 rounded-xl bg-emerald-600 flex items-center justify-center text-white font-bold text-lg">
+              {s.name.charAt(0)}
+            </div>
+            <div>
+              <h2 className="font-bold text-gray-900 dark:text-white">{s.name}</h2>
+              <p className="text-xs text-gray-500 dark:text-gray-400">{s.email}</p>
+            </div>
+          </div>
+          <button onClick={onClose} className="p-1.5 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800"><X className="w-4 h-4 text-gray-500" /></button>
+        </div>
+
+        <div className="p-5 space-y-5">
+          {saved && (
+            <div className="flex items-center gap-2 p-3 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-xl">
+              <CheckCircle className="w-4 h-4 text-green-600" />
+              <span className="text-sm text-green-700 dark:text-green-400 font-medium">Permissions saved successfully!</span>
+            </div>
+          )}
+
+          {/* Profile Details */}
+          <div className="grid grid-cols-2 gap-3">
+            {[
+              { label: 'Job Role', value: s.role },
+              { label: 'Joined', value: s.joined },
+              { label: 'Total Actions', value: s.actions.toString() },
+              { label: 'Status', value: s.status },
+            ].map(({ label, value }) => (
+              <div key={label} className="p-3 bg-gray-50 dark:bg-gray-800 rounded-xl">
+                <p className="text-xs text-gray-500 dark:text-gray-400 mb-0.5">{label}</p>
+                <p className="text-sm font-semibold text-gray-900 dark:text-white">{value}</p>
+              </div>
+            ))}
+          </div>
+
+          {/* Portal Role */}
+          <div className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-800 rounded-xl">
+            <div>
+              <p className="text-xs text-gray-500 dark:text-gray-400 mb-0.5">Portal Role</p>
+              <span className={`text-xs font-semibold px-2.5 py-1 rounded-full ${roleColors[s.assignedRoleId || ''] || 'bg-gray-100 dark:bg-gray-700 text-gray-500'}`}>
+                {s.assignedRoleId || 'Unassigned'}
+              </span>
+            </div>
+            <Shield className="w-5 h-5 text-gray-400" />
+          </div>
+
+          {/* Permission Control */}
+          <div>
+            <div className="flex items-center gap-2 mb-3">
+              <ShieldCheck className="w-4 h-4 text-purple-500" />
+              <p className="text-sm font-semibold text-gray-900 dark:text-white">Permission Control</p>
+              <span className="text-xs text-gray-400 dark:text-gray-500">({permissions.length}/{PERMISSION_LIST.length} enabled)</span>
+            </div>
+            <div className="space-y-3">
+              {groups.map(group => (
+                <div key={group}>
+                  <p className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wide mb-2">{group}</p>
+                  <div className="space-y-1.5">
+                    {PERMISSION_LIST.filter(p => p.group === group).map(perm => (
+                      <label key={perm.id} className="flex items-center justify-between p-2.5 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 cursor-pointer group transition-colors">
+                        <span className="text-sm text-gray-700 dark:text-gray-300 group-hover:text-gray-900 dark:group-hover:text-white">{perm.label}</span>
+                        <div
+                          onClick={() => toggle(perm.id)}
+                          className={`w-10 h-5 rounded-full transition-all cursor-pointer relative flex-shrink-0 ${permissions.includes(perm.id) ? 'bg-purple-500' : 'bg-gray-200 dark:bg-gray-700'}`}
+                        >
+                          <div className={`absolute top-0.5 w-4 h-4 rounded-full bg-white shadow transition-all ${permissions.includes(perm.id) ? 'left-5' : 'left-0.5'}`} />
+                        </div>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        <div className="flex gap-3 p-5 border-t border-gray-100 dark:border-gray-800 sticky bottom-0 bg-white dark:bg-gray-900">
+          <button onClick={onClose} className="flex-1 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300 text-sm font-medium hover:bg-gray-50 dark:hover:bg-gray-800 transition-all">Cancel</button>
+          <button onClick={handleSave} disabled={saved} className="flex-1 py-2.5 rounded-xl bg-purple-600 hover:bg-purple-700 disabled:opacity-50 text-white font-semibold text-sm transition-all flex items-center justify-center gap-2">
+            <ShieldCheck className="w-4 h-4" /> Save Permissions
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 // ── Staff Management ──────────────────────────────────────────────────────────
 export const StaffManagementPage: React.FC = () => {
   const [showAdd, setShowAdd] = useState(false);
   const [assigningRole, setAssigningRole] = useState<StaffRecord | null>(null);
+  const [viewingProfile, setViewingProfile] = useState<StaffRecord | null>(null);
   const [deletingId, setDeletingId] = useState<number | null>(null);
   const [toast, setToast] = useState('');
   const showToast = (msg: string) => { setToast(msg); setTimeout(() => setToast(''), 3000); };
 
-  const [staff, setStaff] = useState<StaffRecord[]>([
-    { id: 1, name: 'Meera Nair', email: 'meera@stunivoz.com', role: 'Content Moderator', joined: 'Dec 2024', actions: 342, status: 'Active', assignedRoleId: 'moderator' },
-    { id: 2, name: 'Ravi Kumar', email: 'ravi@stunivoz.com', role: 'User Support', joined: 'Jan 2025', actions: 189, status: 'Active', assignedRoleId: 'staff' },
-    { id: 3, name: 'Sita Verma', email: 'sita@stunivoz.com', role: 'Content Reviewer', joined: 'Feb 2025', actions: 98, status: 'Active', assignedRoleId: 'moderator' },
-    { id: 4, name: 'Arun Bose', email: 'arun@stunivoz.com', role: 'Data Analyst', joined: 'Mar 2025', actions: 56, status: 'Inactive', assignedRoleId: 'staff' },
-  ]);
+  const [staff, setStaff] = useState<StaffRecord[]>([]);
 
   const handleAssignRole = (roleId: string) => {
     if (!assigningRole) return;
@@ -1697,6 +1803,13 @@ export const StaffManagementPage: React.FC = () => {
   return (
     <div className="space-y-6 animate-fade-in">
       {showAdd && <AddStaffModal onAdd={s => { setStaff(prev => [s, ...prev]); showToast(`${s.name} added to staff`); }} onClose={() => setShowAdd(false)} />}
+      {viewingProfile && (
+        <StaffProfileModal
+          staff={viewingProfile}
+          onClose={() => setViewingProfile(null)}
+          onUpdate={updated => { setStaff(prev => prev.map(s => s.id === updated.id ? updated : s)); showToast('Permissions updated'); }}
+        />
+      )}
       {assigningRole && (
         <AssignRoleModal
           userName={assigningRole.name}
@@ -1802,7 +1915,10 @@ export const StaffManagementPage: React.FC = () => {
                   <td className="px-5 py-4"><StatusBadge status={s.status} /></td>
                   <td className="px-5 py-4 text-right">
                     <div className="flex items-center justify-end gap-1">
-                      <button title="Assign Role" onClick={() => setAssigningRole(s)} className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-400 hover:text-purple-600 transition-colors">
+                      <button title="View Profile & Permissions" onClick={() => setViewingProfile(s)} className="p-1.5 rounded-lg hover:bg-purple-50 dark:hover:bg-purple-900/20 text-gray-400 hover:text-purple-600 transition-colors">
+                        <UserIcon className="w-4 h-4" />
+                      </button>
+                      <button title="Assign Role" onClick={() => setAssigningRole(s)} className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-400 hover:text-blue-600 transition-colors">
                         <Shield className="w-4 h-4" />
                       </button>
                       <button title={s.status === 'Active' ? 'Deactivate' : 'Activate'} onClick={() => toggleStatus(s.id)} className={`p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors ${s.status === 'Active' ? 'text-green-500 hover:text-yellow-600' : 'text-gray-400 hover:text-green-600'}`}>
@@ -1946,12 +2062,7 @@ const CreateAdModal: React.FC<{ onAdd: (a: AdRecord) => void; onClose: () => voi
 
 // ── Ads Management ────────────────────────────────────────────────────────────
 export const AdsSystemPage: React.FC = () => {
-  const [ads, setAds] = useState<AdRecord[]>([
-    { id: 1, title: 'Google Cloud Certification', advertiser: 'Google', placement: 'Dashboard Banner', views: 12400, clicks: 840, ctr: '6.8%', status: 'Active', budget: '₹25,000' },
-    { id: 2, title: 'AWS Internship Program', advertiser: 'Amazon', placement: 'Internships Sidebar', views: 8900, clicks: 420, ctr: '4.7%', status: 'Active', budget: '₹18,000' },
-    { id: 3, title: 'LinkedIn Premium Offer', advertiser: 'LinkedIn', placement: 'Profile Page', views: 5600, clicks: 190, ctr: '3.4%', status: 'Inactive', budget: '₹10,000' },
-    { id: 4, title: 'Coursera Plus Sale', advertiser: 'Coursera', placement: 'Courses Page', views: 7200, clicks: 380, ctr: '5.3%', status: 'Active', budget: '₹15,000' },
-  ]);
+  const [ads, setAds] = useState<AdRecord[]>([]);
   const [showCreate, setShowCreate] = useState(false);
   const [toast, setToast] = useState('');
   const showToast = (msg: string) => { setToast(msg); setTimeout(() => setToast(''), 3000); };
@@ -1960,6 +2071,17 @@ export const AdsSystemPage: React.FC = () => {
     setAds(prev => prev.map(a => a.id === id ? { ...a, status: a.status === 'Active' ? 'Inactive' : 'Active' } : a));
     showToast('Ad status updated');
   };
+
+  const deleteAd = (id: number) => {
+    const title = ads.find(a => a.id === id)?.title;
+    setAds(prev => prev.filter(a => a.id !== id));
+    showToast(`Ad "${title}" removed`);
+  };
+
+  const totalViews = ads.reduce((sum, a) => sum + a.views, 0);
+  const totalClicks = ads.reduce((sum, a) => sum + a.clicks, 0);
+  const activeAds = ads.filter(a => a.status === 'Active').length;
+  const avgCtr = ads.length > 0 ? ((totalClicks / Math.max(totalViews, 1)) * 100).toFixed(1) + '%' : '0.0%';
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -1971,10 +2093,10 @@ export const AdsSystemPage: React.FC = () => {
       />
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {[
-          { label: 'Total Impressions', value: '34.1k', icon: Eye, color: 'text-blue-500', bg: 'bg-blue-50 dark:bg-blue-900/20' },
-          { label: 'Total Clicks', value: '1,830', icon: Zap, color: 'text-purple-500', bg: 'bg-purple-50 dark:bg-purple-900/20' },
-          { label: 'Avg CTR', value: '5.1%', icon: TrendingUp, color: 'text-green-500', bg: 'bg-green-50 dark:bg-green-900/20' },
-          { label: 'Active Ads', value: '3', icon: Megaphone, color: 'text-orange-500', bg: 'bg-orange-50 dark:bg-orange-900/20' },
+          { label: 'Total Impressions', value: totalViews >= 1000 ? `${(totalViews / 1000).toFixed(1)}k` : totalViews.toString(), icon: Eye, color: 'text-blue-500', bg: 'bg-blue-50 dark:bg-blue-900/20' },
+          { label: 'Total Clicks', value: totalClicks.toLocaleString(), icon: Zap, color: 'text-purple-500', bg: 'bg-purple-50 dark:bg-purple-900/20' },
+          { label: 'Avg CTR', value: avgCtr, icon: TrendingUp, color: 'text-green-500', bg: 'bg-green-50 dark:bg-green-900/20' },
+          { label: 'Active Ads', value: activeAds.toString(), icon: Megaphone, color: 'text-orange-500', bg: 'bg-orange-50 dark:bg-orange-900/20' },
         ].map((s, i) => (
           <Card key={i} className="!p-4">
             <div className="flex items-center gap-3">
@@ -2001,7 +2123,7 @@ export const AdsSystemPage: React.FC = () => {
                 <th className="px-5 py-3 font-medium">CTR</th>
                 <th className="px-5 py-3 font-medium">Budget</th>
                 <th className="px-5 py-3 font-medium">Status</th>
-                <th className="px-5 py-3 font-medium text-right">Toggle</th>
+                <th className="px-5 py-3 font-medium text-right">Controls</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
@@ -2018,12 +2140,20 @@ export const AdsSystemPage: React.FC = () => {
                   <td className="px-5 py-4 text-sm text-gray-600 dark:text-gray-400">{ad.budget}</td>
                   <td className="px-5 py-4"><StatusBadge status={ad.status} /></td>
                   <td className="px-5 py-4 text-right">
-                    <button onClick={() => toggle(ad.id)} className={`${ad.status === 'Active' ? 'text-green-500' : 'text-gray-400'} hover:opacity-80 transition-all`}>
-                      {ad.status === 'Active' ? <ToggleRight className="w-7 h-7" /> : <ToggleLeft className="w-7 h-7" />}
-                    </button>
+                    <div className="flex items-center justify-end gap-1">
+                      <button onClick={() => toggle(ad.id)} title={ad.status === 'Active' ? 'Deactivate' : 'Activate'} className={`${ad.status === 'Active' ? 'text-green-500' : 'text-gray-400'} hover:opacity-70 transition-all`}>
+                        {ad.status === 'Active' ? <ToggleRight className="w-7 h-7" /> : <ToggleLeft className="w-7 h-7" />}
+                      </button>
+                      <button onClick={() => deleteAd(ad.id)} title="Delete Ad" className="p-1.5 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 text-gray-400 hover:text-red-600 transition-colors">
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))}
+              {ads.length === 0 && (
+                <tr><td colSpan={8} className="px-5 py-10 text-center text-gray-400 text-sm">No ads created yet. Click "Create Ad" to publish your first advertisement.</td></tr>
+              )}
             </tbody>
           </table>
         </div>
