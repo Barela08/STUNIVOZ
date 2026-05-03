@@ -7,8 +7,9 @@ import {
   Plug, Download, ToggleLeft, ToggleRight, Ban,
   Eye, Lock, Unlock, RefreshCw, Send,
   Zap, Activity, Key, Clock, Star,
-  TrendingUp, ArrowUpRight
+  TrendingUp, ArrowUpRight, X, Save, Mail, Phone, MapPin, UserCog, AlertTriangle
 } from 'lucide-react';
+import { AssignRoleModal } from './RolesPage';
 import {
   AreaChart as ReAreaChart, Area, BarChart, Bar,
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer
@@ -43,26 +44,237 @@ const TableHeader: React.FC<{ title: string; subtitle?: string; actions?: React.
   </div>
 );
 
+// ── User Edit Modal ──────────────────────────────────────────────────────────
+interface UserRecord {
+  id: number; name: string; email: string; role: string;
+  college: string; joined: string; status: string; ats: number | null; logins: number;
+  phone?: string; location?: string; assignedRoleId?: string;
+}
+
+const UserEditModal: React.FC<{ user: UserRecord; onSave: (u: UserRecord) => void; onClose: () => void }> = ({ user, onSave, onClose }) => {
+  const [form, setForm] = useState({ ...user });
+  const [showAssignRole, setShowAssignRole] = useState(false);
+  const [saved, setSaved] = useState(false);
+
+  const handleSave = () => {
+    onSave(form);
+    setSaved(true);
+    setTimeout(() => { setSaved(false); onClose(); }, 1200);
+  };
+
+  return (
+    <>
+      {showAssignRole && (
+        <AssignRoleModal
+          userName={form.name}
+          currentRoleId={form.assignedRoleId || 'staff'}
+          onAssign={id => { setForm(f => ({ ...f, assignedRoleId: id })); setShowAssignRole(false); }}
+          onCancel={() => setShowAssignRole(false)}
+        />
+      )}
+      <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-40 flex items-center justify-center p-4">
+        <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-2xl w-full max-w-lg border border-gray-200 dark:border-gray-700">
+          <div className="flex items-center justify-between p-6 border-b border-gray-100 dark:border-gray-800">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-full bg-gradient-to-br from-red-400 to-red-600 flex items-center justify-center text-white font-bold">
+                {user.name.charAt(0)}
+              </div>
+              <div>
+                <h2 className="text-lg font-bold text-gray-900 dark:text-white">Edit User</h2>
+                <p className="text-xs text-gray-500 dark:text-gray-400">{user.email}</p>
+              </div>
+            </div>
+            <button onClick={onClose} className="p-2 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800">
+              <X className="w-5 h-5 text-gray-500" />
+            </button>
+          </div>
+          <div className="p-6 space-y-4">
+            {saved && (
+              <div className="flex items-center gap-2 p-3 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-xl">
+                <CheckCircle className="w-4 h-4 text-green-600" />
+                <span className="text-sm text-green-700 dark:text-green-400 font-medium">Changes saved successfully!</span>
+              </div>
+            )}
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">Full Name</label>
+                <input value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
+                  className="w-full px-3 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-sm focus:outline-none focus:border-red-500 transition-all" />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">Email</label>
+                <input value={form.email} onChange={e => setForm(f => ({ ...f, email: e.target.value }))}
+                  className="w-full px-3 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-sm focus:outline-none focus:border-red-500 transition-all" />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">College / Org</label>
+                <input value={form.college} onChange={e => setForm(f => ({ ...f, college: e.target.value }))}
+                  className="w-full px-3 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-sm focus:outline-none focus:border-red-500 transition-all" />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">Role</label>
+                <select value={form.role} onChange={e => setForm(f => ({ ...f, role: e.target.value }))}
+                  className="w-full px-3 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-sm focus:outline-none focus:border-red-500 transition-all">
+                  <option value="Student">Student</option>
+                  <option value="staff">Staff</option>
+                  <option value="company">Company</option>
+                  <option value="admin">Admin</option>
+                </select>
+              </div>
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">Account Status</label>
+              <div className="flex gap-2">
+                {['Active', 'Blocked', 'Verified', 'Inactive'].map(s => (
+                  <button key={s} onClick={() => setForm(f => ({ ...f, status: s }))}
+                    className={`flex-1 py-2 rounded-xl text-xs font-semibold border transition-all ${form.status === s ? 'bg-red-600 border-red-600 text-white' : 'border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300 hover:border-red-300'}`}>
+                    {s}
+                  </button>
+                ))}
+              </div>
+            </div>
+            {(form.role === 'staff' || form.role === 'admin') && (
+              <div className="p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-xl">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-semibold text-blue-800 dark:text-blue-300">Portal Role Assignment</p>
+                    <p className="text-xs text-blue-600 dark:text-blue-400 mt-0.5">
+                      {form.assignedRoleId ? `Assigned: ${form.assignedRoleId}` : 'No portal role assigned yet'}
+                    </p>
+                  </div>
+                  <button onClick={() => setShowAssignRole(true)}
+                    className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold transition-all">
+                    <UserCog className="w-3.5 h-3.5" /> Assign Role
+                  </button>
+                </div>
+              </div>
+            )}
+            <div className="grid grid-cols-3 gap-3 pt-1 border-t border-gray-100 dark:border-gray-800">
+              {[
+                { icon: Mail, label: 'Email', val: form.email },
+                { icon: Clock, label: 'Joined', val: form.joined },
+                { icon: Eye, label: 'Logins', val: String(form.logins) },
+              ].map((item, i) => (
+                <div key={i} className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
+                  <item.icon className="w-3.5 h-3.5 flex-shrink-0" />
+                  <span className="truncate">{item.val}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+          <div className="flex gap-3 p-6 border-t border-gray-100 dark:border-gray-800">
+            <button onClick={onClose} className="flex-1 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300 font-medium text-sm hover:bg-gray-50 dark:hover:bg-gray-800 transition-all">
+              Cancel
+            </button>
+            <button onClick={handleSave} className="flex-1 py-2.5 rounded-xl bg-red-600 hover:bg-red-700 text-white font-semibold text-sm transition-all flex items-center justify-center gap-2 shadow-lg shadow-red-500/20">
+              <Save className="w-4 h-4" /> Save Changes
+            </button>
+          </div>
+        </div>
+      </div>
+    </>
+  );
+};
+
+// ── Invite User Modal ─────────────────────────────────────────────────────────
+const InviteUserModal: React.FC<{ onClose: () => void; onInvite: (u: { name: string; email: string; role: string }) => void }> = ({ onClose, onInvite }) => {
+  const [form, setForm] = useState({ name: '', email: '', role: 'Student' });
+  const [sent, setSent] = useState(false);
+
+  const handleInvite = () => {
+    if (!form.name.trim() || !form.email.trim()) return;
+    onInvite(form);
+    setSent(true);
+    setTimeout(() => { setSent(false); onClose(); }, 1500);
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-40 flex items-center justify-center p-4">
+      <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-2xl w-full max-w-md border border-gray-200 dark:border-gray-700">
+        <div className="flex items-center justify-between p-6 border-b border-gray-100 dark:border-gray-800">
+          <h2 className="text-lg font-bold text-gray-900 dark:text-white">Invite New User</h2>
+          <button onClick={onClose} className="p-2 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800"><X className="w-5 h-5 text-gray-500" /></button>
+        </div>
+        <div className="p-6 space-y-4">
+          {sent && (
+            <div className="flex items-center gap-2 p-3 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-xl">
+              <CheckCircle className="w-4 h-4 text-green-600" />
+              <span className="text-sm text-green-700 dark:text-green-400 font-medium">Invitation sent successfully!</span>
+            </div>
+          )}
+          <div>
+            <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">Full Name</label>
+            <input value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} placeholder="e.g. Arjun Singh"
+              className="w-full px-3 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-sm focus:outline-none focus:border-red-500 transition-all" />
+          </div>
+          <div>
+            <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">Email Address</label>
+            <input value={form.email} onChange={e => setForm(f => ({ ...f, email: e.target.value }))} placeholder="user@example.com" type="email"
+              className="w-full px-3 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-sm focus:outline-none focus:border-red-500 transition-all" />
+          </div>
+          <div>
+            <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">Role</label>
+            <select value={form.role} onChange={e => setForm(f => ({ ...f, role: e.target.value }))}
+              className="w-full px-3 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-sm focus:outline-none focus:border-red-500 transition-all">
+              <option value="Student">Student</option>
+              <option value="staff">Staff</option>
+              <option value="company">Company</option>
+              <option value="admin">Admin</option>
+            </select>
+          </div>
+          <p className="text-xs text-gray-400 dark:text-gray-500">An invitation email will be sent with a link to set their password.</p>
+        </div>
+        <div className="flex gap-3 p-6 border-t border-gray-100 dark:border-gray-800">
+          <button onClick={onClose} className="flex-1 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300 font-medium text-sm hover:bg-gray-50 dark:hover:bg-gray-800 transition-all">Cancel</button>
+          <button onClick={handleInvite} disabled={!form.name.trim() || !form.email.trim()}
+            className="flex-1 py-2.5 rounded-xl bg-red-600 hover:bg-red-700 disabled:opacity-50 text-white font-semibold text-sm transition-all flex items-center justify-center gap-2 shadow-lg shadow-red-500/20">
+            <Send className="w-4 h-4" /> Send Invite
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 // ── User Management ─────────────────────────────────────────────────────────
 export const UserManagementPage: React.FC = () => {
   const [search, setSearch] = useState('');
   const [filterRole, setFilterRole] = useState('all');
   const [filterStatus, setFilterStatus] = useState('all');
+  const [editingUser, setEditingUser] = useState<UserRecord | null>(null);
+  const [showInvite, setShowInvite] = useState(false);
+  const [toast, setToast] = useState('');
 
-  const allUsers = [
+  const showToast = (msg: string) => { setToast(msg); setTimeout(() => setToast(''), 3000); };
+
+  const [users, setUsers] = useState<UserRecord[]>([
     { id: 1, name: 'Ananya Sharma', email: 'ananya@iitd.ac.in', role: 'Student', college: 'IIT Delhi', joined: 'Jan 12, 2025', status: 'Active', ats: 94, logins: 48 },
     { id: 2, name: 'Rahul Mehta', email: 'rahul@nitt.edu', role: 'Student', college: 'NIT Trichy', joined: 'Feb 3, 2025', status: 'Active', ats: 87, logins: 32 },
     { id: 3, name: 'Priya Patel', email: 'priya@techcorp.com', role: 'company', college: 'TechCorp HR', joined: 'Nov 20, 2024', status: 'Verified', ats: null, logins: 112 },
     { id: 4, name: 'Suresh Kumar', email: 'suresh@vit.ac.in', role: 'Student', college: 'VIT Vellore', joined: 'Mar 1, 2025', status: 'Blocked', ats: 55, logins: 3 },
-    { id: 5, name: 'Meera Nair', email: 'meera@stunivoz.com', role: 'staff', college: 'STUNIVOZ HQ', joined: 'Dec 5, 2024', status: 'Active', ats: null, logins: 280 },
+    { id: 5, name: 'Meera Nair', email: 'meera@stunivoz.com', role: 'staff', college: 'STUNIVOZ HQ', joined: 'Dec 5, 2024', status: 'Active', ats: null, logins: 280, assignedRoleId: 'staff' },
     { id: 6, name: 'Arjun Singh', email: 'arjun@bits.ac.in', role: 'Student', college: 'BITS Pilani', joined: 'Apr 15, 2025', status: 'Active', ats: 81, logins: 19 },
     { id: 7, name: 'Kavya Menon', email: 'kavya@iiit.ac.in', role: 'Student', college: 'IIIT Hyderabad', joined: 'Apr 20, 2025', status: 'Active', ats: 91, logins: 27 },
-  ];
-
-  const [users, setUsers] = useState(allUsers);
+  ]);
 
   const toggleBlock = (id: number) => {
     setUsers(prev => prev.map(u => u.id === id ? { ...u, status: u.status === 'Blocked' ? 'Active' : 'Blocked' } : u));
+    showToast('User status updated');
+  };
+
+  const handleSaveUser = (updated: UserRecord) => {
+    setUsers(prev => prev.map(u => u.id === updated.id ? updated : u));
+    setEditingUser(null);
+    showToast('User updated successfully');
+  };
+
+  const handleInvite = (data: { name: string; email: string; role: string }) => {
+    const newUser: UserRecord = { id: Date.now(), name: data.name, email: data.email, role: data.role, college: '—', joined: 'Just now', status: 'Pending', ats: null, logins: 0 };
+    setUsers(prev => [newUser, ...prev]);
+    setShowInvite(false);
+    showToast(`Invite sent to ${data.email}`);
   };
 
   const filtered = users.filter(u => {
@@ -74,14 +286,23 @@ export const UserManagementPage: React.FC = () => {
 
   return (
     <div className="space-y-6 animate-fade-in">
+      {editingUser && <UserEditModal user={editingUser} onSave={handleSaveUser} onClose={() => setEditingUser(null)} />}
+      {showInvite && <InviteUserModal onClose={() => setShowInvite(false)} onInvite={handleInvite} />}
+
+      {toast && (
+        <div className="fixed bottom-6 right-6 z-50 flex items-center gap-2 px-4 py-3 bg-gray-900 dark:bg-gray-100 text-white dark:text-gray-900 text-sm font-medium rounded-xl shadow-xl animate-slide-up">
+          <CheckCircle className="w-4 h-4 text-green-400 dark:text-green-600" /> {toast}
+        </div>
+      )}
+
       <TableHeader
         title="User Management"
         subtitle="View, edit, block, and manage all platform users."
         actions={<>
-          <button className="flex items-center gap-2 px-3 py-2 text-sm text-gray-600 dark:text-gray-300 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl hover:bg-gray-50 transition-all">
+          <button onClick={() => {}} className="flex items-center gap-2 px-3 py-2 text-sm text-gray-600 dark:text-gray-300 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700 transition-all">
             <Download className="w-4 h-4" /> Export
           </button>
-          <button className="flex items-center gap-2 px-3 py-2 text-sm text-white bg-red-600 rounded-xl hover:bg-red-700 transition-all shadow-sm">
+          <button onClick={() => setShowInvite(true)} className="flex items-center gap-2 px-3 py-2 text-sm text-white bg-red-600 rounded-xl hover:bg-red-700 transition-all shadow-sm font-semibold">
             <Plus className="w-4 h-4" /> Invite User
           </button>
         </>}
@@ -89,10 +310,10 @@ export const UserManagementPage: React.FC = () => {
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {[
-          { label: 'Total Users', value: '12,450', icon: Users, color: 'text-blue-500', bg: 'bg-blue-50 dark:bg-blue-900/20' },
-          { label: 'Students', value: '11,890', icon: BookOpen, color: 'text-purple-500', bg: 'bg-purple-50 dark:bg-purple-900/20' },
-          { label: 'Active Today', value: '3,210', icon: CheckCircle, color: 'text-green-500', bg: 'bg-green-50 dark:bg-green-900/20' },
-          { label: 'Blocked', value: '42', icon: Ban, color: 'text-red-500', bg: 'bg-red-50 dark:bg-red-900/20' },
+          { label: 'Total Users', value: users.length.toLocaleString(), icon: Users, color: 'text-blue-500', bg: 'bg-blue-50 dark:bg-blue-900/20' },
+          { label: 'Students', value: users.filter(u => u.role === 'Student').length.toLocaleString(), icon: BookOpen, color: 'text-purple-500', bg: 'bg-purple-50 dark:bg-purple-900/20' },
+          { label: 'Active', value: users.filter(u => u.status === 'Active').length.toLocaleString(), icon: CheckCircle, color: 'text-green-500', bg: 'bg-green-50 dark:bg-green-900/20' },
+          { label: 'Blocked', value: users.filter(u => u.status === 'Blocked').length.toLocaleString(), icon: Ban, color: 'text-red-500', bg: 'bg-red-50 dark:bg-red-900/20' },
         ].map((s, i) => (
           <Card key={i} className="!p-4">
             <div className="flex items-center gap-3">
@@ -156,15 +377,20 @@ export const UserManagementPage: React.FC = () => {
                       </div>
                     </div>
                   </td>
-                  <td className="px-5 py-4"><span className="text-xs font-medium text-gray-700 dark:text-gray-300 capitalize">{u.role}</span></td>
+                  <td className="px-5 py-4">
+                    <span className="text-xs font-medium text-gray-700 dark:text-gray-300 capitalize">{u.role}</span>
+                    {u.assignedRoleId && (
+                      <span className="ml-1.5 text-xs bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 px-1.5 py-0.5 rounded-full">{u.assignedRoleId}</span>
+                    )}
+                  </td>
                   <td className="px-5 py-4 text-sm text-gray-600 dark:text-gray-400">{u.college}</td>
                   <td className="px-5 py-4 text-sm font-medium text-gray-900 dark:text-white">{u.logins}</td>
                   <td className="px-5 py-4 text-xs text-gray-500 dark:text-gray-400">{u.joined}</td>
                   <td className="px-5 py-4"><StatusBadge status={u.status} /></td>
                   <td className="px-5 py-4 text-right">
                     <div className="flex items-center justify-end gap-1">
-                      <button title="View" className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-400 hover:text-blue-600 transition-colors"><Eye className="w-4 h-4" /></button>
-                      <button title="Edit" className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-400 hover:text-green-600 transition-colors"><Edit className="w-4 h-4" /></button>
+                      <button title="View/Edit" onClick={() => setEditingUser(u)} className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-400 hover:text-blue-600 transition-colors"><Eye className="w-4 h-4" /></button>
+                      <button title="Edit" onClick={() => setEditingUser(u)} className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-400 hover:text-green-600 transition-colors"><Edit className="w-4 h-4" /></button>
                       <button title={u.status === 'Blocked' ? 'Unblock' : 'Block'} onClick={() => toggleBlock(u.id)} className={`p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors ${u.status === 'Blocked' ? 'text-red-500' : 'text-gray-400 hover:text-red-600'}`}>
                         {u.status === 'Blocked' ? <Unlock className="w-4 h-4" /> : <Lock className="w-4 h-4" />}
                       </button>
@@ -172,13 +398,16 @@ export const UserManagementPage: React.FC = () => {
                   </td>
                 </tr>
               ))}
+              {filtered.length === 0 && (
+                <tr><td colSpan={7} className="px-5 py-10 text-center text-gray-400 text-sm">No users match your search or filters.</td></tr>
+              )}
             </tbody>
           </table>
         </div>
         <div className="p-4 border-t border-gray-100 dark:border-gray-800 flex items-center justify-between text-xs text-gray-500 dark:text-gray-400">
           <span>Showing {filtered.length} of {users.length} users</span>
           <div className="flex gap-1">
-            {[1,2,3,'...'].map((p,i) => (
+            {[1, 2, 3].map((p, i) => (
               <button key={i} className={`w-7 h-7 rounded-lg text-xs font-medium transition-all ${p === 1 ? 'bg-red-600 text-white' : 'hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-600 dark:text-gray-400'}`}>{p}</button>
             ))}
           </div>
@@ -613,31 +842,219 @@ export const AIControlPage: React.FC = () => {
   );
 };
 
+// ── Add Staff Modal ───────────────────────────────────────────────────────────
+interface StaffRecord {
+  id: number; name: string; email: string; role: string;
+  joined: string; actions: number; status: string; assignedRoleId?: string;
+}
+
+const AddStaffModal: React.FC<{ onAdd: (s: StaffRecord) => void; onClose: () => void }> = ({ onAdd, onClose }) => {
+  const [form, setForm] = useState({ name: '', email: '', role: 'Content Moderator', assignedRoleId: 'staff' });
+  const [showRoleAssign, setShowRoleAssign] = useState(false);
+  const [sent, setSent] = useState(false);
+
+  const handleAdd = () => {
+    if (!form.name.trim() || !form.email.trim()) return;
+    setSent(true);
+    setTimeout(() => {
+      onAdd({ id: Date.now(), name: form.name, email: form.email, role: form.role, joined: 'Just now', actions: 0, status: 'Active', assignedRoleId: form.assignedRoleId });
+      onClose();
+    }, 1000);
+  };
+
+  return (
+    <>
+      {showRoleAssign && (
+        <AssignRoleModal
+          userName={form.name || 'New Staff'}
+          currentRoleId={form.assignedRoleId}
+          onAssign={id => { setForm(f => ({ ...f, assignedRoleId: id })); setShowRoleAssign(false); }}
+          onCancel={() => setShowRoleAssign(false)}
+        />
+      )}
+      <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-40 flex items-center justify-center p-4">
+        <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-2xl w-full max-w-md border border-gray-200 dark:border-gray-700">
+          <div className="flex items-center justify-between p-6 border-b border-gray-100 dark:border-gray-800">
+            <h2 className="text-lg font-bold text-gray-900 dark:text-white">Add Staff Member</h2>
+            <button onClick={onClose} className="p-2 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800"><X className="w-5 h-5 text-gray-500" /></button>
+          </div>
+          <div className="p-6 space-y-4">
+            {sent && (
+              <div className="flex items-center gap-2 p-3 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-xl">
+                <CheckCircle className="w-4 h-4 text-green-600" />
+                <span className="text-sm text-green-700 dark:text-green-400 font-medium">Staff member added!</span>
+              </div>
+            )}
+            <div>
+              <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">Full Name</label>
+              <input value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} placeholder="e.g. Ravi Kumar"
+                className="w-full px-3 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-sm focus:outline-none focus:border-red-500 transition-all" />
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">Email</label>
+              <input value={form.email} onChange={e => setForm(f => ({ ...f, email: e.target.value }))} placeholder="staff@stunivoz.com" type="email"
+                className="w-full px-3 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-sm focus:outline-none focus:border-red-500 transition-all" />
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">Job Role / Title</label>
+              <select value={form.role} onChange={e => setForm(f => ({ ...f, role: e.target.value }))}
+                className="w-full px-3 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-sm focus:outline-none focus:border-red-500 transition-all">
+                <option>Content Moderator</option>
+                <option>User Support</option>
+                <option>Content Reviewer</option>
+                <option>Data Analyst</option>
+                <option>Community Manager</option>
+                <option>Technical Support</option>
+              </select>
+            </div>
+            <div className="p-4 bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 rounded-xl">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-semibold text-emerald-800 dark:text-emerald-300">Portal Permissions</p>
+                  <p className="text-xs text-emerald-600 dark:text-emerald-400 mt-0.5">Assigned role: <span className="font-bold">{form.assignedRoleId}</span></p>
+                </div>
+                <button onClick={() => setShowRoleAssign(true)}
+                  className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold transition-all">
+                  <UserCog className="w-3.5 h-3.5" /> Change
+                </button>
+              </div>
+            </div>
+          </div>
+          <div className="flex gap-3 p-6 border-t border-gray-100 dark:border-gray-800">
+            <button onClick={onClose} className="flex-1 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300 font-medium text-sm hover:bg-gray-50 dark:hover:bg-gray-800 transition-all">Cancel</button>
+            <button onClick={handleAdd} disabled={!form.name.trim() || !form.email.trim() || sent}
+              className="flex-1 py-2.5 rounded-xl bg-red-600 hover:bg-red-700 disabled:opacity-50 text-white font-semibold text-sm transition-all flex items-center justify-center gap-2 shadow-lg shadow-red-500/20">
+              <Plus className="w-4 h-4" /> Add Staff
+            </button>
+          </div>
+        </div>
+      </div>
+    </>
+  );
+};
+
 // ── Staff Management ──────────────────────────────────────────────────────────
 export const StaffManagementPage: React.FC = () => {
-  const staff = [
-    { id: 1, name: 'Meera Nair', email: 'meera@stunivoz.com', role: 'Content Moderator', joined: 'Dec 2024', actions: 342, status: 'Active' },
-    { id: 2, name: 'Ravi Kumar', email: 'ravi@stunivoz.com', role: 'User Support', joined: 'Jan 2025', actions: 189, status: 'Active' },
-    { id: 3, name: 'Sita Verma', email: 'sita@stunivoz.com', role: 'Content Reviewer', joined: 'Feb 2025', actions: 98, status: 'Active' },
-    { id: 4, name: 'Arun Bose', email: 'arun@stunivoz.com', role: 'Data Analyst', joined: 'Mar 2025', actions: 56, status: 'Inactive' },
-  ];
+  const [showAdd, setShowAdd] = useState(false);
+  const [assigningRole, setAssigningRole] = useState<StaffRecord | null>(null);
+  const [deletingId, setDeletingId] = useState<number | null>(null);
+  const [toast, setToast] = useState('');
+  const showToast = (msg: string) => { setToast(msg); setTimeout(() => setToast(''), 3000); };
+
+  const [staff, setStaff] = useState<StaffRecord[]>([
+    { id: 1, name: 'Meera Nair', email: 'meera@stunivoz.com', role: 'Content Moderator', joined: 'Dec 2024', actions: 342, status: 'Active', assignedRoleId: 'moderator' },
+    { id: 2, name: 'Ravi Kumar', email: 'ravi@stunivoz.com', role: 'User Support', joined: 'Jan 2025', actions: 189, status: 'Active', assignedRoleId: 'staff' },
+    { id: 3, name: 'Sita Verma', email: 'sita@stunivoz.com', role: 'Content Reviewer', joined: 'Feb 2025', actions: 98, status: 'Active', assignedRoleId: 'moderator' },
+    { id: 4, name: 'Arun Bose', email: 'arun@stunivoz.com', role: 'Data Analyst', joined: 'Mar 2025', actions: 56, status: 'Inactive', assignedRoleId: 'staff' },
+  ]);
+
+  const handleAssignRole = (roleId: string) => {
+    if (!assigningRole) return;
+    setStaff(prev => prev.map(s => s.id === assigningRole.id ? { ...s, assignedRoleId: roleId } : s));
+    setAssigningRole(null);
+    showToast(`Role "${roleId}" assigned to ${assigningRole.name}`);
+  };
+
+  const handleDelete = (id: number) => {
+    const name = staff.find(s => s.id === id)?.name;
+    setStaff(prev => prev.filter(s => s.id !== id));
+    setDeletingId(null);
+    showToast(`${name} removed from staff`);
+  };
+
+  const toggleStatus = (id: number) => {
+    setStaff(prev => prev.map(s => s.id === id ? { ...s, status: s.status === 'Active' ? 'Inactive' : 'Active' } : s));
+    showToast('Status updated');
+  };
+
+  const roleColors: Record<string, string> = {
+    super_admin: 'bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400',
+    admin: 'bg-orange-100 dark:bg-orange-900/30 text-orange-600 dark:text-orange-400',
+    staff: 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400',
+    moderator: 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-400',
+  };
 
   return (
     <div className="space-y-6 animate-fade-in">
-      <TableHeader title="Staff Management" subtitle="Create, manage, and monitor staff accounts."
-        actions={<button className="flex items-center gap-2 px-3 py-2 text-sm text-white bg-red-600 rounded-xl hover:bg-red-700 transition-all"><Plus className="w-4 h-4" /> Add Staff</button>}
+      {showAdd && <AddStaffModal onAdd={s => { setStaff(prev => [s, ...prev]); showToast(`${s.name} added to staff`); }} onClose={() => setShowAdd(false)} />}
+      {assigningRole && (
+        <AssignRoleModal
+          userName={assigningRole.name}
+          currentRoleId={assigningRole.assignedRoleId || 'staff'}
+          onAssign={handleAssignRole}
+          onCancel={() => setAssigningRole(null)}
+        />
+      )}
+      {deletingId && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-40 flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-2xl w-full max-w-sm p-6 border border-gray-200 dark:border-gray-700">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-12 h-12 rounded-xl bg-red-50 dark:bg-red-900/20 flex items-center justify-center flex-shrink-0">
+                <AlertTriangle className="w-6 h-6 text-red-500" />
+              </div>
+              <div>
+                <h3 className="font-bold text-gray-900 dark:text-white">Remove Staff Member?</h3>
+                <p className="text-sm text-gray-500 dark:text-gray-400">They will lose portal access immediately.</p>
+              </div>
+            </div>
+            <div className="flex gap-3 mt-4">
+              <button onClick={() => setDeletingId(null)} className="flex-1 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300 font-medium text-sm hover:bg-gray-50 dark:hover:bg-gray-800 transition-all">Cancel</button>
+              <button onClick={() => handleDelete(deletingId)} className="flex-1 py-2.5 rounded-xl bg-red-600 hover:bg-red-700 text-white font-semibold text-sm transition-all">Remove</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {toast && (
+        <div className="fixed bottom-6 right-6 z-50 flex items-center gap-2 px-4 py-3 bg-gray-900 dark:bg-gray-100 text-white dark:text-gray-900 text-sm font-medium rounded-xl shadow-xl animate-slide-up">
+          <CheckCircle className="w-4 h-4 text-green-400 dark:text-green-600" /> {toast}
+        </div>
+      )}
+
+      <TableHeader title="Staff Management" subtitle="Create, manage, and assign roles to staff accounts."
+        actions={<>
+          <a href="/admin/roles" className="flex items-center gap-2 px-3 py-2 text-sm text-gray-600 dark:text-gray-300 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700 transition-all">
+            <Shield className="w-4 h-4" /> Manage Roles
+          </a>
+          <button onClick={() => setShowAdd(true)} className="flex items-center gap-2 px-3 py-2 text-sm text-white bg-red-600 rounded-xl hover:bg-red-700 transition-all font-semibold">
+            <Plus className="w-4 h-4" /> Add Staff
+          </button>
+        </>}
       />
+
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        {[
+          { label: 'Total Staff', value: staff.length, color: 'text-emerald-500', bg: 'bg-emerald-50 dark:bg-emerald-900/20' },
+          { label: 'Active', value: staff.filter(s => s.status === 'Active').length, color: 'text-green-500', bg: 'bg-green-50 dark:bg-green-900/20' },
+          { label: 'Inactive', value: staff.filter(s => s.status === 'Inactive').length, color: 'text-gray-400', bg: 'bg-gray-100 dark:bg-gray-800' },
+          { label: 'Actions Today', value: staff.reduce((a, s) => a + (s.status === 'Active' ? Math.floor(s.actions / 30) : 0), 0), color: 'text-blue-500', bg: 'bg-blue-50 dark:bg-blue-900/20' },
+        ].map((s, i) => (
+          <Card key={i} className="!p-4">
+            <div className="flex items-center gap-3">
+              <div className={`w-10 h-10 rounded-xl ${s.bg} flex items-center justify-center`}>
+                <Users className={`w-5 h-5 ${s.color}`} />
+              </div>
+              <div>
+                <div className="text-xl font-bold text-gray-900 dark:text-white">{s.value}</div>
+                <div className="text-xs text-gray-500 dark:text-gray-400">{s.label}</div>
+              </div>
+            </div>
+          </Card>
+        ))}
+      </div>
+
       <Card>
         <div className="overflow-x-auto">
           <table className="w-full text-left">
             <thead className="bg-gray-50 dark:bg-gray-800/50 text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide">
               <tr>
                 <th className="px-5 py-3 font-medium">Staff Member</th>
-                <th className="px-5 py-3 font-medium">Role</th>
+                <th className="px-5 py-3 font-medium">Job Role</th>
+                <th className="px-5 py-3 font-medium">Portal Role</th>
                 <th className="px-5 py-3 font-medium">Joined</th>
-                <th className="px-5 py-3 font-medium">Actions Taken</th>
+                <th className="px-5 py-3 font-medium">Actions</th>
                 <th className="px-5 py-3 font-medium">Status</th>
-                <th className="px-5 py-3 font-medium text-right">Actions</th>
+                <th className="px-5 py-3 font-medium text-right">Controls</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
@@ -645,7 +1062,7 @@ export const StaffManagementPage: React.FC = () => {
                 <tr key={s.id} className="hover:bg-gray-50 dark:hover:bg-gray-800/40 transition-colors">
                   <td className="px-5 py-4">
                     <div className="flex items-center gap-3">
-                      <div className="w-9 h-9 rounded-full bg-emerald-600 flex items-center justify-center text-white font-bold text-sm">
+                      <div className="w-9 h-9 rounded-full bg-emerald-600 flex items-center justify-center text-white font-bold text-sm flex-shrink-0">
                         {s.name.charAt(0)}
                       </div>
                       <div>
@@ -655,19 +1072,38 @@ export const StaffManagementPage: React.FC = () => {
                     </div>
                   </td>
                   <td className="px-5 py-4 text-sm text-gray-700 dark:text-gray-300">{s.role}</td>
+                  <td className="px-5 py-4">
+                    <span className={`text-xs font-semibold px-2.5 py-1 rounded-full ${roleColors[s.assignedRoleId || ''] || 'bg-gray-100 dark:bg-gray-800 text-gray-500'}`}>
+                      {s.assignedRoleId || 'Unassigned'}
+                    </span>
+                  </td>
                   <td className="px-5 py-4 text-xs text-gray-500 dark:text-gray-400">{s.joined}</td>
                   <td className="px-5 py-4 text-sm font-bold text-gray-900 dark:text-white">{s.actions}</td>
                   <td className="px-5 py-4"><StatusBadge status={s.status} /></td>
                   <td className="px-5 py-4 text-right">
                     <div className="flex items-center justify-end gap-1">
-                      <button className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-400 hover:text-blue-600 transition-colors"><Edit className="w-4 h-4" /></button>
-                      <button className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-400 hover:text-red-600 transition-colors"><Trash2 className="w-4 h-4" /></button>
+                      <button title="Assign Role" onClick={() => setAssigningRole(s)} className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-400 hover:text-purple-600 transition-colors">
+                        <Shield className="w-4 h-4" />
+                      </button>
+                      <button title={s.status === 'Active' ? 'Deactivate' : 'Activate'} onClick={() => toggleStatus(s.id)} className={`p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors ${s.status === 'Active' ? 'text-green-500 hover:text-yellow-600' : 'text-gray-400 hover:text-green-600'}`}>
+                        <CheckCircle className="w-4 h-4" />
+                      </button>
+                      <button title="Remove" onClick={() => setDeletingId(s.id)} className="p-1.5 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 text-gray-400 hover:text-red-600 transition-colors">
+                        <Trash2 className="w-4 h-4" />
+                      </button>
                     </div>
                   </td>
                 </tr>
               ))}
+              {staff.length === 0 && (
+                <tr><td colSpan={7} className="px-5 py-10 text-center text-gray-400 text-sm">No staff members yet. Add your first staff member above.</td></tr>
+              )}
             </tbody>
           </table>
+        </div>
+        <div className="p-4 border-t border-gray-100 dark:border-gray-800 flex items-center justify-between text-xs text-gray-500 dark:text-gray-400">
+          <span>{staff.length} staff member{staff.length !== 1 ? 's' : ''} total</span>
+          <a href="/admin/roles" className="text-blue-500 hover:underline font-medium">Manage Roles & Permissions →</a>
         </div>
       </Card>
     </div>

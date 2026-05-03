@@ -1,0 +1,110 @@
+**Prompt:**
+
+"Act as a senior full-stack developer and build/fix a complete Admin Dashboard with a fully functional Role-Based Access Control (RBAC) system where all admin features work properly and permissions can be assigned to staff users.
+
+---
+
+**Core Requirements:**
+
+1. **Admin Dashboard Functionality**
+
+* Ensure all admin panel features are fully working
+* Dashboard should include:
+
+  * User management (add, edit, delete users)
+  * Staff management
+  * Content/data management
+  * File management (upload/delete/view)
+  * Analytics/overview (basic stats if applicable)
+* Fix any non-working buttons or actions
+* Ensure all actions connect properly to backend APIs
+
+---
+
+2. **Role & Permission System (RBAC)**
+
+Create a flexible permission system where Admin can control what Staff users can access.
+
+**Roles to implement:**
+
+* Super Admin (full access)
+* Admin
+* Staff (custom permissions)
+
+**Permission Controls:**
+Admin should be able to:
+
+* Create/Edit/Delete roles
+* Assign permissions to each role
+* Assign roles to users
+
+**Permissions should include (granular control):**
+
+* View / Create / Edit / Delete:
+
+  * Users
+  * Files (upload/download/delete)
+  * Resume or content
+  * Planner/tasks
+  * Recommendations
+* Access to:
+
+  * AI features
+  * Dashboard analytics
+  * Admin settings
+* Toggle-based permissions (ON/OFF)
+
+---
+
+3. **UI Requirements**
+
+* Clean admin panel UI with sidebar navigation
+* Role management page with checkboxes/toggles for permissions
+* User edit page where roles can be assigned
+* Proper feedback (success/error messages)
+* Responsive design
+
+---
+
+4. **Backend Logic**
+
+* Implement secure authentication & authorization
+* Middleware to check permissions before every API call
+* Prevent unauthorized access
+* Store roles and permissions in database (structured format)
+
+---
+
+5. **Fix Existing Issues**
+
+* Ensure all admin buttons actually work (not just clickable)
+* Fix broken API integrations
+* Remove unused or unnecessary features/code
+* Ensure real data operations happen (not dummy UI)
+
+---
+
+6. **Testing Requirements**
+
+* Test each role:
+
+  * Super Admin → full access
+  * Admin → limited control
+  * Staff → only assigned permissions
+* Verify restricted access (blocked where no permission)
+* Test all CRUD operations
+* Ensure no unauthorized action is possible
+
+---
+
+7. **Final Output**
+
+* List of implemented features
+* Role & permission structure explanation
+* Sample permission schema (JSON or DB format)
+* Clean working code (if needed)
+* Confirmation that all admin and staff functionalities are fully working
+
+---
+
+Ensure the system is scalable, secure, and production-ready. Every feature must work properly, and permission control must be strictly enforced."

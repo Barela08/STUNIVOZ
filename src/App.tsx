@@ -1,6 +1,7 @@
 import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
+import { PermissionsProvider } from './contexts/PermissionsContext';
 import { ThemeProvider } from './contexts/ThemeContext';
 import { Layout } from './components/Layout/Layout';
 import { LoginPage } from './pages/auth/LoginPage';
@@ -51,6 +52,7 @@ import {
   UIControlPage, FeatureControlPage, AdminNotificationsPage,
   AnalyticsPage, SecurityPage, BackupPage
 } from './pages/admin/AdminPages';
+import { RolesPage } from './pages/admin/RolesPage';
 
 import { Loading } from './components/common';
 import type { UserRole } from './contexts/AuthContext';
@@ -152,6 +154,7 @@ const AppRoutes: React.FC = () => {
       <Route path="/admin/analytics" element={<RoleRoute role="admin" loginPath="/admin/login"><AdminLayout><AnalyticsPage /></AdminLayout></RoleRoute>} />
       <Route path="/admin/security" element={<RoleRoute role="admin" loginPath="/admin/login"><AdminLayout><SecurityPage /></AdminLayout></RoleRoute>} />
       <Route path="/admin/backup" element={<RoleRoute role="admin" loginPath="/admin/login"><AdminLayout><BackupPage /></AdminLayout></RoleRoute>} />
+      <Route path="/admin/roles" element={<RoleRoute role="admin" loginPath="/admin/login"><AdminLayout><RolesPage /></AdminLayout></RoleRoute>} />
 
       {/* Default */}
       <Route path="/" element={<HomePage />} />
@@ -165,7 +168,9 @@ const App: React.FC = () => {
     <BrowserRouter>
       <ThemeProvider>
         <AuthProvider>
-          <AppRoutes />
+          <PermissionsProvider>
+            <AppRoutes />
+          </PermissionsProvider>
         </AuthProvider>
       </ThemeProvider>
     </BrowserRouter>

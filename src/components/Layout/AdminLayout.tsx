@@ -3,7 +3,7 @@ import { Link, useLocation } from 'react-router-dom';
 import {
   LayoutDashboard, Users, Building2, Briefcase, Calendar,
   BookOpen, Plug, Bot, UserCog, Megaphone, Palette,
-  Settings2, Bell, LineChart, Shield, Database, LogOut, Menu, X, Sun, Moon
+  Settings2, Bell, LineChart, Shield, Database, LogOut, Menu, X, Sun, Moon, KeyRound
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTheme } from '../../contexts/ThemeContext';
@@ -22,6 +22,7 @@ const navItems = [
   { path: '/admin/api', icon: Plug, label: 'API System' },
   { path: '/admin/ai', icon: Bot, label: 'AI Control' },
   { path: '/admin/staff', icon: UserCog, label: 'Staff' },
+  { path: '/admin/roles', icon: KeyRound, label: 'Roles & Permissions' },
   { path: '/admin/ads', icon: Megaphone, label: 'Ads System' },
   { path: '/admin/ui', icon: Palette, label: 'UI Control' },
   { path: '/admin/features', icon: Settings2, label: 'Features' },
