@@ -3,6 +3,7 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { PermissionsProvider } from './contexts/PermissionsContext';
 import { ThemeProvider } from './contexts/ThemeContext';
+import { AdminSettingsProvider, useAdminSettings } from './contexts/AdminSettingsContext';
 import { Layout } from './components/Layout/Layout';
 import { LoginPage } from './pages/auth/LoginPage';
 import { SignupPage } from './pages/auth/SignupPage';
@@ -57,32 +58,75 @@ import { RolesPage } from './pages/admin/RolesPage';
 import { Loading } from './components/common';
 import type { UserRole } from './contexts/AuthContext';
 
-// Student-only protected route
+// ── Maintenance Page ──────────────────────────────────────────────────────────
+const MaintenancePage: React.FC<{ message: string }> = ({ message }) => (
+  <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 flex items-center justify-center p-6">
+    <div className="text-center max-w-md">
+      <div className="w-20 h-20 rounded-2xl bg-yellow-500/20 border-2 border-yellow-500/40 flex items-center justify-center mx-auto mb-6">
+        <span className="text-4xl">🔧</span>
+      </div>
+      <h1 className="text-3xl font-bold text-white mb-3">Under Maintenance</h1>
+      <p className="text-gray-400 text-base leading-relaxed mb-8">{message}</p>
+      <div className="inline-flex items-center gap-2 px-4 py-2 bg-yellow-500/10 border border-yellow-500/30 rounded-xl text-yellow-400 text-sm font-medium">
+        <span className="w-2 h-2 rounded-full bg-yellow-400 animate-pulse" />
+        We'll be back soon
+      </div>
+      <p className="text-gray-600 text-xs mt-6">
+        If you're an admin,{' '}
+        <a href="/admin" className="text-yellow-500 underline hover:text-yellow-400 transition-colors">
+          sign in here
+        </a>
+      </p>
+    </div>
+  </div>
+);
+
+// ── Feature Disabled Page ─────────────────────────────────────────────────────
+const FeatureDisabledPage: React.FC<{ name: string }> = ({ name }) => (
+  <div className="min-h-[60vh] flex items-center justify-center p-6">
+    <div className="text-center max-w-sm">
+      <div className="w-16 h-16 rounded-2xl bg-gray-100 dark:bg-gray-800 flex items-center justify-center mx-auto mb-5">
+        <span className="text-3xl">🚫</span>
+      </div>
+      <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-2">{name} is Disabled</h2>
+      <p className="text-gray-500 dark:text-gray-400 text-sm">This feature has been temporarily turned off by the admin. Please check back later.</p>
+    </div>
+  </div>
+);
+
+// ── Route Guards ──────────────────────────────────────────────────────────────
 const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { user, loading } = useAuth();
+  const { maintenanceMode, maintenanceMessage, isFeatureEnabled } = useAdminSettings();
+  void isFeatureEnabled;
   if (loading) return <div className="min-h-screen flex items-center justify-center dark:bg-gray-950"><Loading size="lg" text="Loading..." /></div>;
   if (!user) return <Navigate to="/login" replace />;
+  if (maintenanceMode) return <MaintenancePage message={maintenanceMessage} />;
   return <>{children}</>;
 };
 
-// Role-based protected route for portals
+const FeatureRoute: React.FC<{ children: React.ReactNode; featureKey: string; featureName: string }> = ({ children, featureKey, featureName }) => {
+  const { isFeatureEnabled } = useAdminSettings();
+  if (!isFeatureEnabled(featureKey)) return <FeatureDisabledPage name={featureName} />;
+  return <>{children}</>;
+};
+
 const RoleRoute: React.FC<{ children: React.ReactNode; role: UserRole; loginPath: string }> = ({ children, role, loginPath }) => {
   const { user, profile, loading } = useAuth();
+  const { maintenanceMode, maintenanceMessage } = useAdminSettings();
   if (loading) return <div className="min-h-screen flex items-center justify-center dark:bg-gray-950"><Loading size="lg" text="Loading..." /></div>;
-  // Dev bypass: profile set via devSignIn (no Firebase user needed)
   const isDevProfile = profile?.id?.startsWith('dev-');
   if (!user && !isDevProfile) return <Navigate to={loginPath} replace />;
-  // If profile loaded and role doesn't match → redirect to portal login
   if (profile && profile.role !== role) return <Navigate to={loginPath} replace />;
+  // Admins bypass maintenance
+  if (maintenanceMode && role !== 'admin') return <MaintenancePage message={maintenanceMessage} />;
   return <>{children}</>;
 };
 
-// Public route (redirect if logged in as student)
 const PublicRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { user, profile, loading } = useAuth();
   if (loading) return <div className="min-h-screen flex items-center justify-center dark:bg-gray-950"><Loading size="lg" text="Loading..." /></div>;
   if (user) {
-    // Redirect to appropriate dashboard based on role
     if (profile?.role === 'company') return <Navigate to="/provider" replace />;
     if (profile?.role === 'admin') return <Navigate to="/admin" replace />;
     if (profile?.role === 'staff') return <Navigate to="/staff" replace />;
@@ -114,15 +158,15 @@ const AppRoutes: React.FC = () => {
       <Route path="/career" element={<ProtectedRoute><Layout><CareerPage /></Layout></ProtectedRoute>} />
       <Route path="/skills" element={<ProtectedRoute><Layout><SkillsPage /></Layout></ProtectedRoute>} />
       <Route path="/practice" element={<ProtectedRoute><Layout><PracticePage /></Layout></ProtectedRoute>} />
-      <Route path="/community" element={<ProtectedRoute><Layout><CommunityPage /></Layout></ProtectedRoute>} />
-      <Route path="/planner" element={<ProtectedRoute><Layout><PlannerPage /></Layout></ProtectedRoute>} />
+      <Route path="/community" element={<ProtectedRoute><Layout><FeatureRoute featureKey="community" featureName="Community Feed"><CommunityPage /></FeatureRoute></Layout></ProtectedRoute>} />
+      <Route path="/planner" element={<ProtectedRoute><Layout><FeatureRoute featureKey="planner" featureName="Career Planner"><PlannerPage /></FeatureRoute></Layout></ProtectedRoute>} />
       <Route path="/settings" element={<ProtectedRoute><Layout><SettingsPage /></Layout></ProtectedRoute>} />
-      <Route path="/ats" element={<ProtectedRoute><Layout><ATSPage /></Layout></ProtectedRoute>} />
+      <Route path="/ats" element={<ProtectedRoute><Layout><FeatureRoute featureKey="ats" featureName="ATS Analyzer"><ATSPage /></FeatureRoute></Layout></ProtectedRoute>} />
       <Route path="/recommendations" element={<ProtectedRoute><Layout><RecommendationsPage /></Layout></ProtectedRoute>} />
-      <Route path="/reviews" element={<ProtectedRoute><Layout><ReviewsPage /></Layout></ProtectedRoute>} />
+      <Route path="/reviews" element={<ProtectedRoute><Layout><FeatureRoute featureKey="reviews" featureName="Company Reviews"><ReviewsPage /></FeatureRoute></Layout></ProtectedRoute>} />
       <Route path="/notifications" element={<ProtectedRoute><Layout><NotificationsPage /></Layout></ProtectedRoute>} />
-      <Route path="/gamification" element={<ProtectedRoute><Layout><GamificationPage /></Layout></ProtectedRoute>} />
-      <Route path="/content" element={<ProtectedRoute><Layout><ContentHubPage /></Layout></ProtectedRoute>} />
+      <Route path="/gamification" element={<ProtectedRoute><Layout><FeatureRoute featureKey="gamification" featureName="Gamification"><GamificationPage /></FeatureRoute></Layout></ProtectedRoute>} />
+      <Route path="/content" element={<ProtectedRoute><Layout><FeatureRoute featureKey="content_hub" featureName="Content Hub"><ContentHubPage /></FeatureRoute></Layout></ProtectedRoute>} />
 
       {/* Provider Routes — company role only */}
       <Route path="/provider" element={<RoleRoute role="company" loginPath="/provider/login"><ProviderLayout><ProviderDashboardPage /></ProviderLayout></RoleRoute>} />
@@ -167,11 +211,13 @@ const App: React.FC = () => {
   return (
     <BrowserRouter>
       <ThemeProvider>
-        <AuthProvider>
-          <PermissionsProvider>
-            <AppRoutes />
-          </PermissionsProvider>
-        </AuthProvider>
+        <AdminSettingsProvider>
+          <AuthProvider>
+            <PermissionsProvider>
+              <AppRoutes />
+            </PermissionsProvider>
+          </AuthProvider>
+        </AdminSettingsProvider>
       </ThemeProvider>
     </BrowserRouter>
   );

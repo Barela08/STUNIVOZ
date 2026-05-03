@@ -1,5 +1,6 @@
 import React, { useState, useRef } from 'react';
 import { Card, CardHeader, CardContent } from '../../components/common';
+import { useAdminSettings } from '../../contexts/AdminSettingsContext';
 import {
   Search, Plus, Edit, Trash2, CheckCircle, XCircle,
   Users, Building2, BookOpen, Shield,
@@ -2041,11 +2042,11 @@ const THEME_PRESETS = [
 ];
 
 export const UIControlPage: React.FC = () => {
+  const { maintenanceMode, maintenanceMessage, setMaintenanceMode: ctxSetMaintenance, setMaintenanceMessage } = useAdminSettings();
   const [primaryColor, setPrimaryColor] = useState('#ef4444');
   const [font, setFont] = useState('Inter');
   const [darkModeDefault, setDarkModeDefault] = useState(false);
-  const [maintenanceMode, setMaintenanceMode] = useState(false);
-  const [maintenanceMsg, setMaintenanceMsg] = useState('We are undergoing scheduled maintenance. We\'ll be back in 30 minutes.');
+  const [maintenanceMsg, setMaintenanceMsg] = useState(maintenanceMessage);
   const [saved, setSaved] = useState(false);
   const [confirmMaintenance, setConfirmMaintenance] = useState(false);
   const [toast, setToast] = useState('');
@@ -2057,10 +2058,15 @@ export const UIControlPage: React.FC = () => {
     showToast(`Theme applied: ${THEME_PRESETS.find(t => t.color === color)?.label}`);
   };
 
-  const save = () => { setSaved(true); showToast('UI settings saved successfully!'); setTimeout(() => setSaved(false), 3000); };
+  const save = () => {
+    setMaintenanceMessage(maintenanceMsg);
+    setSaved(true);
+    showToast('UI settings saved successfully!');
+    setTimeout(() => setSaved(false), 3000);
+  };
 
   const toggleMaintenance = () => {
-    if (!maintenanceMode) { setConfirmMaintenance(true); } else { setMaintenanceMode(false); showToast('Maintenance mode disabled — platform is live'); }
+    if (!maintenanceMode) { setConfirmMaintenance(true); } else { ctxSetMaintenance(false); showToast('Maintenance mode disabled — platform is live'); }
   };
 
   return (
@@ -2076,7 +2082,7 @@ export const UIControlPage: React.FC = () => {
             </div>
             <div className="flex gap-3">
               <button onClick={() => setConfirmMaintenance(false)} className="flex-1 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 text-sm font-medium text-gray-600 dark:text-gray-300">Cancel</button>
-              <button onClick={() => { setMaintenanceMode(true); setConfirmMaintenance(false); showToast('⚠️ Maintenance mode ENABLED'); }} className="flex-1 py-2.5 rounded-xl bg-yellow-600 hover:bg-yellow-700 text-white font-semibold text-sm">Enable</button>
+              <button onClick={() => { ctxSetMaintenance(true); setConfirmMaintenance(false); showToast('⚠️ Maintenance mode ENABLED'); }} className="flex-1 py-2.5 rounded-xl bg-yellow-600 hover:bg-yellow-700 text-white font-semibold text-sm">Enable</button>
             </div>
           </div>
         </div>
@@ -2265,25 +2271,12 @@ const AddFeatureModal: React.FC<{ onAdd: (f: Feature) => void; onClose: () => vo
 };
 
 export const FeatureControlPage: React.FC = () => {
-  const [features, setFeatures] = useState<Feature[]>([
-    { key: 'community', label: 'Community Feed', description: 'Social feed for students', category: 'Social', enabled: true },
-    { key: 'gamification', label: 'Gamification', description: 'Points, badges, and leaderboard', category: 'Engagement', enabled: true },
-    { key: 'ats', label: 'ATS Analyzer', description: 'AI resume analysis tool', category: 'AI', enabled: true },
-    { key: 'ai_recommend', label: 'AI Recommendations', description: 'Personalised internship suggestions', category: 'AI', enabled: false },
-    { key: 'ai_interview', label: 'AI Mock Interview', description: 'AI-powered interview simulator', category: 'AI', enabled: false },
-    { key: 'ai_chatbot', label: 'Career Chatbot', description: 'AI career guidance assistant', category: 'AI', enabled: true },
-    { key: 'qna', label: 'Q&A Forum', description: 'Student question & answer board', category: 'Social', enabled: true },
-    { key: 'planner', label: 'Career Planner', description: 'Goal-setting and roadmap tool', category: 'Tools', enabled: true },
-    { key: 'content_hub', label: 'Content Hub', description: 'Blogs, tips, and resource articles', category: 'Content', enabled: false },
-    { key: 'referral', label: 'Referral System', description: 'User referral and rewards', category: 'Engagement', enabled: false },
-    { key: 'multilang', label: 'Multilingual', description: 'Hindi, Tamil, Telugu language support', category: 'Tools', enabled: false },
-    { key: 'reviews', label: 'Company Reviews', description: 'Student reviews for companies', category: 'Content', enabled: true },
-  ]);
+  const { features, toggleFeature, addFeature } = useAdminSettings();
   const [showAddFeature, setShowAddFeature] = useState(false);
   const [toast, setToast] = useState('');
   const showToast = (msg: string) => { setToast(msg); setTimeout(() => setToast(''), 3000); };
 
-  const toggle = (key: string) => setFeatures(prev => prev.map(f => f.key === key ? { ...f, enabled: !f.enabled } : f));
+  const toggle = (key: string) => toggleFeature(key);
   const categories = Array.from(new Set(features.map(f => f.category)));
 
   const categoryColor: Record<string, string> = {
@@ -2296,7 +2289,7 @@ export const FeatureControlPage: React.FC = () => {
 
   return (
     <div className="space-y-6 animate-fade-in">
-      {showAddFeature && <AddFeatureModal existingCategories={categories} onAdd={f => { setFeatures(prev => [...prev, f]); showToast(`Feature "${f.label}" added${f.enabled ? ' and enabled' : ' (disabled)'}`); }} onClose={() => setShowAddFeature(false)} />}
+      {showAddFeature && <AddFeatureModal existingCategories={categories} onAdd={f => { addFeature(f); showToast(`Feature "${f.label}" added${f.enabled ? ' and enabled' : ' (disabled)'}`); }} onClose={() => setShowAddFeature(false)} />}
       {toast && <div className="fixed bottom-6 right-6 z-50 flex items-center gap-2 px-4 py-3 bg-gray-900 dark:bg-gray-100 text-white dark:text-gray-900 text-sm font-medium rounded-xl shadow-xl"><CheckCircle className="w-4 h-4 text-green-400" /> {toast}</div>}
 
       <TableHeader title="Feature Control" subtitle="Toggle platform modules on or off without redeploying."
