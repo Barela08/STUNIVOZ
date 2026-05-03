@@ -90,7 +90,7 @@ export const LoginPage: React.FC = () => {
         <div className="w-full max-w-md animate-slide-up">
           {/* Logo */}
           <div className="flex items-center mb-8">
-            <img src="/stunivoz-logo-cropped.png" alt="STUNIVOZ" className="h-12 w-auto object-contain" />
+            <img src="/stunivoz-new-logo.png" alt="STUNIVOZ" className="h-12 w-auto object-contain" />
           </div>
 
           <div className="mb-8">
@@ -243,7 +243,7 @@ export const LoginPage: React.FC = () => {
         <div className="relative max-w-lg text-center text-white z-10">
           <div className="inline-flex items-center justify-center mb-8">
             <div className="bg-white rounded-2xl px-4 py-3 shadow-2xl">
-              <img src="/stunivoz-logo-cropped.png" alt="STUNIVOZ" className="h-16 w-auto object-contain" />
+              <img src="/stunivoz-new-logo.png" alt="STUNIVOZ" className="h-16 w-auto object-contain" />
             </div>
           </div>
           <h2 className="font-display text-4xl font-bold mb-4 leading-tight">

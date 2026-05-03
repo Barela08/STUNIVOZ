@@ -72,7 +72,7 @@ export const SignupPage: React.FC = () => {
         <div className="w-full max-w-md">
           {/* Logo */}
           <div className="flex items-center mb-8">
-            <img src="/stunivoz-logo-cropped.png" alt="STUNIVOZ" className="h-12 w-auto object-contain" />
+            <img src="/stunivoz-new-logo.png" alt="STUNIVOZ" className="h-12 w-auto object-contain" />
           </div>
 
           {/* Heading */}
@@ -215,7 +215,7 @@ export const SignupPage: React.FC = () => {
         <div className="max-w-lg text-center text-white">
           <div className="mb-8">
             <div className="inline-flex bg-white rounded-2xl px-4 py-3 shadow-2xl mx-auto mb-6">
-              <img src="/stunivoz-logo-cropped.png" alt="STUNIVOZ" className="h-14 w-auto object-contain" />
+              <img src="/stunivoz-new-logo.png" alt="STUNIVOZ" className="h-14 w-auto object-contain" />
             </div>
             <h2 className="font-display text-4xl font-bold mb-4">
               Land Your Dream Internship
