@@ -1,6 +1,6 @@
 import { initializeApp, getApps, getApp } from 'firebase/app';
 import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, onAuthStateChanged } from 'firebase/auth';
-import { getFirestore, collection, addDoc, getDocs, doc, updateDoc, deleteDoc, serverTimestamp } from 'firebase/firestore';
+import { getFirestore, collection, addDoc, getDocs, doc, updateDoc, deleteDoc, serverTimestamp, setDoc, getDoc } from 'firebase/firestore';
 import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 
 const firebaseConfig = {
@@ -75,6 +75,34 @@ export const getCollection = async (collectionName: string) => {
     const querySnapshot = await getDocs(collection(db, collectionName));
     const data = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
     return { success: true, data };
+  } catch (error) {
+    return { success: false, error };
+  }
+};
+
+// Get a single document by ID
+export const getDocument = async (collectionName: string, id: string) => {
+  try {
+    const docRef = doc(db, collectionName, id);
+    const docSnap = await getDoc(docRef);
+    if (docSnap.exists()) {
+      return { success: true, data: { id: docSnap.id, ...docSnap.data() } };
+    }
+    return { success: true, data: null };
+  } catch (error) {
+    return { success: false, error };
+  }
+};
+
+// Upsert a document (create or merge-update) by a known ID
+export const setDocument = async (collectionName: string, id: string, data: any) => {
+  try {
+    const docRef = doc(db, collectionName, id);
+    await setDoc(docRef, {
+      ...data,
+      updatedAt: serverTimestamp()
+    }, { merge: true });
+    return { success: true };
   } catch (error) {
     return { success: false, error };
   }

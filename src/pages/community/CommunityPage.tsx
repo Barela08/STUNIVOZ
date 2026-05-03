@@ -1,8 +1,20 @@
 import React, { useState } from 'react';
-import { Heart, MessageCircle, Share2, Image, Smile, UserPlus, Search } from 'lucide-react';
+import { Heart, MessageCircle, Share2, Image, Smile, UserPlus, Search, Send } from 'lucide-react';
 import { Card, CardHeader, CardContent, Button, Input, Textarea } from '../../components/common';
+import { useAuth } from '../../contexts/AuthContext';
 
-const mockPosts = [
+interface Post {
+  id: number;
+  author: string;
+  avatar: string;
+  content: string;
+  likes: number;
+  comments: number;
+  time: string;
+  image: null | string;
+}
+
+const initialPosts: Post[] = [
   {
     id: 1,
     author: 'John Doe',
@@ -17,7 +29,7 @@ const mockPosts = [
     id: 2,
     author: 'Jane Smith',
     avatar: 'J',
-    content: 'Tips for cracking coding interviews: Practice daily, understand fundamentals, and don\'t give up! 💪',
+    content: "Tips for cracking coding interviews: Practice daily, understand fundamentals, and don't give up! 💪",
     likes: 78,
     comments: 24,
     time: '5 hours ago',
@@ -42,17 +54,38 @@ const mockQuestions = [
 ];
 
 export const CommunityPage: React.FC = () => {
+  const { profile, user } = useAuth();
   const [activeTab, setActiveTab] = useState<'feed' | 'qna' | 'groups'>('feed');
   const [newPost, setNewPost] = useState('');
-  const [posts] = useState(mockPosts);
+  const [posts, setPosts] = useState<Post[]>(initialPosts);
   const [liked, setLiked] = useState<number[]>([]);
+  const [posting, setPosting] = useState(false);
+
+  const displayName = profile?.full_name || user?.email?.split('@')[0] || 'You';
+  const avatarLetter = displayName.charAt(0).toUpperCase();
 
   const toggleLike = (id: number) => {
-    if (liked.includes(id)) {
-      setLiked(liked.filter(l => l !== id));
-    } else {
-      setLiked([...liked, id]);
-    }
+    setLiked(prev =>
+      prev.includes(id) ? prev.filter(l => l !== id) : [...prev, id]
+    );
+  };
+
+  const handlePost = () => {
+    if (!newPost.trim()) return;
+    setPosting(true);
+    const post: Post = {
+      id: Date.now(),
+      author: displayName,
+      avatar: avatarLetter,
+      content: newPost.trim(),
+      likes: 0,
+      comments: 0,
+      time: 'Just now',
+      image: null,
+    };
+    setPosts(prev => [post, ...prev]);
+    setNewPost('');
+    setPosting(false);
   };
 
   return (
@@ -97,8 +130,8 @@ export const CommunityPage: React.FC = () => {
             <Card>
               <CardContent>
                 <div className="flex gap-4">
-                  <div className="w-10 h-10 rounded-full bg-primary-500 flex items-center justify-center text-white font-bold">
-                    Y
+                  <div className="w-10 h-10 rounded-full bg-primary-500 flex items-center justify-center text-white font-bold flex-shrink-0">
+                    {avatarLetter}
                   </div>
                   <div className="flex-1">
                     <Textarea
@@ -116,7 +149,16 @@ export const CommunityPage: React.FC = () => {
                           <Smile className="w-4 h-4" />
                         </Button>
                       </div>
-                      <Button variant="primary" size="sm">Post</Button>
+                      <Button
+                        variant="primary"
+                        size="sm"
+                        onClick={handlePost}
+                        disabled={!newPost.trim() || posting}
+                        loading={posting}
+                      >
+                        <Send className="w-4 h-4" />
+                        Post
+                      </Button>
                     </div>
                   </div>
                 </div>
@@ -128,7 +170,7 @@ export const CommunityPage: React.FC = () => {
               <Card key={post.id}>
                 <CardContent>
                   <div className="flex items-start gap-3 mb-3">
-                    <div className="w-10 h-10 rounded-full bg-primary-500 flex items-center justify-center text-white font-bold">
+                    <div className="w-10 h-10 rounded-full bg-primary-500 flex items-center justify-center text-white font-bold flex-shrink-0">
                       {post.avatar}
                     </div>
                     <div className="flex-1">
@@ -139,21 +181,21 @@ export const CommunityPage: React.FC = () => {
                     </div>
                   </div>
                   <p className="text-gray-600 mb-4">{post.content}</p>
-                  <div className="flex items-center gap-4">
+                  <div className="flex items-center gap-4 border-t border-gray-100 pt-3">
                     <button
                       onClick={() => toggleLike(post.id)}
-                      className={`flex items-center gap-1 text-sm ${
-                        liked.includes(post.id) ? 'text-red-500' : 'text-gray-500'
+                      className={`flex items-center gap-1.5 text-sm transition-colors ${
+                        liked.includes(post.id) ? 'text-red-500' : 'text-gray-500 hover:text-red-400'
                       }`}
                     >
                       <Heart className={`w-4 h-4 ${liked.includes(post.id) ? 'fill-current' : ''}`} />
                       {post.likes + (liked.includes(post.id) ? 1 : 0)}
                     </button>
-                    <button className="flex items-center gap-1 text-sm text-gray-500">
+                    <button className="flex items-center gap-1.5 text-sm text-gray-500 hover:text-primary-500 transition-colors">
                       <MessageCircle className="w-4 h-4" />
                       {post.comments}
                     </button>
-                    <button className="flex items-center gap-1 text-sm text-gray-500">
+                    <button className="flex items-center gap-1.5 text-sm text-gray-500 hover:text-primary-500 transition-colors">
                       <Share2 className="w-4 h-4" />
                       Share
                     </button>
@@ -170,7 +212,7 @@ export const CommunityPage: React.FC = () => {
               <CardContent>
                 <div className="space-y-2">
                   {['Web Development', 'Data Science', 'Interview Prep', 'Career Advice', 'Projects'].map((topic) => (
-                    <button key={topic} className="w-full text-left px-3 py-2 rounded-lg hover:bg-gray-50 text-sm text-gray-600">
+                    <button key={topic} className="w-full text-left px-3 py-2 rounded-lg hover:bg-gray-50 text-sm text-gray-600 transition-colors">
                       #{topic}
                     </button>
                   ))}
@@ -186,11 +228,11 @@ export const CommunityPage: React.FC = () => {
                     { name: 'Alice Brown', role: 'SDE at Google' },
                     { name: 'Bob Wilson', role: 'Full Stack Dev' },
                     { name: 'Carol Davis', role: 'UX Designer' },
-                  ].map((user) => (
-                    <div key={user.name} className="flex items-center justify-between">
+                  ].map((u) => (
+                    <div key={u.name} className="flex items-center justify-between">
                       <div>
-                        <p className="text-sm font-medium text-gray-900">{user.name}</p>
-                        <p className="text-xs text-gray-500">{user.role}</p>
+                        <p className="text-sm font-medium text-gray-900">{u.name}</p>
+                        <p className="text-xs text-gray-500">{u.role}</p>
                       </div>
                       <Button variant="ghost" size="sm">Follow</Button>
                     </div>

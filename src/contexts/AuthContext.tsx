@@ -1,8 +1,9 @@
+// @refresh reset
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { User } from 'firebase/auth';
 import { signInWithPopup, GoogleAuthProvider } from 'firebase/auth';
 import { auth } from '../services/firebase';
-import { loginUser, registerUser, logoutUser, onAuthStateChangedListener, getCollection, addDocument, updateDocument } from '../services/firebase';
+import { loginUser, registerUser, logoutUser, onAuthStateChangedListener, getDocument, setDocument } from '../services/firebase';
 
 interface Profile {
   id: string;
@@ -56,14 +57,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
 
-  const fetchProfile = async (uid: string, email: string) => {
+  const fetchProfile = async (uid: string) => {
     try {
-      const result = await getCollection('profiles');
+      const result = await getDocument('profiles', uid);
       if (result.success && result.data) {
-        const userProfile = (result.data as any[]).find((p: any) => p.id === uid || p.user_id === uid);
-        if (userProfile) {
-          setProfile(userProfile as Profile);
-        }
+        setProfile(result.data as Profile);
       }
     } catch (err) {
       console.error('Error fetching profile:', err);
@@ -78,7 +76,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       clearTimeout(timeout);
       setUser(firebaseUser);
       if (firebaseUser) {
-        await fetchProfile(firebaseUser.uid, firebaseUser.email || '');
+        await fetchProfile(firebaseUser.uid);
       } else {
         setProfile(null);
       }
@@ -107,14 +105,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       const result = await registerUser(email, password);
       if (result.success && result.user) {
-        const profileData: Omit<Profile, 'id'> = {
+        const profileData: Profile = {
+          id: result.user.uid,
           email,
           full_name: fullName,
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString(),
         };
-        await addDocument('profiles', { ...profileData, user_id: result.user.uid, id: result.user.uid });
-        setProfile({ id: result.user.uid, ...profileData });
+        // Use setDocument so the doc ID matches the user UID
+        await setDocument('profiles', result.user.uid, profileData);
+        setProfile(profileData);
         return { error: null };
       }
       return { error: result.error || new Error('Registration failed') };
@@ -129,25 +129,21 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const userCredential = await signInWithPopup(auth, provider);
       const firebaseUser = userCredential.user;
 
-      const result = await getCollection('profiles');
-      const existingProfile = result.success && result.data
-        ? (result.data as any[]).find((p: any) => p.id === firebaseUser.uid || p.user_id === firebaseUser.uid)
-        : null;
-
-      if (!existingProfile) {
-        const profileData = {
+      // Check if profile already exists
+      const result = await getDocument('profiles', firebaseUser.uid);
+      if (!result.success || !result.data) {
+        const profileData: Profile = {
           id: firebaseUser.uid,
-          user_id: firebaseUser.uid,
           email: firebaseUser.email || '',
           full_name: firebaseUser.displayName || '',
           profile_photo: firebaseUser.photoURL || '',
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString(),
         };
-        await addDocument('profiles', profileData);
-        setProfile(profileData as Profile);
+        await setDocument('profiles', firebaseUser.uid, profileData);
+        setProfile(profileData);
       } else {
-        setProfile(existingProfile as Profile);
+        setProfile(result.data as Profile);
       }
 
       return { error: null };
@@ -165,12 +161,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const updateProfile = async (data: Partial<Profile>) => {
     if (!user) return { error: new Error('No user logged in') };
     try {
-      const result = await updateDocument('profiles', user.uid, {
+      // setDocument with merge:true works even if the doc doesn't exist yet
+      const result = await setDocument('profiles', user.uid, {
         ...data,
+        id: user.uid,
         updated_at: new Date().toISOString(),
       });
       if (result.success) {
-        setProfile(prev => prev ? { ...prev, ...data } : null);
+        setProfile(prev => prev ? { ...prev, ...data } : { id: user.uid, email: user.email || '', full_name: '', ...data });
         return { error: null };
       }
       return { error: result.error || new Error('Update failed') };

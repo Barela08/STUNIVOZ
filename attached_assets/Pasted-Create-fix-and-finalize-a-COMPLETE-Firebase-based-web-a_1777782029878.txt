@@ -1,0 +1,287 @@
+Create, fix, and finalize a COMPLETE Firebase-based web application with a fully secure, role-based authentication system, perfect UI/UX, and zero bugs.
+
+This must be a PRODUCTION-READY system where EVERYTHING works perfectly.
+
+---
+
+## 🎯 CORE GOAL
+
+* Every feature must work
+* Every function must work
+* Every route must work
+* No bugs, no crashes, no broken UI
+
+---
+
+## 👤 ROLE SYSTEM (STRICT)
+
+Roles:
+
+* student (default user)
+* company (provider)
+* admin
+* staff
+
+---
+
+## 🔐 AUTHENTICATION RULES
+
+STUDENT (/login):
+
+* Email & Password ✅
+* Google Login ✅
+* GitHub Login ✅
+
+COMPANY (/provider):
+
+* Email & Password ONLY ❌ Google ❌ GitHub
+
+ADMIN (/admin):
+
+* Email & Password ONLY ❌ Google ❌ GitHub
+
+STAFF (/staff):
+
+* Email & Password ONLY ❌ Google ❌ GitHub
+
+---
+
+## 🚫 STRICT RESTRICTIONS
+
+* Google/GitHub login MUST work ONLY for students
+* If any other role tries OAuth → BLOCK access
+* Validate provider + role on backend
+* Show proper error messages
+
+---
+
+## 🙈 HIDDEN ROLE UI
+
+* Website opens as STUDENT UI by default
+
+* NO visible buttons for:
+
+  * admin
+  * company
+  * staff
+
+* These roles can ONLY access via URL:
+
+  * /admin
+  * /provider
+  * /staff
+
+---
+
+## 🔀 ROUTING SYSTEM
+
+* /login → student only
+* /provider → company only
+* /admin → admin only
+* /staff → staff only
+
+Fix ALL issues:
+
+* Admin login not working → FIX
+* Company redirect bug → FIX
+* Role mismatch → FIX
+
+---
+
+## 🎨 UI / UX (PREMIUM)
+
+* Modern, clean, professional UI
+* Fully responsive
+* Smooth animations
+
+Include:
+
+* Dark Mode 🌙
+* Light Mode ☀️
+* Theme toggle
+
+Improve:
+
+* Layout
+* Typography
+* Buttons
+* Cards
+
+Add a proper APP NAME (replace placeholders)
+
+---
+
+## ⚙️ BACKEND (Node.js + Express)
+
+* Firebase Admin SDK
+* Middleware:
+
+  * verifyToken
+  * checkRole
+* Secure APIs
+* Clean architecture
+
+---
+
+## 🔐 SECURITY (HIGH PRIORITY)
+
+* Verify Firebase ID tokens
+* Role-based access control
+* Prevent unauthorized access
+* Use environment variables
+* Input validation
+* Rate limiting
+
+---
+
+## 🌐 DEPLOYMENT (VERCEL READY)
+
+* Fix project for Vercel deployment
+* No build errors
+* No runtime errors
+* Proper config
+
+---
+
+## 🧪 TESTING (FULL)
+
+Test EVERYTHING:
+
+* Authentication:
+
+  * Email login
+  * Google login
+  * GitHub login
+
+* Roles:
+
+  * student
+  * company
+  * admin
+  * staff
+
+* Routing:
+
+  * /login
+  * /provider
+  * /admin
+  * /staff
+
+* UI:
+
+  * Responsive
+  * Theme toggle
+  * Forms
+
+* Errors:
+
+  * Wrong login
+  * Unauthorized access
+
+---
+
+## 🛠️ AUTO FIX SYSTEM
+
+* Scan ALL files
+* Fix ALL bugs
+* Fix ALL functions
+* Fix ALL routes
+* Fix ALL UI issues
+* Ensure complete stability
+
+---
+
+## 🚀 FINAL OUTPUT
+
+Provide:
+
+1. Full working code
+2. Firebase setup
+3. Backend (Express)
+4. Frontend
+5. Role system
+6. Middleware
+7. UI system
+8. Deployment config
+9. .env example
+
+---
+
+## ✅ FINAL CHECK
+
+* Recheck EVERYTHING
+* Test EVERYTHING
+* Fix EVERYTHING
+* Ensure ZERO errors
+
+---
+
+## 🏁 FINAL RESULT
+
+The app must be:
+
+✔ Fully working
+✔ Fully secure
+✔ Fully tested
+✔ Fully responsive
+✔ Deployment ready
+
+NO incomplete work allowed.
+Fix and upgrade the entire Firebase authentication system and UI with the following strict requirements:
+
+1. Authentication:
+
+* Student (/login):
+
+  * Email login
+  * Google login
+  * GitHub login
+
+* Admin (/admin):
+
+  * Email login ONLY
+  * REMOVE Google login completely
+
+* Company (/provider):
+
+  * Email login ONLY
+
+* Staff (/staff):
+
+  * Email login ONLY
+
+2. Role Security:
+
+* Google & GitHub login MUST work ONLY for students
+* If any other role tries OAuth → block access and logout
+
+3. UI Fix:
+
+* Add GitHub login button on student page
+* Remove Google login from admin page
+* Improve buttons (gradient, hover effects)
+* Add glassmorphism design
+* Add dark/light mode toggle
+* Make UI modern and premium
+
+4. Vercel Fix:
+
+* Fix build errors
+* Add correct build script (vite build)
+* Add vercel.json routing fix
+* Fix all import errors
+* Add environment variables support
+
+5. Testing:
+
+* Test all login methods
+* Test all roles
+* Ensure no wrong redirects
+* Ensure no errors
+
+6. Final Requirement:
+
+* Fix ALL bugs
+* Ensure project builds successfully
+* Ensure deployment works on Vercel
+* Ensure UI looks modern and clean
