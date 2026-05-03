@@ -1,14 +1,19 @@
 // @refresh reset
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { User } from 'firebase/auth';
-import { signInWithPopup, GoogleAuthProvider } from 'firebase/auth';
 import { auth } from '../services/firebase';
-import { loginUser, registerUser, logoutUser, onAuthStateChangedListener, getDocument, setDocument } from '../services/firebase';
+import {
+  loginUser, registerUser, logoutUser, onAuthStateChangedListener,
+  getDocument, setDocument, signInWithGoogle, signInWithGitHub
+} from '../services/firebase';
 
-interface Profile {
+export type UserRole = 'student' | 'company' | 'admin' | 'staff';
+
+export interface Profile {
   id: string;
   email: string;
   full_name: string;
+  role?: UserRole;
   profile_photo?: string;
   phone?: string;
   location?: string;
@@ -37,9 +42,11 @@ interface AuthContextType {
   loading: boolean;
   signIn: (email: string, password: string) => Promise<{ error: any }>;
   signUp: (email: string, password: string, fullName: string) => Promise<{ error: any }>;
-  signInWithGoogle: () => Promise<{ error: any }>;
+  signInWithGoogleOAuth: () => Promise<{ error: any }>;
+  signInWithGitHubOAuth: () => Promise<{ error: any }>;
   signOut: () => Promise<void>;
   updateProfile: (data: Partial<Profile>) => Promise<{ error: any }>;
+  fetchProfile: (uid: string) => Promise<Profile | null>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -57,21 +64,23 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
 
-  const fetchProfile = async (uid: string) => {
+  const fetchProfile = async (uid: string): Promise<Profile | null> => {
     try {
       const result = await getDocument('profiles', uid);
       if (result.success && result.data) {
-        setProfile(result.data as Profile);
+        const p = result.data as Profile;
+        setProfile(p);
+        return p;
       }
+      return null;
     } catch (err) {
       console.error('Error fetching profile:', err);
+      return null;
     }
   };
 
   useEffect(() => {
-    // Safety timeout — if Firebase never responds, stop showing loading screen
     const timeout = setTimeout(() => setLoading(false), 5000);
-
     const unsubscribe = onAuthStateChangedListener(async (firebaseUser: User | null) => {
       clearTimeout(timeout);
       setUser(firebaseUser);
@@ -82,19 +91,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
       setLoading(false);
     });
-
-    return () => {
-      clearTimeout(timeout);
-      unsubscribe();
-    };
+    return () => { clearTimeout(timeout); unsubscribe(); };
   }, []);
 
   const signIn = async (email: string, password: string) => {
     try {
       const result = await loginUser(email, password);
-      if (result.success) {
-        return { error: null };
-      }
+      if (result.success) return { error: null };
       return { error: result.error || new Error('Login failed') };
     } catch (err) {
       return { error: err };
@@ -109,10 +112,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           id: result.user.uid,
           email,
           full_name: fullName,
+          role: 'student',
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString(),
         };
-        // Use setDocument so the doc ID matches the user UID
         await setDocument('profiles', result.user.uid, profileData);
         setProfile(profileData);
         return { error: null };
@@ -123,13 +126,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  const signInWithGoogle = async () => {
+  // Google OAuth — students only
+  const signInWithGoogleOAuth = async () => {
     try {
-      const provider = new GoogleAuthProvider();
-      const userCredential = await signInWithPopup(auth, provider);
+      const userCredential = await signInWithGoogle();
       const firebaseUser = userCredential.user;
 
-      // Check if profile already exists
       const result = await getDocument('profiles', firebaseUser.uid);
       if (!result.success || !result.data) {
         const profileData: Profile = {
@@ -137,17 +139,57 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           email: firebaseUser.email || '',
           full_name: firebaseUser.displayName || '',
           profile_photo: firebaseUser.photoURL || '',
+          role: 'student',
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString(),
         };
         await setDocument('profiles', firebaseUser.uid, profileData);
         setProfile(profileData);
       } else {
-        setProfile(result.data as Profile);
+        const existingProfile = result.data as Profile;
+        // Block non-students from using Google OAuth
+        if (existingProfile.role && existingProfile.role !== 'student') {
+          await auth.signOut();
+          return { error: { message: 'Google login is only available for students. Please use your portal login page.' } };
+        }
+        setProfile(existingProfile);
       }
-
       return { error: null };
-    } catch (err) {
+    } catch (err: any) {
+      return { error: err };
+    }
+  };
+
+  // GitHub OAuth — students only
+  const signInWithGitHubOAuth = async () => {
+    try {
+      const userCredential = await signInWithGitHub();
+      const firebaseUser = userCredential.user;
+
+      const result = await getDocument('profiles', firebaseUser.uid);
+      if (!result.success || !result.data) {
+        const profileData: Profile = {
+          id: firebaseUser.uid,
+          email: firebaseUser.email || '',
+          full_name: firebaseUser.displayName || firebaseUser.email?.split('@')[0] || '',
+          profile_photo: firebaseUser.photoURL || '',
+          role: 'student',
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        };
+        await setDocument('profiles', firebaseUser.uid, profileData);
+        setProfile(profileData);
+      } else {
+        const existingProfile = result.data as Profile;
+        // Block non-students from using GitHub OAuth
+        if (existingProfile.role && existingProfile.role !== 'student') {
+          await auth.signOut();
+          return { error: { message: 'GitHub login is only available for students. Please use your portal login page.' } };
+        }
+        setProfile(existingProfile);
+      }
+      return { error: null };
+    } catch (err: any) {
       return { error: err };
     }
   };
@@ -161,7 +203,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const updateProfile = async (data: Partial<Profile>) => {
     if (!user) return { error: new Error('No user logged in') };
     try {
-      // setDocument with merge:true works even if the doc doesn't exist yet
       const result = await setDocument('profiles', user.uid, {
         ...data,
         id: user.uid,
@@ -177,19 +218,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  const value: AuthContextType = {
-    user,
-    profile,
-    loading,
-    signIn,
-    signUp,
-    signInWithGoogle,
-    signOut,
-    updateProfile,
-  };
-
   return (
-    <AuthContext.Provider value={value}>
+    <AuthContext.Provider value={{
+      user, profile, loading,
+      signIn, signUp,
+      signInWithGoogleOAuth,
+      signInWithGitHubOAuth,
+      signOut, updateProfile, fetchProfile
+    }}>
       {children}
     </AuthContext.Provider>
   );

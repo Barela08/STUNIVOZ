@@ -1,5 +1,8 @@
 import { initializeApp, getApps, getApp } from 'firebase/app';
-import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, onAuthStateChanged } from 'firebase/auth';
+import {
+  getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword,
+  signOut, onAuthStateChanged, signInWithPopup, GoogleAuthProvider, GithubAuthProvider
+} from 'firebase/auth';
 import { getFirestore, collection, addDoc, getDocs, doc, updateDoc, deleteDoc, serverTimestamp, setDoc, getDoc } from 'firebase/firestore';
 import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 
@@ -12,11 +15,26 @@ const firebaseConfig = {
   appId: import.meta.env.VITE_FIREBASE_APP_ID,
 };
 
-// Initialize Firebase (guard against duplicate app during HMR)
 const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
 export const auth = getAuth(app);
 export const db = getFirestore(app);
 export const storage = getStorage(app);
+
+// Auth providers
+export const googleProvider = new GoogleAuthProvider();
+export const githubProvider = new GithubAuthProvider();
+
+// Sign in with Google popup
+export const signInWithGoogle = async () => {
+  const result = await signInWithPopup(auth, googleProvider);
+  return result;
+};
+
+// Sign in with GitHub popup
+export const signInWithGitHub = async () => {
+  const result = await signInWithPopup(auth, githubProvider);
+  return result;
+};
 
 // Auth functions
 export const loginUser = async (email: string, password: string) => {
@@ -80,7 +98,6 @@ export const getCollection = async (collectionName: string) => {
   }
 };
 
-// Get a single document by ID
 export const getDocument = async (collectionName: string, id: string) => {
   try {
     const docRef = doc(db, collectionName, id);
@@ -94,14 +111,10 @@ export const getDocument = async (collectionName: string, id: string) => {
   }
 };
 
-// Upsert a document (create or merge-update) by a known ID
 export const setDocument = async (collectionName: string, id: string, data: any) => {
   try {
     const docRef = doc(db, collectionName, id);
-    await setDoc(docRef, {
-      ...data,
-      updatedAt: serverTimestamp()
-    }, { merge: true });
+    await setDoc(docRef, { ...data, updatedAt: serverTimestamp() }, { merge: true });
     return { success: true };
   } catch (error) {
     return { success: false, error };
@@ -111,10 +124,7 @@ export const setDocument = async (collectionName: string, id: string, data: any)
 export const updateDocument = async (collectionName: string, id: string, data: any) => {
   try {
     const docRef = doc(db, collectionName, id);
-    await updateDoc(docRef, {
-      ...data,
-      updatedAt: serverTimestamp()
-    });
+    await updateDoc(docRef, { ...data, updatedAt: serverTimestamp() });
     return { success: true };
   } catch (error) {
     return { success: false, error };
@@ -131,7 +141,6 @@ export const deleteDocument = async (collectionName: string, id: string) => {
   }
 };
 
-// Storage functions
 export const uploadFile = async (file: File, path: string) => {
   try {
     const storageRef = ref(storage, path);
@@ -143,7 +152,6 @@ export const uploadFile = async (file: File, path: string) => {
   }
 };
 
-// Auth listener
 export const onAuthStateChangedListener = (callback: (user: any) => void) => {
   return onAuthStateChanged(auth, callback);
 };

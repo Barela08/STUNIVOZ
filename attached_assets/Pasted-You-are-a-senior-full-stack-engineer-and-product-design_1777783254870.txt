@@ -1,0 +1,258 @@
+You are a senior full-stack engineer and product designer.
+
+Build a COMPLETE production-ready web platform called "STUNIVOZ" – an all-in-one student career development ecosystem.
+
+========================
+CORE REQUIREMENTS
+=================
+
+* Use modern scalable architecture
+* Clean, minimal, premium UI (inspired by LinkedIn + Notion + Stripe dashboard)
+* Fully working backend + frontend
+* Modular, maintainable code
+* Mobile responsive
+
+========================
+TECH STACK
+==========
+
+Frontend:
+
+* Next.js (React)
+* Tailwind CSS
+* TypeScript
+
+Backend:
+
+* Node.js + Express (or NestJS)
+* REST API (or GraphQL)
+
+Database:
+
+* PostgreSQL (main)
+* Redis (caching + queues)
+
+Auth:
+
+* JWT + Refresh Tokens
+* Google OAuth
+* LinkedIn OAuth
+
+Storage:
+
+* AWS S3 (files, resumes)
+
+AI Integration:
+
+* OpenAI APIs for AI features
+
+========================
+FEATURE MODULES (ALL MUST WORK)
+===============================
+
+1. AUTH SYSTEM
+
+* Signup (email + password + OAuth)
+* Login/logout
+* Forgot password + OTP
+* 2FA (optional)
+* Device/session management
+
+2. USER PROFILE
+
+* Personal info
+* Education
+* Skills (levels)
+* Social links
+* Preferences
+
+3. RESUME SYSTEM
+
+* Resume upload (PDF/DOCX)
+* Resume builder with live preview
+* AI resume generator
+* ATS analyzer:
+
+  * score
+  * keyword match
+  * suggestions
+* Resume versioning
+* Download/share
+
+4. SKILL ANALYSIS
+
+* Detect from resume
+* GitHub integration
+* Skill progress tracking
+* Skill gap analysis
+
+5. CAREER GUIDANCE
+
+* Career paths (web dev, data science, etc.)
+* Roadmaps with steps
+* AI career advisor
+
+6. OPPORTUNITY SYSTEM
+
+* Recommend jobs/internships
+* Role suggestions
+* Where to apply
+* Application strategies
+
+7. INTERNSHIP MODULE
+
+* Browse + filters
+* Save + apply
+* Track status (applied, shortlisted, rejected)
+
+8. EVENTS MODULE
+
+* Hackathons, webinars, workshops
+* Register + reminders
+* Certificates
+
+9. COURSES MODULE
+
+* Course listings
+* Save + track progress
+* Learning paths
+
+10. SMART RECOMMENDATION ENGINE
+
+* Based on:
+
+  * profile
+  * resume
+  * behavior
+* Personalized dashboard
+
+11. PRACTICE SYSTEM
+
+* Coding questions
+* MCQs
+* Mock interviews
+* Performance analytics
+
+12. PLANNER
+
+* Daily/weekly goals
+* Task tracking
+* Streak system
+
+13. COMMUNITY
+
+* Posts, comments, likes
+* Q&A section
+* Groups & mentorship
+
+14. REVIEWS
+
+* Internship reviews
+* Course reviews
+* Company reviews
+
+15. NOTIFICATIONS
+
+* Push/email/SMS
+* Smart alerts
+
+16. DASHBOARD
+
+* Resume score
+* Recommendations
+* Progress analytics
+
+17. GAMIFICATION
+
+* Points, badges, leaderboard
+
+18. CONTENT HUB
+
+* Blogs, videos, interview prep
+
+19. SETTINGS
+
+* Profile edit
+* Privacy
+* Notifications
+* Delete account
+
+20. ADMIN PANEL
+
+* User management
+* Content moderation
+* Analytics
+
+21. COMPANY PANEL
+
+* Post jobs/internships
+* Applicant tracking
+* Shortlist candidates
+
+22. AI FEATURES
+
+* AI Resume Builder
+* AI Career Chatbot
+* AI Mock Interview
+* AI Skill Gap Analyzer
+* AI Cover Letter Generator
+
+23. EXTRA FEATURES
+
+* Referral system
+* Dark mode
+* Multilingual
+* Mobile-ready
+
+========================
+UI REQUIREMENTS
+===============
+
+* Modern SaaS UI
+* Sidebar navigation
+* Card-based dashboard
+* Smooth animations
+* Dark/light mode
+* Clean typography
+* Glassmorphism or minimal design
+
+Pages:
+
+* Dashboard
+* Profile
+* Resume Builder
+* Internships
+* Practice
+* Community
+* Settings
+
+========================
+DELIVERABLES
+============
+
+* Full frontend + backend code
+* API structure
+* Database schema
+* Folder structure
+* Sample data
+* Environment setup guide
+
+========================
+IMPORTANT
+=========
+
+* Everything must be FUNCTIONAL (not just UI)
+* Use reusable components
+* Follow best practices
+* Keep code clean and production-ready
+
+Now generate the full project step-by-step including:
+
+1. Folder structure
+2. Database schema
+3. Backend APIs
+4. Frontend pages/components
+5. AI integrations
+6. Deployment steps
+
+Start building now.
