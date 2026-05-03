@@ -71,7 +71,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   useEffect(() => {
+    // Safety timeout — if Firebase never responds, stop showing loading screen
+    const timeout = setTimeout(() => setLoading(false), 5000);
+
     const unsubscribe = onAuthStateChangedListener(async (firebaseUser: User | null) => {
+      clearTimeout(timeout);
       setUser(firebaseUser);
       if (firebaseUser) {
         await fetchProfile(firebaseUser.uid, firebaseUser.email || '');
@@ -81,7 +85,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setLoading(false);
     });
 
-    return () => unsubscribe();
+    return () => {
+      clearTimeout(timeout);
+      unsubscribe();
+    };
   }, []);
 
   const signIn = async (email: string, password: string) => {
