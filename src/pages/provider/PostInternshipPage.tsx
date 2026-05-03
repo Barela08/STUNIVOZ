@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Card, CardHeader, CardContent, Button } from '../../components/common';
+import { Card, CardHeader, CardContent } from '../../components/common';
 import {
   Save, Send, CheckCircle, AlertCircle, Briefcase, MapPin,
   DollarSign, Clock, Users, Tag, FileText, ChevronRight, ChevronLeft, Zap, Star

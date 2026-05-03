@@ -1,14 +1,13 @@
-import React, { useState } from 'react';
-import { Card, CardHeader, CardContent, Button } from '../../components/common';
+import React from 'react';
+import { Card, CardContent, Button } from '../../components/common';
 import { Link } from 'react-router-dom';
 import {
   Users, Eye, CheckCircle, Clock, Briefcase, TrendingUp,
-  ArrowUpRight, ArrowDownRight, Star, ChevronRight, Plus,
-  Calendar, BarChart2, Target, Layers, AlertCircle
+  ArrowUpRight, ArrowDownRight, ChevronRight, Plus, Calendar
 } from 'lucide-react';
 import {
-  AreaChart, Area, BarChart, Bar, XAxis, YAxis,
-  CartesianGrid, Tooltip, ResponsiveContainer, FunnelChart, Funnel, LabelList
+  BarChart, Bar, XAxis, YAxis,
+  CartesianGrid, Tooltip, ResponsiveContainer
 } from 'recharts';
 
 const applicationData = [

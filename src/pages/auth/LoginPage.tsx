@@ -3,7 +3,6 @@ import { Link, useNavigate } from 'react-router-dom';
 import { Sparkles, Mail, Lock, ArrowRight, Eye, EyeOff, Moon, Sun } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTheme } from '../../contexts/ThemeContext';
-import { Button, Input } from '../../components/common';
 
 export const LoginPage: React.FC = () => {
   const navigate = useNavigate();

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { User, Trash2, LogOut, ChevronRight, CheckCircle, AlertCircle } from 'lucide-react';
+import { Trash2, LogOut, ChevronRight, CheckCircle, AlertCircle } from 'lucide-react';
 import { Card, CardHeader, CardContent, Button, Input } from '../../components/common';
 import { useAuth } from '../../contexts/AuthContext';
 import { resetPassword } from '../../services/firebase';

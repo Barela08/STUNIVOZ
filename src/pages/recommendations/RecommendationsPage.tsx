@@ -1,6 +1,6 @@
 import React from 'react';
 import { Card, CardHeader, CardContent, Button } from '../../components/common';
-import { Sparkles, Briefcase, BookOpen, Target } from 'lucide-react';
+import { Sparkles } from 'lucide-react';
 
 export const RecommendationsPage: React.FC = () => {
   return (
