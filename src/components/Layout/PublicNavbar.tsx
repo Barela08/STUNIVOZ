@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { Sparkles, Menu, X } from 'lucide-react';
+import { Menu, X } from 'lucide-react';
 import { Button } from '../common';
 
 export const PublicNavbar: React.FC = () => {
@@ -11,9 +11,10 @@ export const PublicNavbar: React.FC = () => {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between h-20">
           {/* Logo */}
-          <div className="flex items-center gap-2">
-            <Sparkles className="w-8 h-8 text-primary-500" />
-            <span className="font-display font-bold text-2xl text-gray-900 tracking-tight">STUNIVOZ</span>
+          <div className="flex items-center">
+            <Link to="/">
+              <img src="/logo.png" alt="STUNIVOZ" className="h-12 w-auto" />
+            </Link>
           </div>
 
           {/* Desktop Nav */}

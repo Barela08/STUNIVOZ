@@ -73,9 +73,8 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
           >
             <Menu className="w-6 h-6 text-gray-600" />
           </button>
-          <div className="flex items-center gap-2">
-            <Sparkles className="w-6 h-6 text-primary-500" />
-            <span className="font-display font-bold text-xl text-gray-900">STUNIVOZ</span>
+          <div className="flex items-center">
+            <img src="/logo.png" alt="STUNIVOZ" className="h-8 w-auto" />
           </div>
           <div className="flex items-center gap-2">
             <button className="p-2 rounded-lg hover:bg-gray-100">
@@ -105,9 +104,8 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
         <div className="flex flex-col h-full">
           {/* Logo */}
           <div className="flex items-center justify-between h-16 px-4 border-b border-gray-100">
-            <div className="flex items-center gap-2">
-              <Sparkles className="w-8 h-8 text-primary-500" />
-              <span className="font-display font-bold text-xl text-gray-900">STUNIVOZ</span>
+            <div className="flex items-center">
+              <img src="/logo.png" alt="STUNIVOZ" className="h-9 w-auto" />
             </div>
             <button
               onClick={() => setSidebarOpen(false)}
