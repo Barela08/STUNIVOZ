@@ -88,9 +88,7 @@ export const ProviderLoginPage: React.FC = () => {
 
         <div className="w-full max-w-md animate-slide-up">
           <div className="flex items-center gap-3 mb-8">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-600 to-blue-800 flex items-center justify-center shadow-lg">
-              <Building2 className="w-6 h-6 text-white" />
-            </div>
+            <img src="/logo-icon.jpeg" alt="STUNIVOZ" className="h-10 w-10 object-contain rounded-xl shadow-lg" />
             <div>
               <span className="font-display font-bold text-xl dark:text-white text-gray-900">STUNIVOZ</span>
               <span className="block text-xs text-blue-500 font-medium">Company Portal</span>

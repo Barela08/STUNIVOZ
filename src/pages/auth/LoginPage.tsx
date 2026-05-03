@@ -73,10 +73,7 @@ export const LoginPage: React.FC = () => {
         <div className="w-full max-w-md animate-slide-up">
           {/* Logo */}
           <div className="flex items-center gap-2 mb-8">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary-500 to-primary-700 flex items-center justify-center shadow-lg">
-              <Sparkles className="w-6 h-6 text-white" />
-            </div>
-            <span className="font-display font-bold text-2xl dark:text-white text-gray-900">STUNIVOZ</span>
+            <img src="/logo-full.jpeg" alt="STUNIVOZ" className="h-10 w-auto object-contain" />
           </div>
 
           <div className="mb-8">

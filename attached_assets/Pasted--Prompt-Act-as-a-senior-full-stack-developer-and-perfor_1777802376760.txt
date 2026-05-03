@@ -1,0 +1,108 @@
+**Prompt:**
+
+"Act as a senior full-stack developer and perform a complete audit, fix, update, and optimization of the entire project codebase. Ensure the system is fully functional, clean, and production-ready.
+
+---
+
+### 🔧 COMPLETE CODE FIXING
+
+* Review the entire codebase (frontend + backend)
+* Identify and fix all bugs, broken logic, and non-working features
+* Ensure:
+
+  * All buttons work properly
+  * All APIs are connected and functional
+  * Proper data flow between frontend and backend
+* Remove:
+
+  * Unused code
+  * Duplicate logic
+  * Dead components/files
+
+---
+
+### 🔄 FULL PROJECT UPDATE
+
+* I will provide a base structure → integrate all new fixes into it
+* Do not break existing working features
+* Improve overall architecture and performance
+* Refactor code for clean structure and maintainability
+
+---
+
+### 🐙 GITHUB SYNC REQUIREMENT
+
+* Ensure:
+
+  * Final code works perfectly on GitHub repository
+  * No missing files or broken dependencies
+  * Proper folder structure
+  * Add/update:
+
+    * README (setup + usage)
+    * Environment variables (.env example)
+* Code should run after clone without errors
+
+---
+
+### 🖼️ LOGO & UI REQUIREMENTS
+
+* I have provided 2 images (logos)
+* Implement logos:
+
+  * Wherever logo is required in UI (navbar, login page, dashboard, etc.)
+* Ensure:
+
+  * Proper size (not too big or small)
+  * Responsive scaling
+  * Clean alignment
+  * High-quality rendering
+
+---
+
+### 🎨 UI IMPROVEMENTS
+
+* Fix any broken or non-responsive UI
+* Maintain consistent design
+* Ensure proper spacing, alignment, and layout
+* Improve user experience where needed
+
+---
+
+### 🧪 FULL TESTING (VERY IMPORTANT)
+
+Test EVERYTHING:
+
+* Every button → must perform real action
+* Forms → submit and validate correctly
+* File upload → working
+* Download features → working
+* Admin panel → all features working
+* User side → all features working
+* API responses → correct
+* Error handling → proper messages
+
+Also test:
+
+* Mobile responsiveness
+* Different browsers
+* Edge cases
+
+---
+
+### 📋 FINAL OUTPUT
+
+Provide:
+
+* Summary of all fixes and improvements
+* List of removed unnecessary code
+* Confirmation that:
+  ✅ All features are working
+  ✅ GitHub version is stable
+  ✅ UI is clean and updated
+  ✅ Logos are properly placed
+  ✅ Full testing completed
+
+---
+
+Do NOT skip anything. Treat this as a final production deployment task where the entire system must work flawlessly."

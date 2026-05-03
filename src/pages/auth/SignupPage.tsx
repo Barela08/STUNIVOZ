@@ -61,8 +61,7 @@ export const SignupPage: React.FC = () => {
         <div className="w-full max-w-md">
           {/* Logo */}
           <div className="flex items-center gap-2 mb-8">
-            <Sparkles className="w-10 h-10 text-primary-500" />
-            <span className="font-display font-bold text-2xl text-gray-900">STUNIVOZ</span>
+            <img src="/logo-full.jpeg" alt="STUNIVOZ" className="h-10 w-auto object-contain" />
           </div>
 
           {/* Heading */}
