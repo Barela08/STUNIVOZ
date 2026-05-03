@@ -20,13 +20,30 @@ export const LoginPage: React.FC = () => {
     setError('');
   };
 
+  const formatAuthError = (err: any): string => {
+    const code = err?.code || '';
+    const msg = err?.message || '';
+    if (code === 'auth/unauthorized-domain') {
+      const domain = window.location.hostname;
+      return `Domain "${domain}" is not authorized in Firebase Console. Go to Firebase Console → Authentication → Settings → Authorized domains → Add "${domain}".`;
+    }
+    if (code === 'auth/user-not-found' || code === 'auth/wrong-password' || code === 'auth/invalid-credential') return 'Invalid email or password.';
+    if (code === 'auth/too-many-requests') return 'Too many attempts. Please wait a few minutes and try again.';
+    if (code === 'auth/network-request-failed') return 'Network error. Please check your internet connection.';
+    if (code === 'auth/popup-closed-by-user') return 'Sign-in popup was closed. Please try again.';
+    if (code === 'auth/popup-blocked') return 'Popup was blocked by your browser. Please allow popups for this site.';
+    return msg || 'Something went wrong. Please try again.';
+  };
+
+  const isUnauthorizedDomain = error.includes('not authorized in Firebase Console');
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setError('');
-    const { error } = await signIn(formData.email, formData.password);
-    if (error) {
-      setError(error.message || 'Invalid email or password. Please try again.');
+    const { error: err } = await signIn(formData.email, formData.password);
+    if (err) {
+      setError(formatAuthError(err));
       setLoading(false);
     } else {
       navigate('/dashboard');
@@ -36,9 +53,9 @@ export const LoginPage: React.FC = () => {
   const handleGoogleSignIn = async () => {
     setGoogleLoading(true);
     setError('');
-    const { error } = await signInWithGoogleOAuth();
-    if (error) {
-      setError(error.message || 'Google sign-in failed. Please try again.');
+    const { error: err } = await signInWithGoogleOAuth();
+    if (err) {
+      setError(formatAuthError(err));
       setGoogleLoading(false);
     } else {
       navigate('/dashboard');
@@ -48,9 +65,9 @@ export const LoginPage: React.FC = () => {
   const handleGitHubSignIn = async () => {
     setGithubLoading(true);
     setError('');
-    const { error } = await signInWithGitHubOAuth();
-    if (error) {
-      setError(error.message || 'GitHub sign-in failed. Please ensure GitHub is enabled in Firebase Console.');
+    const { error: err } = await signInWithGitHubOAuth();
+    if (err) {
+      setError(formatAuthError(err));
       setGithubLoading(false);
     } else {
       navigate('/dashboard');
@@ -72,8 +89,8 @@ export const LoginPage: React.FC = () => {
 
         <div className="w-full max-w-md animate-slide-up">
           {/* Logo */}
-          <div className="flex items-center gap-2 mb-8">
-            <img src="/stunivoz-logo.png" alt="STUNIVOZ" className="h-10 w-auto object-contain" />
+          <div className="flex items-center mb-8">
+            <img src="/stunivoz-logo-cropped.png" alt="STUNIVOZ" className="h-12 w-auto object-contain" />
           </div>
 
           <div className="mb-8">
@@ -82,8 +99,15 @@ export const LoginPage: React.FC = () => {
           </div>
 
           {error && (
-            <div className="mb-6 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl">
-              <p className="text-sm text-red-600 dark:text-red-400">{error}</p>
+            <div className={`mb-6 p-4 rounded-xl border ${isUnauthorizedDomain ? 'bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-700' : 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800'}`}>
+              {isUnauthorizedDomain ? (
+                <>
+                  <p className="text-sm font-semibold text-amber-700 dark:text-amber-400 mb-1">Firebase Domain Not Authorized</p>
+                  <p className="text-xs text-amber-600 dark:text-amber-400 leading-relaxed">{error}</p>
+                </>
+              ) : (
+                <p className="text-sm text-red-600 dark:text-red-400">{error}</p>
+              )}
             </div>
           )}
 
@@ -95,6 +119,7 @@ export const LoginPage: React.FC = () => {
                 <input
                   name="email"
                   type="email"
+                  autoComplete="email"
                   placeholder="Enter your email"
                   value={formData.email}
                   onChange={handleChange}
@@ -111,6 +136,7 @@ export const LoginPage: React.FC = () => {
                 <input
                   name="password"
                   type={showPassword ? 'text' : 'password'}
+                  autoComplete="current-password"
                   placeholder="Enter your password"
                   value={formData.password}
                   onChange={handleChange}
@@ -217,7 +243,7 @@ export const LoginPage: React.FC = () => {
         <div className="relative max-w-lg text-center text-white z-10">
           <div className="inline-flex items-center justify-center mb-8">
             <div className="bg-white rounded-2xl px-4 py-3 shadow-2xl">
-              <img src="/stunivoz-logo.png" alt="STUNIVOZ" className="h-16 w-auto object-contain" />
+              <img src="/stunivoz-logo-cropped.png" alt="STUNIVOZ" className="h-16 w-auto object-contain" />
             </div>
           </div>
           <h2 className="font-display text-4xl font-bold mb-4 leading-tight">

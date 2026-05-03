@@ -1,4 +1,4 @@
-modules = ["nodejs-20", "swift-5.8", "web"]
+modules = ["nodejs-20", "swift-5.8", "web", "python-3.11"]
 [agent]
 expertMode = true
 stack = "BEST_EFFORT_FALLBACK"

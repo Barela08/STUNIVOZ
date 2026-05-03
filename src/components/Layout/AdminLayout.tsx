@@ -46,7 +46,7 @@ export const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
             <Menu className="w-6 h-6 text-gray-600 dark:text-gray-300" />
           </button>
           <div className="flex items-center gap-2">
-            <img src="/stunivoz-logo.png" alt="STUNIVOZ" className="h-8 w-auto object-contain" />
+            <img src="/stunivoz-logo-cropped.png" alt="STUNIVOZ" className="h-8 w-auto object-contain" />
           </div>
           <button onClick={toggleTheme} className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800">
             {isDark ? <Sun className="w-5 h-5 text-yellow-400" /> : <Moon className="w-5 h-5 text-gray-500" />}
@@ -61,7 +61,7 @@ export const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
           <div className="flex items-center justify-between h-16 px-4 border-b border-gray-800">
             <div className="flex items-center gap-2">
               <div className="bg-white rounded-lg px-2 py-1">
-                <img src="/stunivoz-logo.png" alt="STUNIVOZ" className="h-7 w-auto object-contain" />
+                <img src="/stunivoz-logo-cropped.png" alt="STUNIVOZ" className="h-7 w-auto object-contain" />
               </div>
               <span className="font-display font-bold text-sm text-red-400">Admin</span>
             </div>

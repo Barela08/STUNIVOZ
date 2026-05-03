@@ -137,7 +137,7 @@ export const HomePage: React.FC = () => {
           <div className="flex flex-col md:flex-row justify-between items-center gap-6">
             <div className="flex items-center gap-2">
               <div className="bg-white rounded-xl px-3 py-1.5 shadow-md">
-                <img src="/stunivoz-logo.png" alt="STUNIVOZ" className="h-8 w-auto object-contain" />
+                <img src="/stunivoz-logo-cropped.png" alt="STUNIVOZ" className="h-8 w-auto object-contain" />
               </div>
             </div>
             <div className="flex gap-6">

@@ -1,0 +1,101 @@
+**Prompt:**
+
+"Act as a senior full-stack developer and fix the deployed web application (hosted on Vercel) where authentication and UI issues are occurring.
+
+---
+
+### 🔴 CRITICAL ISSUE: FIREBASE AUTH ERROR
+
+Error shown:
+`Firebase: Error (auth/unauthorized-domain)`
+
+**Fix this completely:**
+
+* Go to Firebase Console → Authentication → Settings
+* Add authorized domain:
+
+  * Add the deployed Vercel domain (e.g., *.vercel.app or specific domain)
+* Ensure:
+
+  * Correct Firebase config is used in production
+  * Environment variables (.env) are properly set in Vercel
+  * No mismatch between local and deployed config
+
+Also verify:
+
+* Google Sign-In works
+* GitHub Sign-In works
+* Email/Password login works
+
+---
+
+### 🔧 DEPLOYMENT FIX (VERCEL)
+
+* Ensure all environment variables are correctly added in Vercel:
+
+  * Firebase API keys
+  * Auth domain
+  * Project ID
+* Rebuild and redeploy after fixing
+* Check console/network errors and fix them
+
+---
+
+### 🖼️ LOGO FIX (IMPORTANT UI ISSUE)
+
+* Current logo is not properly visible or centered
+
+Fix:
+
+* Crop logo so that center content (text/icon) is clearly visible
+* Remove extra padding/empty space
+* Ensure:
+
+  * Proper aspect ratio
+  * Sharp and clear display
+  * No stretching or distortion
+
+Apply logo properly in:
+
+* Login page (top left + right card)
+* Navbar
+* Dashboard
+
+Set:
+
+* Proper size (not too small, not oversized)
+* Good alignment
+* Responsive scaling
+
+---
+
+### 🎨 UI POLISH
+
+* Improve login page layout
+* Ensure spacing and alignment is clean
+* Fix any visual imbalance
+
+---
+
+### 🧪 TESTING (MANDATORY)
+
+Test after fixing:
+
+* Login (Email/Password)
+* Google login
+* GitHub login
+* Page loads without Firebase error
+* Logo visibility (clear + centered)
+
+---
+
+### ✅ FINAL RESULT
+
+* Firebase auth error completely fixed
+* Login system working on deployed Vercel site
+* Logo properly cropped and visible
+* UI clean and balanced
+
+---
+
+Do NOT skip anything. Ensure production deployment works perfectly without errors."

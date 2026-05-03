@@ -88,7 +88,7 @@ export const ProviderLoginPage: React.FC = () => {
 
         <div className="w-full max-w-md animate-slide-up">
           <div className="flex items-center gap-3 mb-8">
-            <img src="/stunivoz-logo.png" alt="STUNIVOZ" className="h-10 w-auto object-contain" />
+            <img src="/stunivoz-logo-cropped.png" alt="STUNIVOZ" className="h-10 w-auto object-contain" />
             <div>
               <span className="font-display font-bold text-xl dark:text-white text-gray-900">STUNIVOZ</span>
               <span className="block text-xs text-blue-500 font-medium">Company Portal</span>
@@ -121,6 +121,7 @@ export const ProviderLoginPage: React.FC = () => {
                 <input
                   name="email"
                   type="email"
+                  autoComplete="email"
                   placeholder="company@example.com"
                   value={formData.email}
                   onChange={handleChange}
@@ -137,6 +138,7 @@ export const ProviderLoginPage: React.FC = () => {
                 <input
                   name="password"
                   type={showPassword ? 'text' : 'password'}
+                  autoComplete="current-password"
                   placeholder="Enter your password"
                   value={formData.password}
                   onChange={handleChange}

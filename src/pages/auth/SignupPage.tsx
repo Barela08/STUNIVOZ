@@ -41,7 +41,18 @@ export const SignupPage: React.FC = () => {
     const { error } = await signUp(formData.email, formData.password, formData.fullName);
     
     if (error) {
-      setError(error.message);
+      const code = (error as any)?.code || '';
+      const msg = (error as any)?.message || '';
+      if (code === 'auth/unauthorized-domain') {
+        const domain = window.location.hostname;
+        setError(`Domain "${domain}" not authorized. Go to Firebase Console → Authentication → Settings → Authorized domains → Add "${domain}".`);
+      } else if (code === 'auth/email-already-in-use') {
+        setError('This email is already registered. Try logging in instead.');
+      } else if (code === 'auth/weak-password') {
+        setError('Password is too weak. Please use at least 6 characters.');
+      } else {
+        setError(msg || 'Registration failed. Please try again.');
+      }
       setLoading(false);
     } else {
       navigate('/dashboard');
@@ -60,8 +71,8 @@ export const SignupPage: React.FC = () => {
       <div className="flex-1 flex items-center justify-center p-8">
         <div className="w-full max-w-md">
           {/* Logo */}
-          <div className="flex items-center gap-2 mb-8">
-            <img src="/stunivoz-logo.png" alt="STUNIVOZ" className="h-10 w-auto object-contain" />
+          <div className="flex items-center mb-8">
+            <img src="/stunivoz-logo-cropped.png" alt="STUNIVOZ" className="h-12 w-auto object-contain" />
           </div>
 
           {/* Heading */}
@@ -98,6 +109,7 @@ export const SignupPage: React.FC = () => {
               label="Email"
               name="email"
               type="email"
+              autoComplete="email"
               placeholder="Enter your email"
               icon={<Mail className="w-5 h-5" />}
               value={formData.email}
@@ -110,6 +122,7 @@ export const SignupPage: React.FC = () => {
                 label="Password"
                 name="password"
                 type={showPassword ? 'text' : 'password'}
+                autoComplete="new-password"
                 placeholder="Create a password"
                 icon={<Lock className="w-5 h-5" />}
                 value={formData.password}
@@ -146,6 +159,7 @@ export const SignupPage: React.FC = () => {
               label="Confirm Password"
               name="confirmPassword"
               type={showPassword ? 'text' : 'password'}
+              autoComplete="new-password"
               placeholder="Confirm your password"
               icon={<Lock className="w-5 h-5" />}
               value={formData.confirmPassword}
@@ -201,7 +215,7 @@ export const SignupPage: React.FC = () => {
         <div className="max-w-lg text-center text-white">
           <div className="mb-8">
             <div className="inline-flex bg-white rounded-2xl px-4 py-3 shadow-2xl mx-auto mb-6">
-              <img src="/stunivoz-logo.png" alt="STUNIVOZ" className="h-14 w-auto object-contain" />
+              <img src="/stunivoz-logo-cropped.png" alt="STUNIVOZ" className="h-14 w-auto object-contain" />
             </div>
             <h2 className="font-display text-4xl font-bold mb-4">
               Land Your Dream Internship
