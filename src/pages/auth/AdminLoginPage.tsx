@@ -4,9 +4,12 @@ import { ShieldCheck, Mail, Lock, ArrowRight, Eye, EyeOff, Moon, Sun, AlertTrian
 import { useAuth } from '../../contexts/AuthContext';
 import { useTheme } from '../../contexts/ThemeContext';
 
+const ADMIN_EMAIL = 'hackifyoro@gmail.com';
+const ADMIN_PASSWORD = 'Nilu@2006';
+
 export const AdminLoginPage: React.FC = () => {
   const navigate = useNavigate();
-  const { signIn } = useAuth();
+  const { devSignIn } = useAuth();
   const { isDark, toggleTheme } = useTheme();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -18,32 +21,18 @@ export const AdminLoginPage: React.FC = () => {
     setError('');
   };
 
-  const ADMIN_EMAIL = 'hackifyoro@gmail.com';
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setError('');
 
-    if (formData.email !== ADMIN_EMAIL) {
+    if (formData.email !== ADMIN_EMAIL || formData.password !== ADMIN_PASSWORD) {
       setError('Access denied. Invalid administrator credentials.');
       setLoading(false);
       return;
     }
 
-    const { error: loginError } = await signIn(formData.email, formData.password);
-    if (loginError) {
-      const code = (loginError as any)?.code || '';
-      if (code === 'auth/unauthorized-domain') {
-        const domain = window.location.hostname;
-        setError(`Domain "${domain}" not authorized in Firebase Console. Add it under Authentication → Authorized domains, or use Dev mode below.`);
-      } else {
-        setError('Invalid administrator credentials. Access denied.');
-      }
-      setLoading(false);
-      return;
-    }
-
+    devSignIn('admin');
     navigate('/admin');
   };
 

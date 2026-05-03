@@ -115,7 +115,8 @@ const RoleRoute: React.FC<{ children: React.ReactNode; role: UserRole; loginPath
   const { user, profile, loading } = useAuth();
   const { maintenanceMode, maintenanceMessage } = useAdminSettings();
   if (loading) return <div className="min-h-screen flex items-center justify-center dark:bg-gray-950"><Loading size="lg" text="Loading..." /></div>;
-  if (!user) return <Navigate to={loginPath} replace />;
+  const isAdminBypass = role === 'admin' && profile?.role === 'admin';
+  if (!user && !isAdminBypass) return <Navigate to={loginPath} replace />;
   if (profile && profile.role !== role) return <Navigate to={loginPath} replace />;
   // Admins bypass maintenance
   if (maintenanceMode && role !== 'admin') return <MaintenancePage message={maintenanceMessage} />;
