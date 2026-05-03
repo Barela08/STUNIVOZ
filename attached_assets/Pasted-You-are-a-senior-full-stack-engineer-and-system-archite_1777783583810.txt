@@ -1,0 +1,435 @@
+You are a senior full-stack engineer and system architect.
+
+Build a COMPLETE production-ready ADMIN PANEL for the platform "STUNIVOZ".
+
+This admin panel must have FULL CONTROL over the entire system including users, APIs, content, automation, security, and monetization.
+
+IMPORTANT:
+
+* Admin panel is ONLY accessible via URL: `/admin`
+* There is NO public admin signup
+* Admin accounts are created manually via database or super admin
+* All features must be FULLY FUNCTIONAL (not UI only)
+
+=================================
+CORE REQUIREMENTS
+=================
+
+* Modern SaaS Admin UI (like Stripe / Firebase / Vercel dashboards)
+* Fully responsive
+* Role-based access control (RBAC)
+* Secure authentication
+* Scalable architecture
+
+=================================
+TECH STACK
+==========
+
+Frontend:
+
+* Next.js (React + TypeScript)
+* Tailwind CSS
+
+Backend:
+
+* Node.js + Express (or NestJS)
+
+Database:
+
+* PostgreSQL
+
+Cache:
+
+* Redis
+
+Auth:
+
+* JWT + Refresh Tokens
+* Admin login via email/password ONLY
+
+=================================
+ADMIN AUTH SYSTEM
+=================
+
+* Route: `/admin/login`
+* Only pre-created admins can login
+* No signup option
+* Features:
+
+  * Login
+  * Logout
+  * 2FA (optional)
+  * Session management
+* Middleware:
+
+  * Protect all `/admin/*` routes
+
+=================================
+0. SYSTEM CORE CONFIG
+=====================
+
+* system_mode (production/staging/development)
+* debug_mode_toggle
+* feature_flags (toggle features dynamically)
+
+=================================
+
+1. SUPER ADMIN CONTROL
+   =================================
+
+* full access to everything
+* override any setting
+* emergency shutdown system
+* force logout all users
+
+=================================
+2. ROLE & STAFF MANAGEMENT
+==========================
+
+* create staff accounts
+* predefined roles
+* custom permissions (RBAC)
+* edit/remove staff
+
+=================================
+3. USER MANAGEMENT
+==================
+
+* view all users
+* edit user profile
+* ban/unban/suspend users
+* bulk actions
+* user activity tracking
+
+=================================
+4. API & PLATFORM CONTROL
+=========================
+
+* add external APIs
+* API mapping system
+* enable/disable APIs
+* cron-based auto sync
+* webhook real-time sync
+
+=================================
+5. AGENT AUTO-INTEGRATION
+=========================
+
+* add API agents
+* auto fetch data
+* smart merge (remove duplicates)
+* auto update system
+
+=================================
+6. CMS (CONTENT MANAGEMENT SYSTEM)
+==================================
+
+* homepage editor
+* page builder (drag & drop)
+* dynamic content updates
+* SEO controls
+
+=================================
+7. UI / THEME CONTROL
+=====================
+
+* theme color change
+* font control
+* dark mode toggle
+* branding:
+
+  * logo
+  * favicon
+  * splash screen
+
+=================================
+8. ADS MANAGEMENT
+=================
+
+* create/manage ads
+* placement control
+* enable/disable ads
+* analytics (views/clicks)
+
+=================================
+9. FEATURE CONTROL
+==================
+
+* toggle modules ON/OFF
+* add new features
+* A/B testing system
+
+=================================
+10. SPECIAL USER CONTROL
+========================
+
+* mark VIP users
+* unlock features
+* custom visibility
+
+=================================
+11. MAINTENANCE MODE
+====================
+
+* enable maintenance mode
+* custom message
+* allow admin/dev access
+
+=================================
+12. NOTIFICATION SYSTEM
+=======================
+
+* send push/email/SMS
+* schedule notifications
+* target specific users
+
+=================================
+13. DATA CONTROL
+================
+
+* duplicate detection
+* auto cleanup
+* manual override
+
+=================================
+14. ANALYTICS DASHBOARD
+=======================
+
+* user growth
+* active users
+* feature usage
+* top content
+
+=================================
+15. SECURITY & LOGS
+===================
+
+* admin logs
+* staff logs
+* login history
+* IP whitelist/blacklist
+* 2FA authentication
+
+=================================
+16. BACKUP & RESTORE
+====================
+
+* auto backups
+* manual backup
+* restore system
+
+=================================
+17. MONETIZATION
+================
+
+* subscriptions
+* featured listings
+* payment gateway:
+
+  * Razorpay
+  * Stripe
+  * PayPal
+
+=================================
+18. GLOBAL SETTINGS
+===================
+
+* website name
+* contact info
+* API keys
+* email config
+* timezone
+
+=================================
+19. AUTOMATION SYSTEM
+=====================
+
+* cron jobs
+* auto data fetch
+* auto cleanup
+* workflow automation
+
+=================================
+20. ERROR HANDLING
+==================
+
+* error logs
+* retry system
+* admin alerts
+
+=================================
+21. SEARCH SYSTEM
+=================
+
+* global search
+* filters
+* auto suggestions
+
+=================================
+22. PERFORMANCE
+===============
+
+* caching (Redis)
+* CDN support
+* lazy loading
+
+=================================
+23. COMMUNITY CONTROL
+=====================
+
+* manage posts/comments
+* moderate content
+
+=================================
+24. SCALABILITY
+===============
+
+* multilingual support
+* mobile app control
+* third-party integrations
+
+=================================
+25. DEV MODE
+============
+
+* sandbox environment
+* API testing
+* debug panel
+
+=================================
+26. EXPORT / IMPORT
+===================
+
+* export CSV/JSON
+* bulk import
+
+=================================
+27. AI SYSTEM
+=============
+
+* AI recommendations
+* AI duplicate detection
+* AI behavior analysis
+* AI chatbot support
+
+=================================
+28. BRANDING & MEDIA CONTROL
+============================
+
+* logo upload
+* favicon control
+* background images
+* splash screen
+* media library
+
+=================================
+29. ADVANCED MAINTENANCE
+========================
+
+* scheduled maintenance
+* custom UI
+* alert bar
+
+=================================
+30. USER & COMPANY RESTRICTIONS
+===============================
+
+* temporary ban
+* permanent ban
+* suspend account
+* reason tracking
+* auto unban
+
+=================================
+31. DYNAMIC BUTTON SYSTEM
+=========================
+
+* create/edit buttons
+* assign actions (internal/external)
+* styling control
+* visibility rules
+
+=================================
+32. CATEGORY CUSTOMIZATION
+==========================
+
+* layout control (grid/list)
+* banners
+* descriptions
+* visibility toggle
+
+=================================
+33. ALERT SYSTEM
+================
+
+* global announcements
+* popup alerts
+* scrolling text
+
+=================================
+34. REPORT MANAGEMENT
+=====================
+
+* user reports
+* admin review panel
+* instant actions
+
+=================================
+35. ACCESS CONTROL (ADVANCED)
+=============================
+
+* feature access per role
+* feature access per user
+* lock/unlock features
+
+=================================
+UI REQUIREMENTS
+===============
+
+* Sidebar navigation (Admin sections)
+* Topbar (search, notifications, profile)
+* Cards + tables UI
+* Charts for analytics
+* Clean modern dashboard
+
+Pages:
+
+* Admin Dashboard
+* Users
+* Staff
+* CMS
+* Analytics
+* Settings
+* Logs
+
+=================================
+DELIVERABLES
+============
+
+* Full backend + frontend code
+* Database schema
+* Admin authentication system
+* RBAC implementation
+* API routes
+* Folder structure
+* Deployment guide
+
+=================================
+IMPORTANT RULES
+===============
+
+* EVERYTHING must be working
+* Use clean architecture
+* Use reusable components
+* Secure all endpoints
+* Optimize performance
+
+Start building step-by-step:
+
+1. Folder structure
+2. Database schema
+3. Auth system
+4. APIs
+5. UI pages
+6. Advanced features
+7. Deployment

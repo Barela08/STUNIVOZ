@@ -1,0 +1,454 @@
+You are a senior full-stack engineer and system architect.
+
+Build a COMPLETE production-ready COMPANY / RECRUITER PLATFORM for "STUNIVOZ".
+
+This system allows companies to post jobs, manage candidates, conduct hiring, and use AI for recruitment.
+
+IMPORTANT:
+
+* Company panel URL: `/company`
+* Authentication required for all routes
+* All features must be FULLY FUNCTIONAL (not just UI)
+* Scalable and secure architecture required
+
+=================================
+CORE REQUIREMENTS
+=================
+
+* Modern SaaS dashboard UI (similar to LinkedIn Recruiter / ATS tools)
+* Fully responsive design
+* Secure authentication & RBAC
+* Real-time updates where needed
+
+=================================
+TECH STACK
+==========
+
+Frontend:
+
+* Next.js (React + TypeScript)
+* Tailwind CSS
+
+Backend:
+
+* Node.js + Express (or NestJS)
+
+Database:
+
+* PostgreSQL
+
+Cache:
+
+* Redis
+
+Storage:
+
+* AWS S3 (logos, resumes, files)
+
+Auth:
+
+* JWT + Refresh Tokens
+* LinkedIn OAuth
+
+AI:
+
+* OpenAI APIs
+
+=================================
+
+1. AUTHENTICATION SYSTEM
+   =================================
+
+* Signup:
+
+  * company_name
+  * recruiter_name
+  * email
+  * password (hashed)
+  * domain verification
+  * LinkedIn OAuth
+
+* Login:
+
+  * email/password
+  * social login
+
+* Security:
+
+  * forgot password
+  * OTP verification
+  * optional 2FA
+
+* Session:
+
+  * JWT auth
+  * refresh tokens
+  * logout all devices
+
+=================================
+2. COMPANY PROFILE
+==================
+
+* Basic info:
+
+  * company name
+  * logo upload
+  * website
+  * industry
+  * company size
+  * founded year
+  * location
+
+* About:
+
+  * description
+  * mission
+  * vision
+
+* Social links
+
+* Verification system:
+
+  * verified/unverified
+
+* Recruiter team:
+
+  * add/remove members
+  * roles (admin/recruiter/viewer)
+
+=================================
+3. JOB / INTERNSHIP POSTING
+===========================
+
+* Create job:
+
+  * title
+  * type (internship/full-time/freelance)
+  * location (remote/on-site/hybrid)
+  * salary/stipend
+  * duration
+  * experience required
+  * skills required
+  * description
+  * responsibilities
+  * perks
+  * openings
+  * deadline
+
+* Job settings:
+
+  * visibility
+  * auto close
+  * featured (paid)
+
+* Edit job
+
+* Delete job
+
+* Duplicate job (must work)
+
+=================================
+4. APPLICANT TRACKING SYSTEM (ATS)
+==================================
+
+* Applications dashboard
+
+* Candidate profile view:
+
+  * resume preview
+  * skills
+  * education
+  * projects
+  * ATS score
+  * portfolio links
+
+* Status pipeline:
+
+  * applied → screening → shortlisted → interview → selected → rejected
+
+* Filters:
+
+  * skills
+  * experience
+  * location
+  * education
+
+* Bulk actions:
+
+  * shortlist/reject multiple
+
+* Notes on candidates
+
+* Tags system
+
+=================================
+5. AI HIRING ASSISTANT
+======================
+
+* Resume screening:
+
+  * keyword match
+  * ranking
+
+* AI shortlisting:
+
+  * recommend top candidates
+
+* AI interview generator:
+
+  * role-based questions
+
+* Candidate scorecard:
+
+  * technical score
+  * communication score
+  * overall fit
+
+=================================
+6. INTERVIEW MANAGEMENT
+=======================
+
+* Schedule interview:
+
+  * date/time
+  * mode (online/offline)
+  * meeting link (Zoom/Google Meet)
+
+* Interview stages:
+
+  * HR / Technical / Final
+
+* Assign interviewer
+
+* Feedback system
+
+* Reschedule option
+
+=================================
+7. COMMUNICATION SYSTEM
+=======================
+
+* In-app chat with candidates
+
+* Email templates:
+
+  * interview invite
+  * rejection
+  * offer letter
+
+* Bulk emails
+
+* Notification center
+
+=================================
+8. OFFER MANAGEMENT
+===================
+
+* Generate offer letter (PDF)
+
+* Salary breakdown
+
+* Joining date
+
+* Send offer
+
+* Status:
+
+  * accepted / declined / pending
+
+=================================
+9. COMPANY DASHBOARD
+====================
+
+* Active jobs
+
+* Total applications
+
+* Shortlisted candidates
+
+* Analytics:
+
+  * conversion rate
+  * top skills
+  * job performance
+
+=================================
+10. BRANDING & COMPANY PAGE
+===========================
+
+* Public company page:
+
+  * overview
+  * culture images
+  * testimonials
+  * open positions
+
+* Employer branding tools
+
+=================================
+11. EVENT & HIRING DRIVE
+========================
+
+* Create hiring events:
+
+  * hackathons
+  * campus drives
+  * webinars
+
+* Registration system
+
+* Participant tracking
+
+* Shortlisting from events
+
+=================================
+12. SUBSCRIPTION & BILLING
+==========================
+
+* Plans:
+
+  * free / premium / enterprise
+
+* Feature limits:
+
+  * job posts
+  * candidate views
+  * AI access
+
+* Payment integration:
+
+  * Razorpay
+  * Stripe
+  * PayPal
+
+* Billing history
+
+* Invoices
+
+=================================
+13. REVIEWS & RATINGS
+=====================
+
+* Student reviews
+* Ratings
+* Feedback analysis
+
+=================================
+14. NOTIFICATIONS
+=================
+
+* Application alerts
+* Interview reminders
+* Deadline alerts
+* Email + push notifications
+
+=================================
+15. SECURITY & COMPLIANCE
+=========================
+
+* Data protection
+* RBAC
+* Audit logs
+* GDPR-ready structure
+
+=================================
+16. SETTINGS
+============
+
+* Edit company profile
+* Manage team
+* Change password
+* Notification preferences
+* Delete account
+
+=================================
+17. ADMIN CONTROL (INTEGRATION)
+===============================
+
+* Super admin can:
+
+  * verify companies
+  * monitor jobs
+  * detect fraud
+  * manage reports
+
+=================================
+18. API & INTEGRATIONS
+======================
+
+* LinkedIn job posting API
+* Google Meet / Zoom
+* GitHub profile fetch
+* HRMS (future ready)
+
+=================================
+19. ADVANCED FEATURES
+=====================
+
+* Campus hiring system
+* Referral hiring
+* Talent pool database
+* Saved candidates
+* Re-engagement campaigns
+
+=================================
+20. AI INSIGHTS
+===============
+
+* Hiring recommendations
+* Salary insights
+* Skill demand analysis
+* Predictive hiring success
+
+=================================
+UI REQUIREMENTS
+===============
+
+* Sidebar navigation
+* Dashboard cards
+* Table-based ATS UI
+* Kanban board for hiring stages
+* Clean modern SaaS UI
+
+Pages:
+
+* Dashboard
+* Jobs
+* Candidates (ATS)
+* Interviews
+* Messages
+* Analytics
+* Settings
+
+=================================
+DELIVERABLES
+============
+
+* Full frontend + backend code
+* Database schema
+* ATS system implementation
+* AI integrations
+* API routes
+* Folder structure
+* Deployment steps
+
+=================================
+IMPORTANT RULES
+===============
+
+* EVERYTHING must be functional
+* Clean architecture
+* Reusable components
+* Secure APIs
+* Optimized performance
+
+Start building step-by-step:
+
+1. Folder structure
+2. Database schema
+3. Auth system
+4. Job system
+5. ATS system
+6. AI integrations
+7. UI
+8. Deployment
