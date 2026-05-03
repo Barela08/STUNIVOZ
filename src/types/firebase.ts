@@ -4,4 +4,15 @@ export interface Profile {
   full_name: string;
   profile_photo?: string;
   phone?: string;
-  location?:
+  location?: string;
+  bio?: string;
+  college?: string;
+  degree?: string;
+  graduation_year?: string;
+  skills?: string[];
+  github?: string;
+  linkedin?: string;
+  portfolio?: string;
+  role?: string;
+  createdAt?: string;
+}
