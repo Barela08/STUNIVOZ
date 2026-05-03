@@ -73,7 +73,7 @@ export const LoginPage: React.FC = () => {
         <div className="w-full max-w-md animate-slide-up">
           {/* Logo */}
           <div className="flex items-center gap-2 mb-8">
-            <img src="/logo-full.jpeg" alt="STUNIVOZ" className="h-10 w-auto object-contain" />
+            <img src="/stunivoz-logo.png" alt="STUNIVOZ" className="h-10 w-auto object-contain" />
           </div>
 
           <div className="mb-8">
@@ -215,8 +215,10 @@ export const LoginPage: React.FC = () => {
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-indigo-500/10 rounded-full blur-3xl" />
 
         <div className="relative max-w-lg text-center text-white z-10">
-          <div className="inline-flex items-center justify-center w-24 h-24 rounded-3xl bg-white/15 backdrop-blur-sm border border-white/20 mb-8 shadow-2xl">
-            <Sparkles className="w-12 h-12 text-white" />
+          <div className="inline-flex items-center justify-center mb-8">
+            <div className="bg-white rounded-2xl px-4 py-3 shadow-2xl">
+              <img src="/stunivoz-logo.png" alt="STUNIVOZ" className="h-16 w-auto object-contain" />
+            </div>
           </div>
           <h2 className="font-display text-4xl font-bold mb-4 leading-tight">
             Your Complete Career Platform

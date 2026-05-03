@@ -61,7 +61,7 @@ export const SignupPage: React.FC = () => {
         <div className="w-full max-w-md">
           {/* Logo */}
           <div className="flex items-center gap-2 mb-8">
-            <img src="/logo-full.jpeg" alt="STUNIVOZ" className="h-10 w-auto object-contain" />
+            <img src="/stunivoz-logo.png" alt="STUNIVOZ" className="h-10 w-auto object-contain" />
           </div>
 
           {/* Heading */}
@@ -200,7 +200,9 @@ export const SignupPage: React.FC = () => {
       <div className="hidden lg:flex flex-1 bg-gradient-to-br from-accent-500 to-accent-700 items-center justify-center p-12">
         <div className="max-w-lg text-center text-white">
           <div className="mb-8">
-            <Sparkles className="w-20 h-20 mx-auto mb-6" />
+            <div className="inline-flex bg-white rounded-2xl px-4 py-3 shadow-2xl mx-auto mb-6">
+              <img src="/stunivoz-logo.png" alt="STUNIVOZ" className="h-14 w-auto object-contain" />
+            </div>
             <h2 className="font-display text-4xl font-bold mb-4">
               Land Your Dream Internship
             </h2>

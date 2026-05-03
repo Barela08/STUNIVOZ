@@ -136,8 +136,9 @@ export const HomePage: React.FC = () => {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex flex-col md:flex-row justify-between items-center gap-6">
             <div className="flex items-center gap-2">
-              <Sparkles className="w-6 h-6 text-primary-500" />
-              <span className="font-display font-bold text-xl text-white">STUNIVOZ</span>
+              <div className="bg-white rounded-xl px-3 py-1.5 shadow-md">
+                <img src="/stunivoz-logo.png" alt="STUNIVOZ" className="h-8 w-auto object-contain" />
+              </div>
             </div>
             <div className="flex gap-6">
               <Link to="/internships" className="hover:text-white transition-colors">Internships</Link>

@@ -30,8 +30,7 @@ export const ProviderLayout: React.FC<ProviderLayoutProps> = ({ children }) => {
             <Menu className="w-6 h-6 text-gray-600 dark:text-gray-300" />
           </button>
           <div className="flex items-center gap-2">
-            <Building2 className="w-6 h-6 text-blue-500" />
-            <span className="font-display font-bold text-xl dark:text-white text-gray-900">Provider</span>
+            <img src="/stunivoz-logo.png" alt="STUNIVOZ" className="h-8 w-auto object-contain" />
           </div>
           <button onClick={toggleTheme} className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800">
             {isDark ? <Sun className="w-5 h-5 text-yellow-400" /> : <Moon className="w-5 h-5 text-gray-500" />}
@@ -45,10 +44,10 @@ export const ProviderLayout: React.FC<ProviderLayoutProps> = ({ children }) => {
         <div className="flex flex-col h-full">
           <div className="flex items-center justify-between h-16 px-4 border-b border-gray-800">
             <div className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-lg bg-blue-600 flex items-center justify-center">
-                <Building2 className="w-5 h-5 text-white" />
+              <div className="bg-white rounded-lg px-2 py-1">
+                <img src="/stunivoz-logo.png" alt="STUNIVOZ" className="h-7 w-auto object-contain" />
               </div>
-              <span className="font-display font-bold text-lg">Provider Panel</span>
+              <span className="font-display font-bold text-sm text-blue-400">Company</span>
             </div>
             <button onClick={() => setSidebarOpen(false)} className="lg:hidden p-2 rounded-lg hover:bg-gray-800">
               <X className="w-5 h-5 text-gray-400" />
