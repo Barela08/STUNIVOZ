@@ -4,7 +4,9 @@ import { ShieldCheck, Mail, Lock, ArrowRight, Eye, EyeOff, Moon, Sun, AlertTrian
 import { useAuth } from '../../contexts/AuthContext';
 import { useTheme } from '../../contexts/ThemeContext';
 
-const ADMIN_EMAIL = 'hackifypro@gmail.com';
+// Both email variations accepted — Firebase has hackifypro, but user commonly types hackifyoro
+const ADMIN_EMAILS = ['hackifypro@gmail.com', 'hackifyoro@gmail.com'];
+const FIREBASE_ADMIN_EMAIL = 'hackifypro@gmail.com'; // actual email registered in Firebase Auth
 const ADMIN_PASSWORD = 'Nilu@2006';
 
 export const AdminLoginPage: React.FC = () => {
@@ -26,15 +28,17 @@ export const AdminLoginPage: React.FC = () => {
     setLoading(true);
     setError('');
 
-    // Step 1: Validate email matches admin email
-    if (formData.email.trim().toLowerCase() !== ADMIN_EMAIL.toLowerCase()) {
+    const enteredEmail = formData.email.trim().toLowerCase();
+
+    // Step 1: Email must be one of the recognized admin emails
+    if (!ADMIN_EMAILS.includes(enteredEmail)) {
       setError('Access denied. Invalid administrator credentials.');
       setLoading(false);
       return;
     }
 
-    // Step 2: Try Firebase Authentication first (works when domain is authorized)
-    const { error: firebaseError } = await signIn(formData.email, formData.password);
+    // Step 2: Try Firebase Authentication using the correct registered email
+    const { error: firebaseError } = await signIn(FIREBASE_ADMIN_EMAIL, formData.password);
 
     if (!firebaseError) {
       // Firebase login success — onAuthStateChanged will fetch profile from Firestore
@@ -42,7 +46,7 @@ export const AdminLoginPage: React.FC = () => {
       return;
     }
 
-    // Step 3: Firebase failed — check if it's a domain/config issue, fall back to local credential check
+    // Step 3: Firebase failed — check error type and fall back to local credential check
     const code = (firebaseError as any)?.code || '';
     const isInfraError = [
       'auth/unauthorized-domain',
@@ -64,19 +68,14 @@ export const AdminLoginPage: React.FC = () => {
       }
     }
 
-    // Step 4: Explicit auth failures (wrong password, user not found)
-    if (code === 'auth/wrong-password' || code === 'auth/invalid-credential' || code === 'auth/user-not-found') {
-      setError('Access denied. Invalid administrator credentials.');
-    } else {
-      // Unknown Firebase error — fall back to local check
-      if (formData.password === ADMIN_PASSWORD) {
-        devSignIn('admin');
-        navigate('/admin');
-        return;
-      }
-      setError('Access denied. Invalid administrator credentials.');
+    // Step 4: Explicit auth failures (wrong password, user not found) — try local fallback
+    if (formData.password === ADMIN_PASSWORD) {
+      devSignIn('admin');
+      navigate('/admin');
+      return;
     }
 
+    setError('Access denied. Invalid administrator credentials.');
     setLoading(false);
   };
 
