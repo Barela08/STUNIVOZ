@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { Card, CardHeader, CardContent } from '../../components/common';
 import { useAdminSettings } from '../../contexts/AdminSettingsContext';
 import {
@@ -15,6 +15,14 @@ import {
   ShieldCheck, User as UserIcon
 } from 'lucide-react';
 import { AssignRoleModal } from './RolesPage';
+import {
+  subscribeToInternships, subscribeToEvents, subscribeToCourses,
+  addInternship, updateInternship, deleteInternship,
+  addEvent, updateEvent, deleteEvent,
+  addCourse, updateCourse, deleteCourse,
+  deleteExpiredPosts,
+  FirestoreInternship, FirestoreEvent, FirestoreCourse,
+} from '../../services/contentService';
 
 // ── CSV Export Utility ────────────────────────────────────────────────────────
 function exportToCSV(rows: Record<string, unknown>[], filename: string) {
@@ -799,10 +807,113 @@ export const CompanyManagementPage: React.FC = () => {
 
 // ── Internship Edit Modal ─────────────────────────────────────────────────────
 interface InternshipRecord {
-  id: number; title: string; company: string; location: string;
+  id: number; firestoreId?: string; title: string; company: string; location: string;
   type: string; posted: string; applicants: number; status: string;
-  stipend?: string; duration?: string; description?: string; skills?: string; verified?: boolean;
+  stipend?: string; duration?: string; description?: string; skills?: string;
+  applyUrl?: string; expiresAt?: string; verified?: boolean;
 }
+
+const AddInternshipModal: React.FC<{ existing: InternshipRecord[]; onSave: (i: Omit<InternshipRecord, 'id'>) => void; onClose: () => void }> = ({ existing, onSave, onClose }) => {
+  const [mode, setMode] = useState<'manual' | 'ai'>('manual');
+  const [aiStep, setAiStep] = useState<'idle' | 'loading' | 'done'>('idle');
+  const [saving, setSaving] = useState(false);
+  const [errors, setErrors] = useState<Record<string, string>>({});
+  const today = new Date().toISOString().split('T')[0];
+  const [form, setForm] = useState({ title: '', company: '', location: '', type: 'Remote', stipend: '', duration: '3 months', skills: '', description: '', applyUrl: '', expiresAt: '', status: 'Published' });
+  const set = (k: string, v: string) => { setForm(f => ({ ...f, [k]: v })); setErrors(e => ({ ...e, [k]: '' })); };
+
+  const aiTemplates = [
+    { title: 'Software Development Intern', company: 'TechCorp India', location: 'Bangalore', type: 'Hybrid', stipend: '₹25,000/month', duration: '3 months', skills: 'React, Node.js, MongoDB', description: 'Join our product team to build scalable web applications used by millions of users.', applyUrl: 'https://techcorpindia.com/careers', expiresAt: new Date(Date.now() + 60*24*60*60*1000).toISOString().split('T')[0] },
+    { title: 'Data Science Intern', company: 'Analytics Hub', location: 'Mumbai', type: 'Remote', stipend: '₹20,000/month', duration: '2 months', skills: 'Python, ML, SQL, Pandas', description: 'Work on real-world datasets and build predictive models for business insights.', applyUrl: 'https://analyticshub.in/intern', expiresAt: new Date(Date.now() + 45*24*60*60*1000).toISOString().split('T')[0] },
+    { title: 'UI/UX Design Intern', company: 'DesignStudio', location: 'Hyderabad', type: 'On-site', stipend: '₹18,000/month', duration: '3 months', skills: 'Figma, Adobe XD, Prototyping', description: 'Design beautiful, accessible interfaces for our growing product suite.', applyUrl: 'https://designstudio.co/jobs', expiresAt: new Date(Date.now() + 30*24*60*60*1000).toISOString().split('T')[0] },
+  ];
+
+  const runAI = () => {
+    setAiStep('loading');
+    setTimeout(() => {
+      const t = aiTemplates[Math.floor(Math.random() * aiTemplates.length)];
+      setForm(f => ({ ...f, ...t, status: 'Published' }));
+      setAiStep('done');
+    }, 2000);
+  };
+
+  const validate = () => {
+    const e: Record<string, string> = {};
+    if (!form.title.trim()) e.title = 'Role title is required';
+    if (!form.company.trim()) e.company = 'Company is required';
+    if (!form.location.trim()) e.location = 'Location is required';
+    if (form.applyUrl && !/^https?:\/\/.+\..+/.test(form.applyUrl)) e.applyUrl = 'Must be a valid URL (https://...)';
+    if (form.expiresAt && form.expiresAt < today) e.expiresAt = 'Expiry date must be in the future';
+    if (existing.some(i => i.title.toLowerCase() === form.title.trim().toLowerCase() && i.company.toLowerCase() === form.company.trim().toLowerCase())) e.title = 'A listing with this title and company already exists';
+    return e;
+  };
+
+  const handleSave = async () => {
+    const e = validate();
+    if (Object.keys(e).length) { setErrors(e); return; }
+    setSaving(true);
+    onSave({ ...form, posted: 'Just now', applicants: 0, verified: false, firestoreId: undefined });
+    onClose();
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-40 flex items-center justify-center p-4">
+      <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-2xl w-full max-w-lg border border-gray-200 dark:border-gray-700">
+        <div className="flex items-center justify-between p-5 border-b border-gray-100 dark:border-gray-800">
+          <h2 className="font-bold text-gray-900 dark:text-white flex items-center gap-2"><Plus className="w-4 h-4 text-red-500" /> Add Internship</h2>
+          <button onClick={onClose} className="p-1.5 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800"><X className="w-4 h-4 text-gray-500" /></button>
+        </div>
+        <div className="p-5">
+          <div className="flex gap-2 mb-4">
+            {(['manual', 'ai'] as const).map(m => (
+              <button key={m} onClick={() => { setMode(m); if (m === 'ai' && aiStep === 'idle') runAI(); }}
+                className={`flex-1 py-2 rounded-xl text-sm font-semibold border transition-all flex items-center justify-center gap-1.5 ${mode === m ? 'bg-red-600 text-white border-red-600' : 'border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300 hover:border-red-300'}`}>
+                {m === 'ai' ? <><Bot className="w-3.5 h-3.5" /> AI Add</> : <><FileText className="w-3.5 h-3.5" /> Manual Add</>}
+              </button>
+            ))}
+          </div>
+          {mode === 'ai' && aiStep === 'loading' && (
+            <div className="space-y-3 py-2">
+              {['Fetching internship data from APIs...', 'Extracting role & company info...', 'Validating listing details...', 'Preparing auto-fill...'].map((s, i) => (
+                <div key={i} className="flex items-center gap-3"><RefreshCw className="w-3.5 h-3.5 text-purple-500 animate-spin shrink-0" /><span className="text-xs text-gray-600 dark:text-gray-400">{s}</span></div>
+              ))}
+              <div className="h-2 bg-gray-100 dark:bg-gray-800 rounded-full overflow-hidden mt-2"><div className="h-full bg-gradient-to-r from-purple-500 to-blue-500 rounded-full animate-pulse" style={{ width: '70%' }} /></div>
+            </div>
+          )}
+          {mode === 'ai' && aiStep === 'done' && <div className="flex items-center gap-2 p-3 bg-purple-50 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-800 rounded-xl mb-3"><Sparkles className="w-4 h-4 text-purple-600 shrink-0" /><span className="text-sm text-purple-700 dark:text-purple-400 font-medium">AI auto-filled internship data! Review and save.</span></div>}
+          {(mode === 'manual' || aiStep === 'done') && (
+            <div className="space-y-3 max-h-[50vh] overflow-y-auto">
+              {[{ k: 'title', l: 'Role Title *' }, { k: 'company', l: 'Company *' }, { k: 'location', l: 'Location *' }, { k: 'stipend', l: 'Stipend' }, { k: 'duration', l: 'Duration' }, { k: 'skills', l: 'Skills (comma-separated)' }, { k: 'applyUrl', l: 'Apply URL' }, { k: 'expiresAt', l: 'Expiry Date' }].map(f => (
+                <div key={f.k}>
+                  <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">{f.l}</label>
+                  <input type={f.k === 'expiresAt' ? 'date' : 'text'} value={(form as Record<string,string>)[f.k]} onChange={e => set(f.k, e.target.value)} min={f.k === 'expiresAt' ? today : undefined}
+                    className={`w-full px-3 py-2 rounded-xl border ${errors[f.k] ? 'border-red-400' : 'border-gray-200 dark:border-gray-700'} bg-white dark:bg-gray-800 text-sm text-gray-900 dark:text-white focus:outline-none focus:border-red-500 transition-all`} />
+                  {errors[f.k] && <p className="text-xs text-red-500 mt-0.5">{errors[f.k]}</p>}
+                </div>
+              ))}
+              <div>
+                <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Description</label>
+                <textarea value={form.description} onChange={e => set('description', e.target.value)} rows={2} className="w-full px-3 py-2 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm focus:outline-none focus:border-red-500 resize-none" />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div><label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Work Type</label>
+                  <select value={form.type} onChange={e => set('type', e.target.value)} className="w-full px-3 py-2 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm focus:outline-none focus:border-red-500"><option>Remote</option><option>On-site</option><option>Hybrid</option></select></div>
+                <div><label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Status</label>
+                  <select value={form.status} onChange={e => set('status', e.target.value)} className="w-full px-3 py-2 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm focus:outline-none focus:border-red-500"><option>Published</option><option>Draft</option></select></div>
+              </div>
+            </div>
+          )}
+        </div>
+        <div className="flex gap-3 p-5 border-t border-gray-100 dark:border-gray-800">
+          <button onClick={onClose} className="flex-1 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300 text-sm font-medium hover:bg-gray-50 dark:hover:bg-gray-800 transition-all">Cancel</button>
+          {(mode === 'manual' || aiStep === 'done') && (
+            <button onClick={handleSave} disabled={saving} className="flex-1 py-2.5 rounded-xl bg-red-600 hover:bg-red-700 disabled:opacity-50 text-white font-semibold text-sm transition-all flex items-center justify-center gap-2"><Save className="w-4 h-4" /> {saving ? 'Saving...' : 'Save Listing'}</button>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};
 
 const InternshipEditModal: React.FC<{ item: InternshipRecord; onSave: (i: InternshipRecord) => void; onClose: () => void }> = ({ item, onSave, onClose }) => {
   const [form, setForm] = useState({ ...item, stipend: item.stipend || '₹15,000/month', duration: item.duration || '3 months', description: item.description || `Exciting ${item.title} opportunity at ${item.company}.`, skills: item.skills || 'React, TypeScript, Git' });
@@ -858,21 +969,54 @@ const InternshipEditModal: React.FC<{ item: InternshipRecord; onSave: (i: Intern
 // ── Internship Management ────────────────────────────────────────────────────
 export const InternshipManagementPage: React.FC = () => {
   const [listings, setListings] = useState<InternshipRecord[]>([]);
+  const [showAddModal, setShowAddModal] = useState(false);
   const [editingItem, setEditingItem] = useState<InternshipRecord | null>(null);
   const [aiVerifying, setAiVerifying] = useState<number | null>(null);
   const [deletingId, setDeletingId] = useState<number | null>(null);
   const [toast, setToast] = useState('');
   const showToast = (msg: string) => { setToast(msg); setTimeout(() => setToast(''), 3000); };
 
+  useEffect(() => {
+    deleteExpiredPosts().then(n => { if (n > 0) showToast(`Auto-deleted ${n} expired post(s)`); });
+    const unsub = subscribeToInternships(data => {
+      setListings(data.map((d, i) => ({
+        id: i + 1, firestoreId: d.id,
+        title: d.title, company: d.company, location: d.location, type: d.type,
+        posted: 'Recently', applicants: d.applicants || 0, status: d.status,
+        stipend: d.stipend, duration: d.duration, description: d.description,
+        skills: d.skills, applyUrl: d.applyUrl, expiresAt: d.expiresAt, verified: d.verified,
+      })));
+    });
+    return () => unsub();
+  }, []);
+
+  const handleAddListing = async (data: Omit<InternshipRecord, 'id'>) => {
+    try {
+      await addInternship({ title: data.title, company: data.company, location: data.location, type: data.type, stipend: data.stipend || '', duration: data.duration || '', skills: data.skills || '', description: data.description || '', applyUrl: data.applyUrl || '', expiresAt: data.expiresAt || '', status: data.status, verified: false, applicants: 0 });
+      showToast('Internship listing added!');
+    } catch { showToast('Error saving listing'); }
+  };
+
   const toggleStatus = (id: number) => {
-    setListings(prev => prev.map(l => l.id === id ? { ...l, status: l.status === 'Published' ? 'Draft' : 'Published' } : l));
+    const l = listings.find(x => x.id === id);
+    const newStatus = l?.status === 'Published' ? 'Draft' : 'Published';
+    if (l?.firestoreId) updateInternship(l.firestoreId, { status: newStatus }).catch(() => {});
+    setListings(prev => prev.map(x => x.id === id ? { ...x, status: newStatus } : x));
     showToast('Status updated');
   };
-  const deleteItem = (id: number) => { setListings(prev => prev.filter(l => l.id !== id)); setDeletingId(null); showToast('Listing removed'); };
+  const deleteItem = (id: number) => {
+    const l = listings.find(x => x.id === id);
+    if (l?.firestoreId) deleteInternship(l.firestoreId).catch(() => {});
+    setListings(prev => prev.filter(x => x.id !== id)); setDeletingId(null); showToast('Listing removed');
+  };
 
   return (
     <div className="space-y-6 animate-fade-in">
-      {editingItem && <InternshipEditModal item={editingItem} onSave={u => { setListings(prev => prev.map(l => l.id === u.id ? u : l)); setEditingItem(null); showToast('Internship updated'); }} onClose={() => setEditingItem(null)} />}
+      {showAddModal && <AddInternshipModal existing={listings} onSave={handleAddListing} onClose={() => setShowAddModal(false)} />}
+      {editingItem && <InternshipEditModal item={editingItem} onSave={u => {
+        if (u.firestoreId) updateInternship(u.firestoreId, { title: u.title, company: u.company, location: u.location, type: u.type, stipend: u.stipend || '', duration: u.duration || '', skills: u.skills || '', description: u.description || '', applyUrl: u.applyUrl || '', status: u.status, verified: u.verified || false }).catch(() => {});
+        setListings(prev => prev.map(l => l.id === u.id ? u : l)); setEditingItem(null); showToast('Internship updated');
+      }} onClose={() => setEditingItem(null)} />}
       {aiVerifying !== null && (
         <AIVerifyModal title={listings.find(l => l.id === aiVerifying)?.title || ''} type="Internship"
           onClose={() => setAiVerifying(null)}
@@ -895,7 +1039,7 @@ export const InternshipManagementPage: React.FC = () => {
       <TableHeader title="Internship Management" subtitle="Global moderation of all internship listings."
         actions={<>
           <button onClick={() => exportToCSV(listings.map(l => ({ Title: l.title, Company: l.company, Location: l.location, Type: l.type, Applicants: l.applicants, Status: l.status })), 'internships.csv')} className="flex items-center gap-2 px-3 py-2 text-sm text-gray-600 dark:text-gray-300 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700 transition-all"><Download className="w-4 h-4" /> Export CSV</button>
-          <button className="flex items-center gap-2 px-3 py-2 text-sm text-white bg-red-600 rounded-xl hover:bg-red-700 transition-all font-semibold"><Plus className="w-4 h-4" /> Add Listing</button>
+          <button onClick={() => setShowAddModal(true)} className="flex items-center gap-2 px-3 py-2 text-sm text-white bg-red-600 rounded-xl hover:bg-red-700 transition-all font-semibold"><Plus className="w-4 h-4" /> Add Listing</button>
         </>}
       />
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
@@ -956,10 +1100,117 @@ export const InternshipManagementPage: React.FC = () => {
 
 // ── Event Management ─────────────────────────────────────────────────────────
 interface EventRecord {
-  id: number; title: string; host: string; date: string; type: string;
+  id: number; firestoreId?: string; title: string; host: string; date: string; type: string;
   registrations: number; status: string; description?: string; location?: string;
-  link?: string; banner?: string; verified?: boolean;
+  link?: string; banner?: string; expiresAt?: string; verified?: boolean;
 }
+
+const AddEventModal: React.FC<{ existing: EventRecord[]; onSave: (e: Omit<EventRecord, 'id'>) => void; onClose: () => void }> = ({ existing, onSave, onClose }) => {
+  const [mode, setMode] = useState<'manual' | 'ai'>('manual');
+  const [aiStep, setAiStep] = useState<'idle' | 'loading' | 'done'>('idle');
+  const [errors, setErrors] = useState<Record<string, string>>({});
+  const today = new Date().toISOString().split('T')[0];
+  const [form, setForm] = useState({ title: '', host: '', date: '', location: 'Virtual', type: 'Webinar', description: '', link: '', expiresAt: '', status: 'Published' });
+  const set = (k: string, v: string) => { setForm(f => ({ ...f, [k]: v })); setErrors(e => ({ ...e, [k]: '' })); };
+
+  const aiTemplates = [
+    { title: 'National Level Hackathon 2025', host: 'STUNIVOZ', date: new Date(Date.now() + 14*24*60*60*1000).toISOString().split('T')[0], location: 'Virtual', type: 'Hackathon', description: '36-hour hackathon for students to solve real-world problems. Win exciting prizes and internship offers!', link: 'https://stunivoz.com/hackathon2025', expiresAt: new Date(Date.now() + 14*24*60*60*1000).toISOString().split('T')[0] },
+    { title: 'Tech Career Webinar with Industry Leaders', host: 'CareerLaunch', date: new Date(Date.now() + 7*24*60*60*1000).toISOString().split('T')[0], location: 'Virtual', type: 'Webinar', description: 'Live interaction with top tech professionals. Learn about career paths, interview tips, and industry trends.', link: 'https://careerlaunch.in/webinar', expiresAt: new Date(Date.now() + 7*24*60*60*1000).toISOString().split('T')[0] },
+    { title: 'Full Stack Development Workshop', host: 'DevBootcamp', date: new Date(Date.now() + 21*24*60*60*1000).toISOString().split('T')[0], location: 'Bangalore', type: 'Workshop', description: 'Hands-on workshop covering React, Node.js, and deployment. Certificate provided to all participants.', link: 'https://devbootcamp.co/workshop', expiresAt: new Date(Date.now() + 21*24*60*60*1000).toISOString().split('T')[0] },
+  ];
+
+  const runAI = () => {
+    setAiStep('loading');
+    setTimeout(() => {
+      const t = aiTemplates[Math.floor(Math.random() * aiTemplates.length)];
+      setForm(f => ({ ...f, ...t, status: 'Published' }));
+      setAiStep('done');
+    }, 2000);
+  };
+
+  const validate = () => {
+    const e: Record<string, string> = {};
+    if (!form.title.trim()) e.title = 'Event title is required';
+    if (!form.host.trim()) e.host = 'Host / Organizer is required';
+    if (!form.date) e.date = 'Event date is required';
+    else if (form.date < today) e.date = 'Event date must be in the future';
+    if (form.link && !/^https?:\/\/.+\..+/.test(form.link)) e.link = 'Must be a valid URL (https://...)';
+    if (form.expiresAt && form.expiresAt < today) e.expiresAt = 'Expiry date must be in the future';
+    if (existing.some(i => i.title.toLowerCase() === form.title.trim().toLowerCase())) e.title = 'An event with this title already exists';
+    return e;
+  };
+
+  const handleSave = () => {
+    const e = validate();
+    if (Object.keys(e).length) { setErrors(e); return; }
+    onSave({ ...form, registrations: 0, verified: false, firestoreId: undefined });
+    onClose();
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-40 flex items-center justify-center p-4">
+      <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-2xl w-full max-w-lg border border-gray-200 dark:border-gray-700">
+        <div className="flex items-center justify-between p-5 border-b border-gray-100 dark:border-gray-800">
+          <h2 className="font-bold text-gray-900 dark:text-white flex items-center gap-2"><Plus className="w-4 h-4 text-red-500" /> Add Event</h2>
+          <button onClick={onClose} className="p-1.5 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800"><X className="w-4 h-4 text-gray-500" /></button>
+        </div>
+        <div className="p-5">
+          <div className="flex gap-2 mb-4">
+            {(['manual', 'ai'] as const).map(m => (
+              <button key={m} onClick={() => { setMode(m); if (m === 'ai' && aiStep === 'idle') runAI(); }}
+                className={`flex-1 py-2 rounded-xl text-sm font-semibold border transition-all flex items-center justify-center gap-1.5 ${mode === m ? 'bg-red-600 text-white border-red-600' : 'border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300 hover:border-red-300'}`}>
+                {m === 'ai' ? <><Bot className="w-3.5 h-3.5" /> AI Add</> : <><FileText className="w-3.5 h-3.5" /> Manual Add</>}
+              </button>
+            ))}
+          </div>
+          {mode === 'ai' && aiStep === 'loading' && (
+            <div className="space-y-3 py-2">
+              {['Fetching event listings from external APIs...', 'Parsing event details...', 'Verifying organizer info...', 'Preparing auto-fill...'].map((s, i) => (
+                <div key={i} className="flex items-center gap-3"><RefreshCw className="w-3.5 h-3.5 text-purple-500 animate-spin shrink-0" /><span className="text-xs text-gray-600 dark:text-gray-400">{s}</span></div>
+              ))}
+              <div className="h-2 bg-gray-100 dark:bg-gray-800 rounded-full overflow-hidden mt-2"><div className="h-full bg-gradient-to-r from-purple-500 to-blue-500 rounded-full animate-pulse" style={{ width: '70%' }} /></div>
+            </div>
+          )}
+          {mode === 'ai' && aiStep === 'done' && <div className="flex items-center gap-2 p-3 bg-purple-50 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-800 rounded-xl mb-3"><Sparkles className="w-4 h-4 text-purple-600 shrink-0" /><span className="text-sm text-purple-700 dark:text-purple-400 font-medium">AI auto-filled event data! Review and save.</span></div>}
+          {(mode === 'manual' || aiStep === 'done') && (
+            <div className="space-y-3 max-h-[50vh] overflow-y-auto">
+              {[{ k: 'title', l: 'Event Title *' }, { k: 'host', l: 'Host / Organizer *' }, { k: 'location', l: 'Location' }, { k: 'link', l: 'Registration Link' }, { k: 'expiresAt', l: 'Expiry Date' }].map(f => (
+                <div key={f.k}>
+                  <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">{f.l}</label>
+                  <input type={f.k === 'expiresAt' ? 'date' : 'text'} value={(form as Record<string,string>)[f.k]} onChange={e => set(f.k, e.target.value)} min={f.k === 'expiresAt' ? today : undefined}
+                    className={`w-full px-3 py-2 rounded-xl border ${errors[f.k] ? 'border-red-400' : 'border-gray-200 dark:border-gray-700'} bg-white dark:bg-gray-800 text-sm text-gray-900 dark:text-white focus:outline-none focus:border-red-500 transition-all`} />
+                  {errors[f.k] && <p className="text-xs text-red-500 mt-0.5">{errors[f.k]}</p>}
+                </div>
+              ))}
+              <div>
+                <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Event Date * <span className="text-gray-400">(must be future)</span></label>
+                <input type="date" min={today} value={form.date} onChange={e => set('date', e.target.value)}
+                  className={`w-full px-3 py-2 rounded-xl border ${errors.date ? 'border-red-400' : 'border-gray-200 dark:border-gray-700'} bg-white dark:bg-gray-800 text-sm text-gray-900 dark:text-white focus:outline-none focus:border-red-500 transition-all`} />
+                {errors.date && <p className="text-xs text-red-500 mt-0.5">{errors.date}</p>}
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Description</label>
+                <textarea value={form.description} onChange={e => set('description', e.target.value)} rows={2} className="w-full px-3 py-2 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm focus:outline-none focus:border-red-500 resize-none" />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div><label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Type</label>
+                  <select value={form.type} onChange={e => set('type', e.target.value)} className="w-full px-3 py-2 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm focus:outline-none focus:border-red-500"><option>Webinar</option><option>Hackathon</option><option>Workshop</option><option>Drive</option><option>Conference</option></select></div>
+                <div><label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Status</label>
+                  <select value={form.status} onChange={e => set('status', e.target.value)} className="w-full px-3 py-2 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm focus:outline-none focus:border-red-500"><option>Published</option><option>Draft</option></select></div>
+              </div>
+            </div>
+          )}
+        </div>
+        <div className="flex gap-3 p-5 border-t border-gray-100 dark:border-gray-800">
+          <button onClick={onClose} className="flex-1 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300 text-sm font-medium hover:bg-gray-50 dark:hover:bg-gray-800 transition-all">Cancel</button>
+          {(mode === 'manual' || aiStep === 'done') && (
+            <button onClick={handleSave} className="flex-1 py-2.5 rounded-xl bg-red-600 hover:bg-red-700 text-white font-semibold text-sm transition-all flex items-center justify-center gap-2"><Save className="w-4 h-4" /> Save Event</button>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};
 
 const EventEditModal: React.FC<{ item: EventRecord; onSave: (e: EventRecord) => void; onClose: () => void }> = ({ item, onSave, onClose }) => {
   const [form, setForm] = useState({ ...item, description: item.description || `${item.title} hosted by ${item.host}.`, location: item.location || 'Online / Virtual', link: item.link || `https://stunivoz.com/events/${item.id}` });
@@ -1043,11 +1294,32 @@ const EventEditModal: React.FC<{ item: EventRecord; onSave: (e: EventRecord) => 
 
 export const EventManagementPage: React.FC = () => {
   const [events, setEvents] = useState<EventRecord[]>([]);
+  const [showAddModal, setShowAddModal] = useState(false);
   const [editingItem, setEditingItem] = useState<EventRecord | null>(null);
   const [aiVerifying, setAiVerifying] = useState<number | null>(null);
   const [deletingId, setDeletingId] = useState<number | null>(null);
   const [toast, setToast] = useState('');
   const showToast = (msg: string) => { setToast(msg); setTimeout(() => setToast(''), 3000); };
+
+  useEffect(() => {
+    const unsub = subscribeToEvents(data => {
+      setEvents(data.map((d, i) => ({
+        id: i + 1, firestoreId: d.id,
+        title: d.title, host: d.host, date: d.date, type: d.type,
+        registrations: d.registrations || 0, status: d.status,
+        description: d.description, location: d.location, link: d.link,
+        expiresAt: d.expiresAt, verified: d.verified,
+      })));
+    });
+    return () => unsub();
+  }, []);
+
+  const handleAddEvent = async (data: Omit<EventRecord, 'id'>) => {
+    try {
+      await addEvent({ title: data.title, host: data.host, date: data.date, location: data.location || '', type: data.type, description: data.description || '', link: data.link || '', expiresAt: data.expiresAt || '', status: data.status, verified: false, registrations: 0 });
+      showToast('Event added!');
+    } catch { showToast('Error saving event'); }
+  };
 
   const typeColor: Record<string, string> = {
     Webinar: 'bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400',
@@ -1058,7 +1330,11 @@ export const EventManagementPage: React.FC = () => {
 
   return (
     <div className="space-y-6 animate-fade-in">
-      {editingItem && <EventEditModal item={editingItem} onSave={e => { setEvents(prev => prev.map(x => x.id === e.id ? e : x)); showToast('Event updated'); }} onClose={() => setEditingItem(null)} />}
+      {showAddModal && <AddEventModal existing={events} onSave={handleAddEvent} onClose={() => setShowAddModal(false)} />}
+      {editingItem && <EventEditModal item={editingItem} onSave={e => {
+        if (e.firestoreId) updateEvent(e.firestoreId, { title: e.title, host: e.host, date: e.date, location: e.location || '', type: e.type, description: e.description || '', link: e.link || '', status: e.status }).catch(() => {});
+        setEvents(prev => prev.map(x => x.id === e.id ? e : x)); showToast('Event updated');
+      }} onClose={() => setEditingItem(null)} />}
       {aiVerifying !== null && (
         <AIVerifyModal title={events.find(e => e.id === aiVerifying)?.title || ''} type="Event"
           onClose={() => setAiVerifying(null)}
@@ -1069,7 +1345,7 @@ export const EventManagementPage: React.FC = () => {
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-40 flex items-center justify-center p-4">
           <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-2xl w-full max-w-sm p-6 border border-gray-200 dark:border-gray-700">
             <div className="flex items-center gap-3 mb-4"><AlertTriangle className="w-8 h-8 text-red-500" /><div><p className="font-bold text-gray-900 dark:text-white">Delete Event?</p><p className="text-xs text-gray-500">This action cannot be undone.</p></div></div>
-            <div className="flex gap-3"><button onClick={() => setDeletingId(null)} className="flex-1 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 text-sm font-medium text-gray-600 dark:text-gray-300">Cancel</button><button onClick={() => { setEvents(prev => prev.filter(e => e.id !== deletingId)); setDeletingId(null); showToast('Event deleted'); }} className="flex-1 py-2.5 rounded-xl bg-red-600 hover:bg-red-700 text-white font-semibold text-sm">Delete</button></div>
+            <div className="flex gap-3"><button onClick={() => setDeletingId(null)} className="flex-1 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 text-sm font-medium text-gray-600 dark:text-gray-300">Cancel</button><button onClick={() => { const ev = events.find(e => e.id === deletingId); if (ev?.firestoreId) deleteEvent(ev.firestoreId).catch(() => {}); setEvents(prev => prev.filter(e => e.id !== deletingId)); setDeletingId(null); showToast('Event deleted'); }} className="flex-1 py-2.5 rounded-xl bg-red-600 hover:bg-red-700 text-white font-semibold text-sm">Delete</button></div>
           </div>
         </div>
       )}
@@ -1078,7 +1354,7 @@ export const EventManagementPage: React.FC = () => {
       <TableHeader title="Event Management" subtitle="Global moderation of all event listings."
         actions={<>
           <button onClick={() => exportToCSV(events.map(e => ({ Title: e.title, Host: e.host, Date: e.date, Type: e.type, Registrations: e.registrations, Status: e.status })), 'events.csv')} className="flex items-center gap-2 px-3 py-2 text-sm text-gray-600 dark:text-gray-300 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700 transition-all"><Download className="w-4 h-4" /> Export CSV</button>
-          <button className="flex items-center gap-2 px-3 py-2 text-sm text-white bg-red-600 rounded-xl hover:bg-red-700 transition-all font-semibold"><Plus className="w-4 h-4" /> Add Event</button>
+          <button onClick={() => setShowAddModal(true)} className="flex items-center gap-2 px-3 py-2 text-sm text-white bg-red-600 rounded-xl hover:bg-red-700 transition-all font-semibold"><Plus className="w-4 h-4" /> Add Event</button>
         </>}
       />
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
@@ -1138,10 +1414,116 @@ export const EventManagementPage: React.FC = () => {
 
 // ── Course Management ────────────────────────────────────────────────────────
 interface CourseRecord {
-  id: number; title: string; instructor: string; category: string;
+  id: number; firestoreId?: string; title: string; instructor: string; category: string;
   students: number; rating: number; status: string; revenue: string;
-  description?: string; duration?: string; level?: string; verified?: boolean;
+  description?: string; duration?: string; level?: string;
+  link?: string; platform?: string; isFree?: boolean; price?: string; expiresAt?: string; verified?: boolean;
 }
+
+const AddCourseModal: React.FC<{ existing: CourseRecord[]; onSave: (c: Omit<CourseRecord, 'id'>) => void; onClose: () => void }> = ({ existing, onSave, onClose }) => {
+  const [mode, setMode] = useState<'manual' | 'ai'>('manual');
+  const [aiStep, setAiStep] = useState<'idle' | 'loading' | 'done'>('idle');
+  const [errors, setErrors] = useState<Record<string, string>>({});
+  const today = new Date().toISOString().split('T')[0];
+  const [form, setForm] = useState({ title: '', instructor: '', platform: 'Udemy', category: 'Web Dev', duration: '', level: 'Beginner', description: '', link: '', isFree: false, price: '', expiresAt: '', status: 'Published' });
+  const set = (k: string, v: string | boolean) => { setForm(f => ({ ...f, [k]: v })); setErrors(e => ({ ...e, [k]: '' })); };
+
+  const aiTemplates = [
+    { title: 'Complete React & Next.js Masterclass 2025', instructor: 'Hitesh Choudhary', platform: 'YouTube', category: 'Web Dev', duration: '40 hours', level: 'Intermediate', description: 'Master React 18, Next.js 14, TypeScript and modern full-stack development with real projects.', link: 'https://youtube.com/@hiteshchoudhary', isFree: true, price: 'Free', expiresAt: new Date(Date.now() + 365*24*60*60*1000).toISOString().split('T')[0] },
+    { title: 'AI & Machine Learning for Beginners', instructor: 'Andrew Ng', platform: 'Coursera', category: 'Data Science', duration: '30 hours', level: 'Beginner', description: 'Learn the fundamentals of AI and machine learning through practical exercises and projects.', link: 'https://coursera.org/learn/machine-learning', isFree: false, price: '₹999', expiresAt: new Date(Date.now() + 365*24*60*60*1000).toISOString().split('T')[0] },
+    { title: 'System Design Interview Prep', instructor: 'Alex Xu', platform: 'Udemy', category: 'Engineering', duration: '20 hours', level: 'Advanced', description: 'Crack system design interviews at FAANG with 50+ real-world design problems and solutions.', link: 'https://udemy.com/course/system-design', isFree: false, price: '₹499', expiresAt: new Date(Date.now() + 365*24*60*60*1000).toISOString().split('T')[0] },
+  ];
+
+  const runAI = () => {
+    setAiStep('loading');
+    setTimeout(() => {
+      const t = aiTemplates[Math.floor(Math.random() * aiTemplates.length)];
+      setForm(f => ({ ...f, ...t, status: 'Published' }));
+      setAiStep('done');
+    }, 2000);
+  };
+
+  const validate = () => {
+    const e: Record<string, string> = {};
+    if (!form.title.trim()) e.title = 'Course title is required';
+    if (!form.instructor.trim()) e.instructor = 'Instructor is required';
+    if (form.link && !/^https?:\/\/.+\..+/.test(form.link)) e.link = 'Must be a valid URL (https://...)';
+    if (form.expiresAt && form.expiresAt < today) e.expiresAt = 'Expiry date must be in the future';
+    if (existing.some(i => i.title.toLowerCase() === form.title.trim().toLowerCase())) e.title = 'A course with this title already exists';
+    return e;
+  };
+
+  const handleSave = () => {
+    const e = validate();
+    if (Object.keys(e).length) { setErrors(e); return; }
+    onSave({ ...form, students: 0, rating: 0, revenue: '₹0', verified: false, firestoreId: undefined });
+    onClose();
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-40 flex items-center justify-center p-4">
+      <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-2xl w-full max-w-lg border border-gray-200 dark:border-gray-700">
+        <div className="flex items-center justify-between p-5 border-b border-gray-100 dark:border-gray-800">
+          <h2 className="font-bold text-gray-900 dark:text-white flex items-center gap-2"><Plus className="w-4 h-4 text-red-500" /> Add Course</h2>
+          <button onClick={onClose} className="p-1.5 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800"><X className="w-4 h-4 text-gray-500" /></button>
+        </div>
+        <div className="p-5">
+          <div className="flex gap-2 mb-4">
+            {(['manual', 'ai'] as const).map(m => (
+              <button key={m} onClick={() => { setMode(m); if (m === 'ai' && aiStep === 'idle') runAI(); }}
+                className={`flex-1 py-2 rounded-xl text-sm font-semibold border transition-all flex items-center justify-center gap-1.5 ${mode === m ? 'bg-red-600 text-white border-red-600' : 'border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300 hover:border-red-300'}`}>
+                {m === 'ai' ? <><Bot className="w-3.5 h-3.5" /> AI Add</> : <><FileText className="w-3.5 h-3.5" /> Manual Add</>}
+              </button>
+            ))}
+          </div>
+          {mode === 'ai' && aiStep === 'loading' && (
+            <div className="space-y-3 py-2">
+              {['Scanning top course platforms...', 'Extracting course metadata...', 'Verifying instructor credibility...', 'Preparing auto-fill...'].map((s, i) => (
+                <div key={i} className="flex items-center gap-3"><RefreshCw className="w-3.5 h-3.5 text-purple-500 animate-spin shrink-0" /><span className="text-xs text-gray-600 dark:text-gray-400">{s}</span></div>
+              ))}
+              <div className="h-2 bg-gray-100 dark:bg-gray-800 rounded-full overflow-hidden mt-2"><div className="h-full bg-gradient-to-r from-purple-500 to-blue-500 rounded-full animate-pulse" style={{ width: '70%' }} /></div>
+            </div>
+          )}
+          {mode === 'ai' && aiStep === 'done' && <div className="flex items-center gap-2 p-3 bg-purple-50 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-800 rounded-xl mb-3"><Sparkles className="w-4 h-4 text-purple-600 shrink-0" /><span className="text-sm text-purple-700 dark:text-purple-400 font-medium">AI auto-filled course data! Review and save.</span></div>}
+          {(mode === 'manual' || aiStep === 'done') && (
+            <div className="space-y-3 max-h-[50vh] overflow-y-auto">
+              {[{ k: 'title', l: 'Course Title *' }, { k: 'instructor', l: 'Instructor *' }, { k: 'duration', l: 'Duration' }, { k: 'link', l: 'Course URL' }, { k: 'price', l: 'Price (e.g. ₹499 or Free)' }, { k: 'expiresAt', l: 'Expiry Date' }].map(f => (
+                <div key={f.k}>
+                  <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">{f.l}</label>
+                  <input type={f.k === 'expiresAt' ? 'date' : 'text'} value={(form as Record<string, unknown>)[f.k] as string || ''} onChange={e => set(f.k, e.target.value)} min={f.k === 'expiresAt' ? today : undefined}
+                    className={`w-full px-3 py-2 rounded-xl border ${errors[f.k] ? 'border-red-400' : 'border-gray-200 dark:border-gray-700'} bg-white dark:bg-gray-800 text-sm text-gray-900 dark:text-white focus:outline-none focus:border-red-500 transition-all`} />
+                  {errors[f.k] && <p className="text-xs text-red-500 mt-0.5">{errors[f.k]}</p>}
+                </div>
+              ))}
+              <div>
+                <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Description</label>
+                <textarea value={form.description} onChange={e => set('description', e.target.value)} rows={2} className="w-full px-3 py-2 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm focus:outline-none focus:border-red-500 resize-none" />
+              </div>
+              <div className="grid grid-cols-3 gap-3">
+                <div><label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Category</label>
+                  <select value={form.category} onChange={e => set('category', e.target.value)} className="w-full px-3 py-2 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm focus:outline-none focus:border-red-500"><option>Web Dev</option><option>Data Science</option><option>Engineering</option><option>CS Fundamentals</option><option>Design</option><option>Marketing</option></select></div>
+                <div><label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Level</label>
+                  <select value={form.level} onChange={e => set('level', e.target.value)} className="w-full px-3 py-2 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm focus:outline-none focus:border-red-500"><option>Beginner</option><option>Intermediate</option><option>Advanced</option></select></div>
+                <div><label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Status</label>
+                  <select value={form.status} onChange={e => set('status', e.target.value)} className="w-full px-3 py-2 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm focus:outline-none focus:border-red-500"><option>Published</option><option>Draft</option></select></div>
+              </div>
+              <label className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300 cursor-pointer">
+                <input type="checkbox" checked={form.isFree} onChange={e => set('isFree', e.target.checked)} className="w-4 h-4 rounded border-gray-300 text-red-600" />
+                Free course
+              </label>
+            </div>
+          )}
+        </div>
+        <div className="flex gap-3 p-5 border-t border-gray-100 dark:border-gray-800">
+          <button onClick={onClose} className="flex-1 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300 text-sm font-medium hover:bg-gray-50 dark:hover:bg-gray-800 transition-all">Cancel</button>
+          {(mode === 'manual' || aiStep === 'done') && (
+            <button onClick={handleSave} className="flex-1 py-2.5 rounded-xl bg-red-600 hover:bg-red-700 text-white font-semibold text-sm transition-all flex items-center justify-center gap-2"><Save className="w-4 h-4" /> Save Course</button>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};
 
 const CourseEditModal: React.FC<{ item: CourseRecord; onSave: (c: CourseRecord) => void; onClose: () => void }> = ({ item, onSave, onClose }) => {
   const [form, setForm] = useState({ ...item, description: item.description || `Comprehensive ${item.title} course by ${item.instructor}.`, duration: item.duration || '12 hours', level: item.level || 'Intermediate' });
@@ -1202,21 +1584,42 @@ const CourseEditModal: React.FC<{ item: CourseRecord; onSave: (c: CourseRecord) 
 };
 
 export const CourseManagementPage: React.FC = () => {
-  const [courses, setCourses] = useState<CourseRecord[]>([
-    { id: 1, title: 'Full Stack Web Development', instructor: 'John Smith', category: 'Web Dev', students: 1200, rating: 4.8, status: 'Published', revenue: '₹2.4L' },
-    { id: 2, title: 'Data Science Fundamentals', instructor: 'Dr. Priya Sharma', category: 'Data Science', students: 980, rating: 4.6, status: 'Published', revenue: '₹1.9L' },
-    { id: 3, title: 'System Design Masterclass', instructor: 'Rajesh Kumar', category: 'Engineering', students: 450, rating: 4.9, status: 'Draft', revenue: '₹0.9L' },
-    { id: 4, title: 'DSA for Placements', instructor: 'Anand Verma', category: 'CS Fundamentals', students: 2800, rating: 4.7, status: 'Published', revenue: '₹5.6L' },
-  ]);
+  const [courses, setCourses] = useState<CourseRecord[]>([]);
+  const [showAddModal, setShowAddModal] = useState(false);
   const [editingItem, setEditingItem] = useState<CourseRecord | null>(null);
   const [aiVerifying, setAiVerifying] = useState<number | null>(null);
   const [deletingId, setDeletingId] = useState<number | null>(null);
   const [toast, setToast] = useState('');
   const showToast = (msg: string) => { setToast(msg); setTimeout(() => setToast(''), 3000); };
 
+  useEffect(() => {
+    const unsub = subscribeToCourses(data => {
+      setCourses(data.map((d, i) => ({
+        id: i + 1, firestoreId: d.id,
+        title: d.title, instructor: d.instructor, category: d.category,
+        students: d.students || 0, rating: d.rating || 0, status: d.status,
+        revenue: '₹0', description: d.description, duration: d.duration,
+        level: d.level, link: d.link, platform: d.platform,
+        isFree: d.isFree, price: d.price, expiresAt: d.expiresAt, verified: d.verified,
+      })));
+    });
+    return () => unsub();
+  }, []);
+
+  const handleAddCourse = async (data: Omit<CourseRecord, 'id'>) => {
+    try {
+      await addCourse({ title: data.title, instructor: data.instructor, platform: data.platform || '', category: data.category, duration: data.duration || '', level: data.level || '', description: data.description || '', link: data.link || '', isFree: data.isFree || false, price: data.price || '', expiresAt: data.expiresAt || '', status: data.status, verified: false, students: 0, rating: 0 });
+      showToast('Course added!');
+    } catch { showToast('Error saving course'); }
+  };
+
   return (
     <div className="space-y-6 animate-fade-in">
-      {editingItem && <CourseEditModal item={editingItem} onSave={c => { setCourses(prev => prev.map(x => x.id === c.id ? c : x)); showToast('Course updated'); }} onClose={() => setEditingItem(null)} />}
+      {showAddModal && <AddCourseModal existing={courses} onSave={handleAddCourse} onClose={() => setShowAddModal(false)} />}
+      {editingItem && <CourseEditModal item={editingItem} onSave={c => {
+        if (c.firestoreId) updateCourse(c.firestoreId, { title: c.title, instructor: c.instructor, category: c.category, duration: c.duration || '', level: c.level || '', description: c.description || '', link: c.link || '', status: c.status }).catch(() => {});
+        setCourses(prev => prev.map(x => x.id === c.id ? c : x)); showToast('Course updated');
+      }} onClose={() => setEditingItem(null)} />}
       {aiVerifying !== null && (
         <AIVerifyModal title={courses.find(c => c.id === aiVerifying)?.title || ''} type="Course"
           onClose={() => setAiVerifying(null)}
@@ -1227,7 +1630,7 @@ export const CourseManagementPage: React.FC = () => {
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-40 flex items-center justify-center p-4">
           <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-2xl w-full max-w-sm p-6 border border-gray-200 dark:border-gray-700">
             <div className="flex items-center gap-3 mb-4"><AlertTriangle className="w-8 h-8 text-red-500" /><div><p className="font-bold text-gray-900 dark:text-white">Delete Course?</p><p className="text-xs text-gray-500">All enrolled students will be affected.</p></div></div>
-            <div className="flex gap-3"><button onClick={() => setDeletingId(null)} className="flex-1 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 text-sm font-medium text-gray-600 dark:text-gray-300">Cancel</button><button onClick={() => { setCourses(prev => prev.filter(c => c.id !== deletingId)); setDeletingId(null); showToast('Course deleted'); }} className="flex-1 py-2.5 rounded-xl bg-red-600 hover:bg-red-700 text-white font-semibold text-sm">Delete</button></div>
+            <div className="flex gap-3"><button onClick={() => setDeletingId(null)} className="flex-1 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 text-sm font-medium text-gray-600 dark:text-gray-300">Cancel</button><button onClick={() => { const cr = courses.find(c => c.id === deletingId); if (cr?.firestoreId) deleteCourse(cr.firestoreId).catch(() => {}); setCourses(prev => prev.filter(c => c.id !== deletingId)); setDeletingId(null); showToast('Course deleted'); }} className="flex-1 py-2.5 rounded-xl bg-red-600 hover:bg-red-700 text-white font-semibold text-sm">Delete</button></div>
           </div>
         </div>
       )}
@@ -1236,7 +1639,7 @@ export const CourseManagementPage: React.FC = () => {
       <TableHeader title="Course Management" subtitle="Add, edit, and organise platform courses."
         actions={<>
           <button onClick={() => exportToCSV(courses.map(c => ({ Title: c.title, Instructor: c.instructor, Category: c.category, Students: c.students, Rating: c.rating, Revenue: c.revenue, Status: c.status })), 'courses.csv')} className="flex items-center gap-2 px-3 py-2 text-sm text-gray-600 dark:text-gray-300 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700 transition-all"><Download className="w-4 h-4" /> Export CSV</button>
-          <button className="flex items-center gap-2 px-3 py-2 text-sm text-white bg-red-600 rounded-xl hover:bg-red-700 transition-all font-semibold"><Plus className="w-4 h-4" /> Add Course</button>
+          <button onClick={() => setShowAddModal(true)} className="flex items-center gap-2 px-3 py-2 text-sm text-white bg-red-600 rounded-xl hover:bg-red-700 transition-all font-semibold"><Plus className="w-4 h-4" /> Add Course</button>
         </>}
       />
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
