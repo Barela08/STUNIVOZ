@@ -1,0 +1,101 @@
+Project Requirement Prompt (User Visibility, Google Auth Sync & Dynamic API Platform Setup)
+
+We are using Firebase (including Google Authentication) in our website, and we need the following enhancements and fixes:
+
+1. Google Authentication Users in Admin Panel
+
+- Users who sign up or log in using Google Authentication are currently visible in Firebase Authentication but NOT in the admin panel.
+- This must be fixed.
+
+Requirement:
+
+- All users who register or log in (especially via Google Authentication) must also appear in the Admin Panel.
+
+- The admin panel should display full user details, including:
+  
+  - Name
+  - Email
+  - Profile picture
+  - UID (Firebase User ID)
+  - Login/registration timestamp
+  - Authentication provider (Google, Email, etc.)
+
+- User profiles should be clearly visible and accessible in the admin panel dashboard.
+
+- Real-time syncing between Firebase Authentication and the admin panel database must be ensured.
+
+2. User Profile Visibility
+
+- Currently, user profile data is not properly displayed.
+- The system must:
+  - Store user data in Firestore (or Realtime DB) after login/signup.
+  - Automatically create/update user profiles.
+  - Show complete profile information in the admin panel.
+
+3. API Key + Platform-Based Auto Configuration
+
+- When adding an API key, the system should NOT require manual configuration beyond selecting the platform.
+
+New Requirement:
+
+- Admin will:
+  
+  - Enter API Key
+  - Select Platform (e.g., OpenAI, Gemini, Claude, etc.)
+
+- Based on selected platform:
+  
+  - The system should automatically configure:
+    - Model selection
+    - API endpoints
+    - Required parameters
+  - No manual setup needed beyond platform selection.
+
+4. Multiple Platform Support
+
+- The system should support multiple platforms, such as:
+  
+  - OpenAI
+  - Google Gemini
+  - Anthropic Claude
+  - Other AI providers (extensible)
+
+- Admin should be able to easily add and manage multiple API keys across platforms.
+
+5. Feature-Based API Assignment (Modular Usage)
+
+- The system should allow different APIs for different features.
+
+Example:
+
+- One API for Discover/Search
+- Another API for Career Guidance
+- Another API for Chatbot
+- Another API for Detection/Analysis
+
+Requirement:
+
+- Admin can assign different APIs (and platforms) to different modules/features.
+- Each feature should independently use its assigned API configuration.
+- Flexible mapping system between features and APIs.
+
+6. Automation & Scalability
+
+- The system must be:
+  - Fully automated
+  - Easily scalable for adding new platforms and features
+  - Minimal manual configuration required
+
+7. Firebase Integration
+
+- Use Firebase for:
+  - Authentication (including Google Auth)
+  - Firestore/Realtime DB for storing user and API configurations
+  - Secure and structured data handling
+
+Goal:
+Create a fully automated admin system where:
+
+- All authenticated users (including Google users) are visible with full profiles.
+- API setup is simplified to just API key + platform selection.
+- Multiple platforms and feature-based API usage are supported seamlessly.

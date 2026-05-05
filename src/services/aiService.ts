@@ -1,6 +1,8 @@
 const SETTINGS_KEY = 'stunivoz_admin_settings';
+const FEATURE_API_KEY = 'stunivoz_feature_apis';
+const API_RECORDS_KEY = 'stunivoz_api_records';
 
-function getAIConfig(): { provider: string; model: string; apiKey: string } {
+function getAIConfig(): { provider: string; model: string; apiKey: string; endpoint?: string } {
   try {
     const raw = localStorage.getItem(SETTINGS_KEY);
     if (raw) {
@@ -13,6 +15,26 @@ function getAIConfig(): { provider: string; model: string; apiKey: string } {
     }
   } catch {}
   return { provider: 'gemini', model: 'gemini-2.0-flash', apiKey: '' };
+}
+
+function getFeatureConfig(feature: string): { provider: string; model: string; apiKey: string; endpoint?: string } {
+  try {
+    const featureApis = JSON.parse(localStorage.getItem(FEATURE_API_KEY) || '{}');
+    const featureApiId = featureApis[feature];
+    if (featureApiId !== undefined && featureApiId !== '') {
+      const apis = JSON.parse(localStorage.getItem(API_RECORDS_KEY) || '[]');
+      const api = apis.find((a: any) => String(a.id) === String(featureApiId));
+      if (api && api.apiKey) {
+        return {
+          provider: api.platform || 'gemini',
+          model: api.model || 'gemini-2.0-flash',
+          apiKey: api.apiKey,
+          endpoint: api.endpoint,
+        };
+      }
+    }
+  } catch {}
+  return getAIConfig();
 }
 
 async function callGemini(prompt: string, model: string, apiKey: string): Promise<string> {
@@ -52,10 +74,34 @@ async function callOpenAI(prompt: string, model: string, apiKey: string): Promis
   return data.choices?.[0]?.message?.content || '';
 }
 
-export async function callAI(prompt: string): Promise<string> {
-  const { provider, model, apiKey } = getAIConfig();
+async function callClaude(prompt: string, model: string, apiKey: string): Promise<string> {
+  const res = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-api-key': apiKey,
+      'anthropic-version': '2023-06-01',
+    },
+    body: JSON.stringify({
+      model,
+      max_tokens: 4096,
+      messages: [{ role: 'user', content: prompt }],
+    }),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err?.error?.message || `API error: ${res.status}`);
+  }
+  const data = await res.json();
+  return data.content?.[0]?.text || '';
+}
+
+export async function callAI(prompt: string, feature?: string): Promise<string> {
+  const config = feature ? getFeatureConfig(feature) : getAIConfig();
+  const { provider, model, apiKey } = config;
   if (!apiKey) throw new Error('No API key configured. Please set your AI API key in Admin → AI Settings.');
   if (provider === 'openai') return callOpenAI(prompt, model, apiKey);
+  if (provider === 'claude') return callClaude(prompt, model, apiKey);
   return callGemini(prompt, model, apiKey);
 }
 
@@ -137,7 +183,7 @@ Return ONLY a valid JSON array (no markdown, no explanation) with this structure
 
 Make the data realistic for the Indian job market in 2025-2026. Include a mix of companies (startups, mid-size, large corps). Mark any that seem suspicious as isScam: true with a reason.`;
 
-  const raw = await callAI(prompt);
+  const raw = await callAI(prompt, 'discover');
   const jsonMatch = raw.match(/\[[\s\S]*\]/);
   if (!jsonMatch) throw new Error('AI returned invalid format. Please try again.');
   return JSON.parse(jsonMatch[0]) as DiscoveredInternship[];
@@ -173,7 +219,7 @@ Return ONLY a valid JSON array (no markdown, no explanation):
 
 Include a mix of virtual and in-person events. Dates should be in 2025-2026. Mark suspicious ones with isScam: true.`;
 
-  const raw = await callAI(prompt);
+  const raw = await callAI(prompt, 'discover');
   const jsonMatch = raw.match(/\[[\s\S]*\]/);
   if (!jsonMatch) throw new Error('AI returned invalid format. Please try again.');
   return JSON.parse(jsonMatch[0]) as DiscoveredEvent[];
@@ -204,7 +250,7 @@ Return ONLY a valid JSON array (no markdown, no explanation):
 
 Include a mix of free and paid courses, different platforms, and difficulty levels. Mark any suspicious or low-quality courses with isScam: true.`;
 
-  const raw = await callAI(prompt);
+  const raw = await callAI(prompt, 'discover');
   const jsonMatch = raw.match(/\[[\s\S]*\]/);
   if (!jsonMatch) throw new Error('AI returned invalid format. Please try again.');
   return JSON.parse(jsonMatch[0]) as DiscoveredCourse[];
@@ -231,5 +277,5 @@ ${historyText}
 User: ${userMessage}
 Assistant:`;
 
-  return await callAI(prompt);
+  return await callAI(prompt, 'career_chat');
 }

@@ -15,6 +15,8 @@ export interface Profile {
   full_name: string;
   role?: UserRole;
   profile_photo?: string;
+  provider?: string;
+  last_login?: string;
   phone?: string;
   location?: string;
   headline?: string;
@@ -133,6 +135,21 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const signIn = async (email: string, password: string) => {
     try {
       const result = await loginUser(email, password);
+      if (result.success && result.user) {
+        const now = new Date().toISOString();
+        const existing = await fetchProfile(result.user.uid);
+        await setDocument('profiles', result.user.uid, {
+          id: result.user.uid,
+          email,
+          full_name: existing?.full_name || email.split('@')[0],
+          role: existing?.role || 'student',
+          provider: 'email',
+          last_login: now,
+          updated_at: now,
+          ...(existing ? {} : { created_at: now }),
+        });
+        return { error: null };
+      }
       if (result.success) return { error: null };
       return { error: result.error || new Error('Login failed') };
     } catch (err) {
@@ -167,27 +184,28 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       const userCredential = await signInWithGoogle();
       const firebaseUser = userCredential.user;
+      const now = new Date().toISOString();
 
-      const result = await fetchProfile(firebaseUser.uid);
-      if (!result) {
-        const profileData: Profile = {
-          id: firebaseUser.uid,
-          email: firebaseUser.email || '',
-          full_name: firebaseUser.displayName || '',
-          profile_photo: firebaseUser.photoURL || '',
-          role: 'student',
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
-        };
-        await setDocument('profiles', firebaseUser.uid, profileData);
-        setProfile(profileData);
-      } else {
-        if (result.role && result.role !== 'student') {
-          await auth.signOut();
-          return { error: { message: 'Google login is only available for students. Please use your portal login page.' } };
-        }
-        setProfile(result);
+      const existing = await fetchProfile(firebaseUser.uid);
+      if (existing && existing.role && existing.role !== 'student') {
+        await auth.signOut();
+        return { error: { message: 'Google login is only available for students. Please use your portal login page.' } };
       }
+
+      const profileData: Profile = {
+        ...(existing || {}),
+        id: firebaseUser.uid,
+        email: firebaseUser.email || '',
+        full_name: firebaseUser.displayName || existing?.full_name || '',
+        profile_photo: firebaseUser.photoURL || existing?.profile_photo || '',
+        role: existing?.role || 'student',
+        provider: 'google',
+        last_login: now,
+        updated_at: now,
+        ...(!existing ? { created_at: now } : {}),
+      };
+      await setDocument('profiles', firebaseUser.uid, profileData);
+      setProfile(profileData);
       return { error: null };
     } catch (err: any) {
       return { error: err };
@@ -199,27 +217,28 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       const userCredential = await signInWithGitHub();
       const firebaseUser = userCredential.user;
+      const now = new Date().toISOString();
 
-      const result = await fetchProfile(firebaseUser.uid);
-      if (!result) {
-        const profileData: Profile = {
-          id: firebaseUser.uid,
-          email: firebaseUser.email || '',
-          full_name: firebaseUser.displayName || firebaseUser.email?.split('@')[0] || '',
-          profile_photo: firebaseUser.photoURL || '',
-          role: 'student',
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
-        };
-        await setDocument('profiles', firebaseUser.uid, profileData);
-        setProfile(profileData);
-      } else {
-        if (result.role && result.role !== 'student') {
-          await auth.signOut();
-          return { error: { message: 'GitHub login is only available for students. Please use your portal login page.' } };
-        }
-        setProfile(result);
+      const existing = await fetchProfile(firebaseUser.uid);
+      if (existing && existing.role && existing.role !== 'student') {
+        await auth.signOut();
+        return { error: { message: 'GitHub login is only available for students. Please use your portal login page.' } };
       }
+
+      const profileData: Profile = {
+        ...(existing || {}),
+        id: firebaseUser.uid,
+        email: firebaseUser.email || '',
+        full_name: firebaseUser.displayName || existing?.full_name || firebaseUser.email?.split('@')[0] || '',
+        profile_photo: firebaseUser.photoURL || existing?.profile_photo || '',
+        role: existing?.role || 'student',
+        provider: 'github',
+        last_login: now,
+        updated_at: now,
+        ...(!existing ? { created_at: now } : {}),
+      };
+      await setDocument('profiles', firebaseUser.uid, profileData);
+      setProfile(profileData);
       return { error: null };
     } catch (err: any) {
       return { error: err };
