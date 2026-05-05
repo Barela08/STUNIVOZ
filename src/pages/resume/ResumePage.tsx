@@ -1,6 +1,7 @@
 import React, { useState, useRef } from 'react';
-import { FileText, Upload, Plus, Download, Share, Eye, Edit, Trash2, CheckCircle, AlertCircle, Sparkles, FileDown, X, Save } from 'lucide-react';
-import { Card, CardHeader, CardContent, Button, Input, Textarea } from '../../components/common';
+import { FileText, Plus, Download, Share, Eye, Edit, Trash2, CheckCircle, AlertCircle, Sparkles, X, Save, ExternalLink, Upload, FileDown } from 'lucide-react';
+import { Card, CardHeader, CardContent, Button, Input, Textarea, FileUpload } from '../../components/common';
+import type { UploadResult } from '../../services/uploadService';
 
 type Resume = {
   id: string;
@@ -45,8 +46,7 @@ export const ResumePage: React.FC = () => {
   const [editTitle, setEditTitle] = useState('');
   const [saving, setSaving] = useState(false);
   const [toast, setToast] = useState<{ msg: string; type: 'success' | 'error' } | null>(null);
-  const [uploadedFiles, setUploadedFiles] = useState<{ name: string; size: string; date: string }[]>([]);
-  const [uploading, setUploading] = useState(false);
+  const [uploadedFiles, setUploadedFiles] = useState<{ name: string; size: string; date: string; url: string }[]>([]);
   const [shareLink, setShareLink] = useState<string | null>(null);
   const [generating, setGenerating] = useState(false);
 
@@ -172,35 +172,6 @@ ATS Score: ${selected.atsScore}/100
     showToast('Share link copied to clipboard!');
   };
 
-  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    const allowed = ['application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'];
-    if (!allowed.includes(file.type)) {
-      showToast('Only PDF, DOC, DOCX files allowed', 'error');
-      return;
-    }
-    if (file.size > 10 * 1024 * 1024) {
-      showToast('File size must be under 10MB', 'error');
-      return;
-    }
-    setUploading(true);
-    await new Promise(r => setTimeout(r, 1200));
-    const kb = (file.size / 1024).toFixed(0);
-    setUploadedFiles(prev => [{
-      name: file.name,
-      size: `${kb} KB`,
-      date: new Date().toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }),
-    }, ...prev]);
-    setUploading(false);
-    showToast(`"${file.name}" uploaded successfully!`);
-    if (fileInputRef.current) fileInputRef.current.value = '';
-  };
-
-  const downloadUploadedFile = (fileName: string) => {
-    showToast(`Downloading "${fileName}"…`);
-    setTimeout(() => showToast('Download complete!'), 800);
-  };
 
   const addSkill = () => {
     if (!newSkill.trim()) return;
@@ -664,34 +635,26 @@ ATS Score: ${selected.atsScore}/100
       ) : (
         <div className="grid md:grid-cols-3 gap-4">
           {/* Upload Area */}
-          <div className="md:col-span-2">
-            <input
-              type="file"
-              ref={fileInputRef}
-              accept=".pdf,.doc,.docx"
-              className="hidden"
-              onChange={handleFileUpload}
-            />
-            <Card className="border-2 border-dashed border-gray-300 hover:border-primary-400 transition-colors cursor-pointer"
-              onClick={() => fileInputRef.current?.click()}>
+          <div className="md:col-span-2 space-y-4">
+            <Card>
+              <CardHeader title="Upload Your Resume" subtitle="Securely stored on Cloudinary — images and PDFs supported" />
               <CardContent>
-                <div className="text-center py-12">
-                  {uploading ? (
-                    <>
-                      <div className="w-12 h-12 mx-auto border-4 border-primary-200 border-t-primary-500 rounded-full animate-spin mb-4" />
-                      <p className="text-gray-600 font-medium">Uploading…</p>
-                    </>
-                  ) : (
-                    <>
-                      <Upload className="w-12 h-12 mx-auto text-gray-400 mb-4" />
-                      <h3 className="font-semibold text-gray-900 mb-2">Upload your resume</h3>
-                      <p className="text-gray-500 mb-4">PDF, DOC, or DOCX — up to 10MB</p>
-                      <Button variant="primary" onClick={e => { e.stopPropagation(); fileInputRef.current?.click(); }}>
-                        Choose File
-                      </Button>
-                    </>
-                  )}
-                </div>
+                <FileUpload
+                  folder="stunivoz/resumes"
+                  accept="application/pdf,image/jpeg,image/png"
+                  label="Upload Resume (PDF or Image)"
+                  onSuccess={(result: UploadResult) => {
+                    const kb = (result.bytes / 1024).toFixed(0);
+                    setUploadedFiles(prev => [{
+                      name: result.public_id.split('/').pop() || 'resume',
+                      size: `${kb} KB`,
+                      date: new Date().toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }),
+                      url: result.secure_url,
+                    }, ...prev]);
+                    showToast('Resume uploaded to Cloudinary!');
+                  }}
+                  onError={(err) => showToast(err, 'error')}
+                />
               </CardContent>
             </Card>
           </div>
@@ -713,9 +676,11 @@ ATS Score: ${selected.atsScore}/100
                         <h4 className="font-medium text-gray-900 text-sm truncate">{file.name}</h4>
                         <p className="text-xs text-gray-500">{file.size} · {file.date}</p>
                       </div>
-                      <Button variant="ghost" size="sm" onClick={() => downloadUploadedFile(file.name)}>
-                        <Download className="w-4 h-4" />
-                      </Button>
+                      <a href={file.url} target="_blank" rel="noopener noreferrer">
+                        <Button variant="ghost" size="sm">
+                          <ExternalLink className="w-4 h-4" />
+                        </Button>
+                      </a>
                     </div>
                   ))}
                 </div>

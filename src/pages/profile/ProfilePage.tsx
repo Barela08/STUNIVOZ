@@ -1,13 +1,15 @@
 import React, { useState, useEffect } from 'react';
-import { Phone, MapPin, Linkedin, Github, Globe, Twitter, Edit, Save, Plus, X, CheckCircle, AlertCircle } from 'lucide-react';
+import { Phone, MapPin, Linkedin, Github, Globe, Twitter, Edit, Save, Plus, X, CheckCircle, AlertCircle, Camera } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
-import { Card, CardHeader, CardContent, Button, Input, Textarea } from '../../components/common';
+import { Card, CardHeader, CardContent, Button, Input, Textarea, FileUpload } from '../../components/common';
+import type { UploadResult } from '../../services/uploadService';
 
 export const ProfilePage: React.FC = () => {
   const { profile, updateProfile, user } = useAuth();
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
   const [saveStatus, setSaveStatus] = useState<'idle' | 'success' | 'error'>('idle');
+  const [showPhotoUpload, setShowPhotoUpload] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
 
   const [formData, setFormData] = useState({
@@ -156,13 +158,26 @@ export const ProfilePage: React.FC = () => {
       <Card padding="none">
         <div className="relative">
           <div className="h-32 bg-gradient-to-r from-primary-500 to-primary-600 rounded-t-xl" />
-          <div className="absolute -bottom-12 left-6">
-            <div className="w-24 h-24 bg-white rounded-full p-1 shadow-lg">
-              <div className="w-full h-full bg-primary-100 rounded-full flex items-center justify-center">
-                <span className="text-primary-600 text-3xl font-bold">
-                  {displayName?.charAt(0)?.toUpperCase() || 'U'}
-                </span>
-              </div>
+          <div className="absolute -bottom-12 left-6 group">
+            <div className="w-24 h-24 bg-white rounded-full p-1 shadow-lg relative">
+              {profile?.profile_photo ? (
+                <img src={profile.profile_photo} alt={displayName} className="w-full h-full rounded-full object-cover" />
+              ) : (
+                <div className="w-full h-full bg-primary-100 rounded-full flex items-center justify-center">
+                  <span className="text-primary-600 text-3xl font-bold">
+                    {displayName?.charAt(0)?.toUpperCase() || 'U'}
+                  </span>
+                </div>
+              )}
+              {editing && (
+                <button
+                  onClick={() => setShowPhotoUpload(p => !p)}
+                  className="absolute inset-0 rounded-full bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                  title="Change photo"
+                >
+                  <Camera className="w-6 h-6 text-white" />
+                </button>
+              )}
             </div>
           </div>
           <div className="absolute top-4 right-4 flex gap-2">
@@ -179,6 +194,21 @@ export const ProfilePage: React.FC = () => {
           </div>
         </div>
         <div className="pt-16 pb-6 px-6">
+          {editing && showPhotoUpload && (
+            <div className="mb-4 max-w-md p-4 bg-gray-50 rounded-xl border border-gray-200">
+              <p className="text-sm font-medium text-gray-700 mb-3">Update Profile Photo</p>
+              <FileUpload
+                folder="stunivoz/profile-photos"
+                accept="image/jpeg,image/png,image/webp"
+                label="Upload Profile Photo"
+                onSuccess={async (result: UploadResult) => {
+                  await updateProfile({ profile_photo: result.secure_url });
+                  setShowPhotoUpload(false);
+                }}
+                onError={(err) => { setErrorMsg(err); setSaveStatus('error'); }}
+              />
+            </div>
+          )}
           {editing ? (
             <div className="space-y-3 max-w-md">
               <Input

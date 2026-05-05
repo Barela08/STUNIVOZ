@@ -117,12 +117,65 @@ The AI service reads from localStorage key `stunivoz_admin_settings`:
 ## Development
 ```bash
 npm install
-npm run dev    # Starts on http://0.0.0.0:5000
+npm run dev       # Vite frontend on http://0.0.0.0:5000
+npm run server    # Express API server on http://0.0.0.0:3001
 ```
+
+Both are configured as separate Replit workflows ("Start application" + "API Server").
 
 ## Deployment
 - Build: `npm run build`
 - Public dir: `dist`
+- Vercel: uses `vercel.json` (rewrites /api/* to serverless functions, /* to index.html)
+
+## Backend API Server (`server/`)
+Express.js API server running on port 3001. All secrets are server-only (never exposed to frontend).
+
+### Routes
+- `GET  /api/health` — health check
+- `POST /api/upload/file` — authenticated file upload to Cloudinary (images + PDFs)
+- `POST /api/upload/sign` — generate signed upload params for client-side Cloudinary upload
+- `DELETE /api/upload/:publicId` — delete a Cloudinary file
+- `POST /api/auth/forgot-password` — send password reset email via Nodemailer/Gmail
+- `POST /api/auth/reset-password` — verify token + update Firebase password
+- `GET  /api/auth/verify-reset-token` — validate reset token
+
+### Authentication
+All `/api/upload/*` routes require `Authorization: Bearer <firebase-id-token>` header.
+The server uses Firebase Admin SDK to verify tokens server-side.
+
+### Files
+```
+server/
+  index.js                 — Express app entry (port 3001)
+  routes/
+    upload.js              — Cloudinary upload/sign/delete routes
+    auth.js                — forgot-password / reset-password routes
+  middleware/
+    requireAuth.js         — Firebase ID token verification middleware
+  lib/
+    cloudinary.js          — Cloudinary SDK config
+    firebaseAdmin.js       — Firebase Admin SDK init
+    mailer.js              — Nodemailer (Gmail SMTP) email sender
+```
+
+### Required Secrets
+| Secret | Purpose |
+|--------|---------|
+| `CLOUDINARY_CLOUD_NAME` | Cloudinary cloud identifier |
+| `CLOUDINARY_API_KEY` | Cloudinary API key (public) |
+| `CLOUDINARY_API_SECRET` | Cloudinary API secret (server-only) |
+| `EMAIL_USER` | Gmail address for sending emails |
+| `EMAIL_PASS` | Gmail App Password (16-char) |
+| `FIREBASE_SERVICE_ACCOUNT_JSON` | Firebase Admin SDK service account JSON |
+
+## Frontend Services
+- `src/services/uploadService.ts` — uploadFile(), deleteFile() — posts to /api/upload with Firebase ID token
+- `src/services/passwordResetService.ts` — requestPasswordReset(), verifyResetToken(), submitNewPassword()
+- `src/components/common/FileUpload.tsx` — reusable drag-and-drop upload UI with preview + progress
+
+## New Routes
+- `/reset-password?token=xxx` — password reset form (validates token, sets new password)
 
 ## Security Fixes (May 2026)
 - Removed all "Dev Mode" bypass buttons from Admin, Staff, and Company login pages

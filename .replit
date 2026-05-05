@@ -18,6 +18,10 @@ author = "agent"
 task = "workflow.run"
 args = "Start application"
 
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "API Server"
+
 [[workflows.workflow]]
 name = "Start application"
 author = "agent"
@@ -29,6 +33,22 @@ outputType = "webview"
 task = "shell.exec"
 args = "npm run dev"
 waitForPort = 5000
+
+[[workflows.workflow]]
+name = "API Server"
+author = "agent"
+
+[workflows.workflow.metadata]
+outputType = "console"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "node server/index.js"
+waitForPort = 3001
+
+[[ports]]
+localPort = 3001
+externalPort = 3001
 
 [[ports]]
 localPort = 5000
@@ -59,6 +79,6 @@ VITE_FIREBASE_PROJECT_ID = "stunivoz"
 VITE_FIREBASE_STORAGE_BUCKET = "stunivoz.firebasestorage.app"
 VITE_FIREBASE_MESSAGING_SENDER_ID = "758018830397"
 VITE_FIREBASE_APP_ID = "1:758018830397:web:2a0d13fa90ed60e0bdfa54"
-VITE_API_URL = "http://localhost:4000/api"
+VITE_API_URL = "http://localhost:3001/api"
 VITE_FIREBASE_MEASUREMENT_ID = "G-W4X81X98JJ"
 VITE_FIREBASE_API_KEY = "AIzaSyAgN7evtASc7zyyD8FUVwXbsgwUBYejZmE"
