@@ -112,7 +112,7 @@ export const LoginPage: React.FC = () => {
 
         <div className="w-full max-w-md animate-slide-up">
           <div className="flex items-center mb-8">
-            <img src="/stunivoz-new-logo.png" alt="STUNIVOZ" className="h-12 w-auto object-contain" />
+            <img src="/stunivoz-brand-logo.png" alt="STUNIVOZ" className="h-12 w-auto object-contain" />
           </div>
 
           <div className="mb-8">
@@ -278,6 +278,11 @@ export const LoginPage: React.FC = () => {
               Sign up for free
             </Link>
           </p>
+
+          <p className="mt-6 text-center text-xs text-gray-400 dark:text-gray-600">
+            Created by <span className="font-semibold text-gray-500 dark:text-gray-500">Nilesh Barela</span> · Founder,{' '}
+            <a href="https://hackifypro.com" target="_blank" rel="noopener noreferrer" className="text-primary-500 hover:underline font-semibold">HackifyPro</a>
+          </p>
         </div>
       </div>
 
@@ -289,7 +294,7 @@ export const LoginPage: React.FC = () => {
         <div className="relative max-w-lg text-center text-white z-10">
           <div className="inline-flex items-center justify-center mb-8">
             <div className="bg-white rounded-2xl px-4 py-3 shadow-2xl">
-              <img src="/stunivoz-new-logo.png" alt="STUNIVOZ" className="h-16 w-auto object-contain" />
+              <img src="/stunivoz-brand-logo.png" alt="STUNIVOZ" className="h-16 w-auto object-contain" />
             </div>
           </div>
           <h2 className="font-display text-4xl font-bold mb-4 leading-tight">
@@ -312,6 +317,11 @@ export const LoginPage: React.FC = () => {
               </div>
             ))}
           </div>
+
+          <p className="mt-10 text-xs text-primary-200/70">
+            Created by <span className="font-semibold text-white/80">Nilesh Barela</span> · Founder,{' '}
+            <a href="https://hackifypro.com" target="_blank" rel="noopener noreferrer" className="text-white font-bold hover:underline">HackifyPro</a>
+          </p>
         </div>
       </div>
     </div>

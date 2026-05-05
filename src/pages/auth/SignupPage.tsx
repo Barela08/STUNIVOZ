@@ -109,7 +109,7 @@ export const SignupPage: React.FC = () => {
 
         <div className="w-full max-w-md animate-slide-up">
           <div className="flex items-center mb-8">
-            <img src="/stunivoz-new-logo.png" alt="STUNIVOZ" className="h-12 w-auto object-contain" />
+            <img src="/stunivoz-brand-logo.png" alt="STUNIVOZ" className="h-12 w-auto object-contain" />
           </div>
 
           <div className="mb-8">
@@ -282,6 +282,11 @@ export const SignupPage: React.FC = () => {
             Already have an account?{' '}
             <Link to="/login" className="text-primary-500 hover:text-primary-600 font-medium">Sign in</Link>
           </p>
+
+          <p className="mt-4 text-center text-xs text-gray-400 dark:text-gray-600">
+            Created by <span className="font-semibold text-gray-500 dark:text-gray-500">Nilesh Barela</span> · Founder,{' '}
+            <a href="https://hackifypro.com" target="_blank" rel="noopener noreferrer" className="text-primary-500 hover:underline font-semibold">HackifyPro</a>
+          </p>
         </div>
       </div>
 
@@ -289,7 +294,7 @@ export const SignupPage: React.FC = () => {
         <div className="max-w-lg text-center text-white">
           <div className="mb-8">
             <div className="inline-flex bg-white rounded-2xl px-4 py-3 shadow-2xl mx-auto mb-6">
-              <img src="/stunivoz-new-logo.png" alt="STUNIVOZ" className="h-14 w-auto object-contain" />
+              <img src="/stunivoz-brand-logo.png" alt="STUNIVOZ" className="h-14 w-auto object-contain" />
             </div>
             <h2 className="font-display text-4xl font-bold mb-4">Land Your Dream Internship</h2>
             <p className="text-accent-100 text-lg">
@@ -315,6 +320,10 @@ export const SignupPage: React.FC = () => {
               </div>
             ))}
           </div>
+          <p className="mt-8 text-xs text-accent-100/60">
+            Created by <span className="font-semibold text-white/80">Nilesh Barela</span> · Founder,{' '}
+            <a href="https://hackifypro.com" target="_blank" rel="noopener noreferrer" className="text-white font-bold hover:underline">HackifyPro</a>
+          </p>
         </div>
       </div>
     </div>

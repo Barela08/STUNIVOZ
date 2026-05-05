@@ -13,7 +13,7 @@ export const PublicNavbar: React.FC = () => {
           {/* Logo */}
           <div className="flex items-center">
             <Link to="/">
-              <img src="/stunivoz-new-logo.png" alt="STUNIVOZ" className="h-14 w-auto object-contain" />
+              <img src="/stunivoz-brand-logo.png" alt="STUNIVOZ" className="h-14 w-auto object-contain" />
             </Link>
           </div>
 

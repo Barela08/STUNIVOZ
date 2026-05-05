@@ -50,7 +50,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
           <button onClick={() => setSidebarOpen(true)} className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800">
             <Menu className="w-6 h-6 text-gray-600 dark:text-gray-300" />
           </button>
-          <img src="/stunivoz-new-logo.png" alt="STUNIVOZ" className="h-9 w-auto object-contain" />
+          <img src="/stunivoz-icon.png" alt="STUNIVOZ" className="h-9 w-auto object-contain" />
           <div className="flex items-center gap-1">
             <button onClick={toggleTheme} className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800">
               {isDark ? <Sun className="w-5 h-5 text-yellow-400" /> : <Moon className="w-5 h-5 text-gray-500" />}
@@ -72,7 +72,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
         <div className="flex flex-col h-full">
           {/* Logo */}
           <div className="flex items-center justify-between h-16 px-4 border-b border-gray-100 dark:border-gray-800">
-            <img src="/stunivoz-new-logo.png" alt="STUNIVOZ" className="h-10 w-auto object-contain" />
+            <img src="/stunivoz-brand-logo.png" alt="STUNIVOZ" className="h-11 w-auto object-contain" />
             <button onClick={() => setSidebarOpen(false)} className="lg:hidden p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800">
               <X className="w-5 h-5 text-gray-500 dark:text-gray-400" />
             </button>
@@ -103,6 +103,14 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
               </React.Fragment>
             ))}
           </nav>
+
+          {/* Creator Credit */}
+          <div className="px-4 py-2 border-t border-gray-100 dark:border-gray-800 bg-gray-50 dark:bg-gray-900/50">
+            <p className="text-[10px] text-gray-400 dark:text-gray-600 text-center leading-relaxed">
+              Created by <span className="font-semibold text-gray-500 dark:text-gray-500">Nilesh Barela</span>
+              <br />Founder, <a href="https://hackifypro.com" target="_blank" rel="noopener noreferrer" className="text-primary-500 hover:text-primary-600 font-semibold">HackifyPro</a>
+            </p>
+          </div>
 
           {/* User Section */}
           <div className="p-4 border-t border-gray-100 dark:border-gray-800">

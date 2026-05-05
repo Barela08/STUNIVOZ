@@ -131,7 +131,7 @@ export const ProviderRegisterPage: React.FC = () => {
 
         <div className="w-full max-w-md py-8">
           <div className="flex items-center gap-3 mb-6">
-            <img src="/stunivoz-new-logo.png" alt="STUNIVOZ" className="h-10 w-auto object-contain" />
+            <img src="/stunivoz-brand-logo.png" alt="STUNIVOZ" className="h-10 w-auto object-contain" />
             <div>
               <span className="font-display font-bold text-xl dark:text-white text-gray-900">STUNIVOZ</span>
               <span className="block text-xs text-blue-500 font-medium">Company Portal</span>

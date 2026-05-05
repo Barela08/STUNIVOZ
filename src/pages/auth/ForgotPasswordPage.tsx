@@ -29,7 +29,7 @@ export const ForgotPasswordPage: React.FC = () => {
       <div className="flex-1 flex items-center justify-center p-8">
         <div className="w-full max-w-md">
           <div className="flex items-center mb-8">
-            <img src="/stunivoz-new-logo.png" alt="STUNIVOZ" className="h-12 w-auto object-contain" />
+            <img src="/stunivoz-brand-logo.png" alt="STUNIVOZ" className="h-12 w-auto object-contain" />
           </div>
 
           <Link to="/login" className="inline-flex items-center gap-2 text-sm text-gray-500 hover:text-gray-900 mb-8 transition-colors">
@@ -106,7 +106,7 @@ export const ForgotPasswordPage: React.FC = () => {
         </div>
         <div className="max-w-lg text-center text-white relative z-10">
           <div className="inline-flex bg-white rounded-2xl px-4 py-3 shadow-2xl mx-auto mb-6">
-            <img src="/stunivoz-new-logo.png" alt="STUNIVOZ" className="h-14 w-auto object-contain" />
+            <img src="/stunivoz-brand-logo.png" alt="STUNIVOZ" className="h-14 w-auto object-contain" />
           </div>
           <h2 className="font-display text-4xl font-bold mb-4">Secure Your Account</h2>
           <p className="text-primary-100 text-lg">Don't worry, happens to the best of us. We'll get you back into your account in no time.</p>

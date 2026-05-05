@@ -89,7 +89,7 @@ export const StaffLoginPage: React.FC = () => {
 
         <div className="w-full max-w-md animate-slide-up">
           <div className="flex items-center gap-3 mb-8">
-            <img src="/stunivoz-new-logo.png" alt="STUNIVOZ" className="h-10 w-auto object-contain" />
+            <img src="/stunivoz-brand-logo.png" alt="STUNIVOZ" className="h-10 w-auto object-contain" />
             <div>
               <span className="font-display font-bold text-xl dark:text-white text-gray-900">STUNIVOZ</span>
               <span className="block text-xs text-emerald-500 font-medium">Staff Portal</span>

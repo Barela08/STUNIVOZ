@@ -135,17 +135,31 @@ export const HomePage: React.FC = () => {
       <footer className="bg-gray-900 text-gray-400 py-12 border-t border-gray-800">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex flex-col md:flex-row justify-between items-center gap-6">
-            <div className="flex items-center gap-2">
-              <div className="bg-white rounded-xl px-3 py-1.5 shadow-md">
-                <img src="/stunivoz-new-logo.png" alt="STUNIVOZ" className="h-8 w-auto object-contain" />
+            <div className="flex flex-col items-center md:items-start gap-2">
+              <div className="bg-white rounded-xl px-3 py-2 shadow-md">
+                <img src="/stunivoz-brand-logo.png" alt="STUNIVOZ" className="h-10 w-auto object-contain" />
               </div>
+              <p className="text-xs text-gray-500">
+                Created by{' '}
+                <span className="text-gray-300 font-semibold">Nilesh Barela</span>
+                {' '}· Founder,{' '}
+                <a
+                  href="https://hackifypro.com"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-primary-400 hover:text-primary-300 font-semibold transition-colors"
+                >
+                  HackifyPro
+                </a>
+                {' '}– a cybersecurity learning platform
+              </p>
             </div>
             <div className="flex gap-6">
               <Link to="/internships" className="hover:text-white transition-colors">Internships</Link>
               <Link to="/courses" className="hover:text-white transition-colors">Courses</Link>
               <Link to="/events" className="hover:text-white transition-colors">Events</Link>
             </div>
-            <p className="text-sm">© 2026 STUNIVOZ. All rights reserved.</p>
+            <p className="text-sm text-center">© 2026 STUNIVOZ. All rights reserved.</p>
           </div>
         </div>
       </footer>
