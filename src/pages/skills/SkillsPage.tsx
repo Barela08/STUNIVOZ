@@ -2,14 +2,7 @@ import React, { useState } from 'react';
 import { Plus, Search, Zap, Target, AlertCircle, CheckCircle, ChevronRight, Edit, Trash2, FileText } from 'lucide-react';
 import { Card, CardHeader, CardContent, Button, Input } from '../../components/common';
 
-const mockSkills = [
-  { name: 'React', level: 'intermediate', progress: 65, lastUpdated: '2024-12-01' },
-  { name: 'TypeScript', level: 'beginner', progress: 30, lastUpdated: '2024-12-05' },
-  { name: 'Node.js', level: 'intermediate', progress: 50, lastUpdated: '2024-11-20' },
-  { name: 'Python', level: 'advanced', progress: 85, lastUpdated: '2024-10-15' },
-  { name: 'MongoDB', level: 'intermediate', progress: 45, lastUpdated: '2024-11-10' },
-  { name: 'AWS', level: 'beginner', progress: 20, lastUpdated: '2024-12-10' },
-];
+const mockSkills: { name: string; level: string; progress: number; lastUpdated: string }[] = [];
 
 const levelColors = {
   beginner: 'bg-yellow-100 text-yellow-700',

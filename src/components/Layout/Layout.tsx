@@ -9,6 +9,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTheme } from '../../contexts/ThemeContext';
+import { useAdminSettings } from '../../contexts/AdminSettingsContext';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -42,6 +43,8 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
   const location = useLocation();
   const { user, profile, signOut } = useAuth();
   const { isDark, toggleTheme } = useTheme();
+  const { logoUrl } = useAdminSettings();
+  const logoSrc = logoUrl || '/stunivoz-brand-logo.png';
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-950 transition-colors duration-300">
@@ -51,7 +54,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
           <button onClick={() => setSidebarOpen(true)} className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800">
             <Menu className="w-6 h-6 text-gray-600 dark:text-gray-300" />
           </button>
-          <img src="/stunivoz-icon.png" alt="STUNIVOZ" className="h-9 w-auto object-contain" />
+          <img src={logoSrc} alt="STUNIVOZ" className="h-9 w-auto object-contain" />
           <div className="flex items-center gap-1">
             <button onClick={toggleTheme} className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800">
               {isDark ? <Sun className="w-5 h-5 text-yellow-400" /> : <Moon className="w-5 h-5 text-gray-500" />}
@@ -73,7 +76,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
         <div className="flex flex-col h-full">
           {/* Logo */}
           <div className="flex items-center justify-between h-16 px-4 border-b border-gray-100 dark:border-gray-800">
-            <img src="/stunivoz-brand-logo.png" alt="STUNIVOZ" className="h-11 w-auto object-contain" />
+            <img src={logoSrc} alt="STUNIVOZ" className="h-11 w-auto object-contain" />
             <button onClick={() => setSidebarOpen(false)} className="lg:hidden p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800">
               <X className="w-5 h-5 text-gray-500 dark:text-gray-400" />
             </button>

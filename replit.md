@@ -45,9 +45,12 @@ An all-in-one student career platform — helps students find internships, cours
 
 - **Two-server setup**: Vite dev server (5000) proxies `/api/*` to Express (3001) — keep both workflows running in dev.
 - **Firebase for auth + Firestore**: The entire user identity, profiles, and content live in the user's own Firebase project (`stunivoz`). Firebase config values are inlined as fallbacks in `src/services/firebase.ts` so the app works without env vars set.
-- **Cloudinary for server-side uploads**: Files are uploaded through the Express server (not directly from browser) so the Cloudinary secret stays server-side only.
+- **Cloudinary for ALL uploads**: PDFs, images, and branding assets all go through `uploadService.ts` → Express `/api/upload/file` → Cloudinary. Firebase Storage is no longer used for uploads.
+- **Maintenance mode via Firestore**: `AdminSettingsContext` writes maintenance state to `system_config/site_settings` and all clients listen via `onSnapshot` — cross-device real-time without refresh.
+- **Dynamic logo via Firestore**: Logo URL stored in `system_config/branding`, synced to all layouts in real-time via `AdminSettingsContext.logoUrl`.
 - **Role-based routing**: Four roles — `student`, `company`, `staff`, `admin` — each with dedicated layouts and protected routes in `src/App.tsx`.
 - **AI keys stored by admin**: AI API keys (Gemini, OpenAI, Claude) are stored by the admin in Firestore/localStorage via the Admin UI, not hardcoded.
+- **AI Help page**: Uses `callAI` from `aiService.ts` directly (not an iframe) — chatgpt.com refused iframe embedding.
 
 ## Product
 

@@ -63,21 +63,6 @@ export const DashboardPage: React.FC = () => {
     { label: 'Points', value: 0, icon: Zap, color: 'text-orange-500', bg: 'bg-orange-100 dark:bg-orange-900/30', to: '/gamification' },
   ];
 
-  const recommendedInternships = [
-    { id: '1', company: 'Google', role: 'Frontend Developer Intern', location: 'Bangalore', stipend: '₹50,000/month', skills: ['React', 'TypeScript', 'CSS'], posted: '2 days ago' },
-    { id: '2', company: 'Microsoft', role: 'Full Stack Developer', location: 'Hyderabad', stipend: '₹45,000/month', skills: ['Node.js', 'React', 'SQL'], posted: '3 days ago' },
-    { id: '3', company: 'Amazon', role: 'SDE Intern', location: 'Bangalore', stipend: '₹40,000/month', skills: ['Python', 'AWS', 'DSA'], posted: '5 days ago' },
-  ];
-
-  const upcomingEvents = [
-    { id: '1', title: 'Google Cloud Hackathon', date: 'May 15, 2026', type: 'Hackathon' },
-    { id: '2', title: 'AWS Career Workshop', date: 'May 18, 2026', type: 'Webinar' },
-  ];
-
-  const recommendedCourses = [
-    { id: '1', title: 'Complete Web Development Bootcamp', platform: 'Udemy', rating: 4.8, duration: '48 hours' },
-    { id: '2', title: 'React - The Complete Guide', platform: 'Udemy', rating: 4.7, duration: '52 hours' },
-  ];
 
   const [messages, setMessages] = useState<Message[]>([
     { role: 'bot', text: "Hi! I'm your AI Career Advisor 👋\n\nI can help you with:\n• Internship hunting tips\n• Resume and ATS advice\n• Interview preparation\n• Skills to learn in 2026\n• Salary and stipend benchmarks\n\nWhat would you like to know?" },
@@ -151,17 +136,12 @@ export const DashboardPage: React.FC = () => {
 
       {/* Main Content Grid */}
       <div className="grid lg:grid-cols-3 gap-6">
-        {/* Recommended Internships */}
+        {/* Internships */}
         <div className="lg:col-span-2">
           <Card padding="none">
             <div className="p-6 border-b border-gray-100 dark:border-gray-800">
               <div className="flex items-center justify-between">
-                <div>
-                  <CardHeader
-                    title="Recommended Internships"
-                    subtitle="Based on your profile and skills"
-                  />
-                </div>
+                <CardHeader title="Internships" subtitle="Browse latest opportunities" />
                 <Link to="/internships">
                   <Button variant="ghost" size="sm">
                     View All <ArrowRight className="w-4 h-4" />
@@ -169,33 +149,15 @@ export const DashboardPage: React.FC = () => {
                 </Link>
               </div>
             </div>
-            <div className="divide-y divide-gray-100 dark:divide-gray-800">
-              {recommendedInternships.map((internship) => (
-                <div key={internship.id} className="p-4 lg:p-6 flex flex-col lg:flex-row lg:items-center gap-4 hover:bg-gray-50 dark:hover:bg-gray-800/40 transition-colors">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2 mb-1">
-                      <h3 className="font-semibold text-gray-900 dark:text-white">{internship.role}</h3>
-                      <span className="px-2 py-0.5 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 text-xs rounded-full">Active</span>
-                    </div>
-                    <p className="text-gray-600 dark:text-gray-400">{internship.company}</p>
-                    <div className="flex flex-wrap items-center gap-3 mt-2 text-sm text-gray-500 dark:text-gray-400">
-                      <span className="flex items-center gap-1"><Briefcase className="w-4 h-4" />{internship.location}</span>
-                      <span className="flex items-center gap-1"><TrendingUp className="w-4 h-4" />{internship.stipend}</span>
-                      <span className="flex items-center gap-1"><Clock className="w-4 h-4" />{internship.posted}</span>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <div className="flex gap-1 flex-wrap">
-                      {internship.skills.map((skill) => (
-                        <span key={skill} className="px-2 py-1 bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 text-xs rounded-lg">{skill}</span>
-                      ))}
-                    </div>
-                    <Button variant="primary" size="sm" onClick={() => navigate('/internships')}>
-                      Apply
-                    </Button>
-                  </div>
-                </div>
-              ))}
+            <div className="p-10 flex flex-col items-center justify-center text-center">
+              <Briefcase className="w-10 h-10 text-gray-300 dark:text-gray-600 mb-3" />
+              <p className="font-medium text-gray-700 dark:text-gray-300 mb-1">Find Your Internship</p>
+              <p className="text-sm text-gray-400 dark:text-gray-500 mb-4">Browse real listings posted by companies on the platform</p>
+              <Link to="/internships">
+                <Button variant="primary" size="sm">
+                  Browse Internships <ArrowRight className="w-4 h-4" />
+                </Button>
+              </Link>
             </div>
           </Card>
         </div>
@@ -237,47 +199,27 @@ export const DashboardPage: React.FC = () => {
                 </Link>
               </div>
             </div>
-            <div className="divide-y divide-gray-100 dark:divide-gray-800">
-              {upcomingEvents.map((event) => (
-                <div key={event.id} className="p-4 flex items-center gap-3 hover:bg-gray-50 dark:hover:bg-gray-800/40 cursor-pointer" onClick={() => navigate('/events')}>
-                  <div className="w-10 h-10 rounded-lg bg-accent-100 dark:bg-accent-900/30 flex items-center justify-center">
-                    <Calendar className="w-5 h-5 text-accent-500" />
-                  </div>
-                  <div className="flex-1">
-                    <div className="font-medium text-gray-900 dark:text-white">{event.title}</div>
-                    <div className="text-xs text-gray-500 dark:text-gray-400">{event.date}</div>
-                  </div>
-                  <span className="px-2 py-1 bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 text-xs rounded-lg">{event.type}</span>
-                </div>
-              ))}
+            <div className="p-6 flex flex-col items-center text-center">
+              <Calendar className="w-8 h-8 text-gray-300 dark:text-gray-600 mb-2" />
+              <p className="text-sm text-gray-400 dark:text-gray-500 mb-3">No upcoming events yet</p>
+              <Link to="/events"><Button variant="ghost" size="sm">Browse Events</Button></Link>
             </div>
           </Card>
 
-          {/* Recommended Courses */}
+          {/* Courses */}
           <Card padding="none">
             <div className="p-4 border-b border-gray-100 dark:border-gray-800">
               <div className="flex items-center justify-between">
-                <CardHeader title="Recommended Courses" />
+                <CardHeader title="Courses" />
                 <Link to="/courses">
                   <Button variant="ghost" size="sm">View All</Button>
                 </Link>
               </div>
             </div>
-            <div className="divide-y divide-gray-100 dark:divide-gray-800">
-              {recommendedCourses.map((course) => (
-                <div key={course.id} className="p-4 flex items-center gap-3 hover:bg-gray-50 dark:hover:bg-gray-800/40 cursor-pointer" onClick={() => navigate('/courses')}>
-                  <div className="w-10 h-10 rounded-lg bg-primary-100 dark:bg-primary-900/30 flex items-center justify-center">
-                    <BookOpen className="w-5 h-5 text-primary-500" />
-                  </div>
-                  <div className="flex-1">
-                    <div className="font-medium text-gray-900 dark:text-white">{course.title}</div>
-                    <div className="text-xs text-gray-500 dark:text-gray-400">{course.platform} · {course.duration}</div>
-                  </div>
-                  <div className="flex items-center gap-1 text-sm text-yellow-500">
-                    <Star className="w-4 h-4 fill-current" />{course.rating}
-                  </div>
-                </div>
-              ))}
+            <div className="p-6 flex flex-col items-center text-center">
+              <BookOpen className="w-8 h-8 text-gray-300 dark:text-gray-600 mb-2" />
+              <p className="text-sm text-gray-400 dark:text-gray-500 mb-3">Discover courses to upskill</p>
+              <Link to="/courses"><Button variant="ghost" size="sm">Browse Courses</Button></Link>
             </div>
           </Card>
         </div>

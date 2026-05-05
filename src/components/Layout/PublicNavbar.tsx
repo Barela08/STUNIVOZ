@@ -2,9 +2,12 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import { Menu, X } from 'lucide-react';
 import { Button } from '../common';
+import { useAdminSettings } from '../../contexts/AdminSettingsContext';
 
 export const PublicNavbar: React.FC = () => {
   const [isOpen, setIsOpen] = React.useState(false);
+  const { logoUrl } = useAdminSettings();
+  const logoSrc = logoUrl || '/stunivoz-brand-logo.png';
 
   return (
     <nav className="fixed w-full bg-white/80 backdrop-blur-md z-50 border-b border-gray-100 transition-all duration-300">
@@ -13,7 +16,7 @@ export const PublicNavbar: React.FC = () => {
           {/* Logo */}
           <div className="flex items-center">
             <Link to="/">
-              <img src="/stunivoz-brand-logo.png" alt="STUNIVOZ" className="h-14 w-auto object-contain" />
+              <img src={logoSrc} alt="STUNIVOZ" className="h-14 w-auto object-contain" />
             </Link>
           </div>
 

@@ -24,7 +24,8 @@ import {
   FirestoreInternship, FirestoreEvent, FirestoreCourse,
 } from '../../services/contentService';
 import { discoverInternships, discoverEvents, discoverCourses } from '../../services/aiService';
-import { db, uploadFile } from '../../services/firebase';
+import { db } from '../../services/firebase';
+import { uploadFile as cloudinaryUpload } from '../../services/uploadService';
 import { collection, onSnapshot, doc, addDoc, updateDoc, deleteDoc } from 'firebase/firestore';
 
 // ── CSV Export Utility ────────────────────────────────────────────────────────
@@ -2544,24 +2545,19 @@ export const RoadmapManagementPage: React.FC = () => {
 
   const handleFileUpload = async (file: File) => {
     if (!file || file.type !== 'application/pdf') { setUploadError('Please select a PDF file (.pdf only)'); return; }
-    if (file.size > 20 * 1024 * 1024) { setUploadError('PDF must be under 20MB'); return; }
+    if (file.size > 10 * 1024 * 1024) { setUploadError('PDF must be under 10MB'); return; }
     setUploading(true);
-    setUploadProgress('Uploading PDF to Firebase Storage...');
+    setUploadProgress('Uploading PDF...');
     setUploadError('');
-    const path = `roadmaps/${Date.now()}_${file.name.replace(/\s+/g, '_')}`;
-    const result = await uploadFile(file, path);
-    if (result.success && result.url) {
-      setForm(f => ({ ...f, pdfUrl: result.url!, pdfName: file.name }));
+    try {
+      const result = await cloudinaryUpload(file, 'stunivoz/roadmaps', (pct) => {
+        setUploadProgress(`Uploading... ${pct}%`);
+      });
+      setForm(f => ({ ...f, pdfUrl: result.secure_url, pdfName: file.name }));
       setUploadProgress('');
       showToast('PDF uploaded successfully!');
-    } else {
-      const err = result.error as any;
-      const isRules = err?.code === 'storage/unauthorized';
-      setUploadError(
-        isRules
-          ? 'Firebase Storage rules are blocking PDF uploads. Go to Firebase Console → Storage → Rules and set:\n\nmatch /{allPaths=**} { allow read, write: if request.auth != null; }'
-          : `Upload failed: ${err?.message || 'Unknown error — check Firebase Storage rules'}`
-      );
+    } catch (err: any) {
+      setUploadError(`Upload failed: ${err?.message || 'Unknown error'}`);
       setUploadProgress('');
     }
     setUploading(false);
@@ -3989,10 +3985,13 @@ const CreateAdModal: React.FC<{ onClose: () => void }> = ({ onClose }) => {
     let imageUrl = form.imageUrl;
     if (imageFile) {
       setUploading(true);
-      const result = await uploadFile(imageFile, `advertisements/${Date.now()}_${imageFile.name}`);
+      try {
+        const result = await cloudinaryUpload(imageFile, 'stunivoz/advertisements');
+        imageUrl = result.secure_url;
+      } catch {
+        setError('Image upload failed. Try a URL instead.'); setSaving(false); setUploading(false); return;
+      }
       setUploading(false);
-      if (!result.url) { setError('Image upload failed. Try a URL instead.'); setSaving(false); return; }
-      imageUrl = result.url;
     }
     try {
       await addDoc(collection(db, 'advertisements'), {
@@ -4288,7 +4287,7 @@ const THEME_PRESETS = [
 ];
 
 export const UIControlPage: React.FC = () => {
-  const { maintenanceMode, maintenanceMessage, setMaintenanceMode: ctxSetMaintenance, setMaintenanceMessage } = useAdminSettings();
+  const { maintenanceMode, maintenanceMessage, setMaintenanceMode: ctxSetMaintenance, setMaintenanceMessage, logoUrl, setLogoUrl } = useAdminSettings();
   const [primaryColor, setPrimaryColor] = useState('#ef4444');
   const [font, setFont] = useState('Inter');
   const [darkModeDefault, setDarkModeDefault] = useState(false);
@@ -4296,7 +4295,28 @@ export const UIControlPage: React.FC = () => {
   const [saved, setSaved] = useState(false);
   const [confirmMaintenance, setConfirmMaintenance] = useState(false);
   const [toast, setToast] = useState('');
+  const [logoUploading, setLogoUploading] = useState(false);
+  const logoFileRef = useRef<HTMLInputElement>(null);
   const showToast = (msg: string) => { setToast(msg); setTimeout(() => setToast(''), 3000); };
+
+  const handleLogoUpload = async (file: File) => {
+    if (!file) return;
+    if (!['image/png', 'image/jpeg', 'image/svg+xml', 'image/webp'].includes(file.type)) {
+      showToast('Please select a PNG, JPG, SVG or WebP image'); return;
+    }
+    if (file.size > 2 * 1024 * 1024) { showToast('Logo must be under 2MB'); return; }
+    setLogoUploading(true);
+    try {
+      const result = await cloudinaryUpload(file, 'stunivoz/branding');
+      setLogoUrl(result.secure_url);
+      showToast('Logo updated! All users will see the new logo instantly.');
+    } catch (err: any) {
+      showToast(`Upload failed: ${err?.message || 'Unknown error'}`);
+    } finally {
+      setLogoUploading(false);
+      if (logoFileRef.current) logoFileRef.current.value = '';
+    }
+  };
 
   const applyTheme = (color: string) => {
     setPrimaryColor(color);
@@ -4423,15 +4443,44 @@ export const UIControlPage: React.FC = () => {
         <Card>
           <CardHeader title="Branding Assets" />
           <CardContent className="space-y-3">
+            <input
+              ref={logoFileRef}
+              type="file"
+              accept="image/png,image/jpeg,image/svg+xml,image/webp"
+              className="hidden"
+              onChange={e => { const f = e.target.files?.[0]; if (f) handleLogoUpload(f); }}
+            />
+            {/* Platform Logo — functional upload */}
+            <div className="flex items-center justify-between p-3 rounded-xl border border-gray-100 dark:border-gray-800 bg-gray-50 dark:bg-gray-800/50">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-lg bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 flex items-center justify-center overflow-hidden">
+                  {logoUrl
+                    ? <img src={logoUrl} alt="Logo" className="w-full h-full object-contain" />
+                    : <span className="text-lg">🖼️</span>
+                  }
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-gray-800 dark:text-gray-200">Platform Logo</p>
+                  <p className="text-xs text-gray-400">PNG/SVG/WebP, max 2MB — shown in all navbars</p>
+                </div>
+              </div>
+              <button
+                onClick={() => logoFileRef.current?.click()}
+                disabled={logoUploading}
+                className="px-3 py-1.5 text-xs bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 text-gray-600 dark:text-gray-300 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-600 transition-all font-medium disabled:opacity-50 flex items-center gap-1"
+              >
+                {logoUploading ? <><span className="w-3 h-3 border-2 border-gray-400 border-t-transparent rounded-full animate-spin" /> Uploading...</> : 'Upload'}
+              </button>
+            </div>
+            {/* Other branding assets — informational */}
             {[
-              { label: 'Platform Logo', hint: 'PNG/SVG, max 2MB', icon: '🖼️' },
               { label: 'Favicon', hint: '32×32 ICO/PNG', icon: '🔖' },
               { label: 'Splash Screen', hint: '1920×1080 PNG', icon: '🎨' },
               { label: 'Email Banner', hint: '600×200 PNG', icon: '✉️' },
             ].map((asset, i) => (
               <div key={i} className="flex items-center justify-between p-3 rounded-xl border border-gray-100 dark:border-gray-800 bg-gray-50 dark:bg-gray-800/50">
                 <div className="flex items-center gap-3"><span className="text-xl">{asset.icon}</span><div><p className="text-sm font-medium text-gray-800 dark:text-gray-200">{asset.label}</p><p className="text-xs text-gray-400">{asset.hint}</p></div></div>
-                <button onClick={() => showToast(`Upload ${asset.label} — file picker opened`)} className="px-3 py-1.5 text-xs bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 text-gray-600 dark:text-gray-300 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-600 transition-all font-medium">Upload</button>
+                <button onClick={() => showToast(`${asset.label} upload — coming soon`)} className="px-3 py-1.5 text-xs bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 text-gray-600 dark:text-gray-300 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-600 transition-all font-medium">Upload</button>
               </div>
             ))}
           </CardContent>

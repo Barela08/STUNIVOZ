@@ -4,6 +4,7 @@ import { LayoutDashboard, Users, FileCheck, ShieldAlert, Flag, LogOut, Menu, X, 
 import { useAuth } from '../../contexts/AuthContext';
 import { useTheme } from '../../contexts/ThemeContext';
 import { changePassword } from '../../services/firebase';
+import { useAdminSettings } from '../../contexts/AdminSettingsContext';
 
 interface StaffLayoutProps {
   children: React.ReactNode;
@@ -22,6 +23,8 @@ export const StaffLayout: React.FC<StaffLayoutProps> = ({ children }) => {
   const location = useLocation();
   const { profile, signOut } = useAuth();
   const { isDark, toggleTheme } = useTheme();
+  const { logoUrl } = useAdminSettings();
+  const logoSrc = logoUrl || '/stunivoz-brand-logo.png';
 
   const [showChangePwd, setShowChangePwd] = useState(false);
   const [pwdLoading, setPwdLoading] = useState(false);
@@ -60,7 +63,7 @@ export const StaffLayout: React.FC<StaffLayoutProps> = ({ children }) => {
             <Menu className="w-6 h-6 text-gray-600 dark:text-gray-300" />
           </button>
           <div className="flex items-center gap-2">
-            <img src="/stunivoz-brand-logo.png" alt="STUNIVOZ" className="h-8 w-auto object-contain" />
+            <img src={logoSrc} alt="STUNIVOZ" className="h-8 w-auto object-contain" />
           </div>
           <button onClick={toggleTheme} className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800">
             {isDark ? <Sun className="w-5 h-5 text-yellow-400" /> : <Moon className="w-5 h-5 text-gray-500" />}
@@ -75,7 +78,7 @@ export const StaffLayout: React.FC<StaffLayoutProps> = ({ children }) => {
           <div className="flex items-center justify-between h-16 px-4 border-b border-emerald-800">
             <div className="flex items-center gap-2">
               <div className="bg-white rounded-lg px-2 py-1">
-                <img src="/stunivoz-brand-logo.png" alt="STUNIVOZ" className="h-7 w-auto object-contain" />
+                <img src={logoSrc} alt="STUNIVOZ" className="h-7 w-auto object-contain" />
               </div>
               <span className="font-display font-bold text-sm text-emerald-400">Staff</span>
             </div>

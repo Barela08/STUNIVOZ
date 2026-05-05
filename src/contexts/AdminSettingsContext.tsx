@@ -1,4 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import { db } from '../services/firebase';
+import { doc, onSnapshot, setDoc } from 'firebase/firestore';
 
 export interface FeatureFlag {
   key: string;
@@ -16,6 +18,7 @@ interface AdminSettings {
   aiProvider: string;
   aiModel: string;
   aiApiKey: string;
+  logoUrl: string;
 }
 
 interface AdminSettingsContextType extends AdminSettings {
@@ -27,6 +30,7 @@ interface AdminSettingsContextType extends AdminSettings {
   setActiveTheme: (theme: string) => void;
   setAIConfig: (provider: string, model: string, apiKey: string) => void;
   isFeatureEnabled: (key: string) => boolean;
+  setLogoUrl: (url: string) => void;
 }
 
 const STORAGE_KEY = 'stunivoz_admin_settings';
@@ -54,6 +58,7 @@ const DEFAULT_SETTINGS: AdminSettings = {
   aiProvider: 'gemini',
   aiModel: 'gemini-2.0-flash',
   aiApiKey: '',
+  logoUrl: '',
 };
 
 function loadSettings(): AdminSettings {
@@ -83,6 +88,7 @@ const AdminSettingsContext = createContext<AdminSettingsContextType | null>(null
 export const AdminSettingsProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [settings, setSettings] = useState<AdminSettings>(loadSettings);
 
+  // Cross-tab localStorage sync
   useEffect(() => {
     const handler = (e: StorageEvent) => {
       if (e.key === STORAGE_KEY && e.newValue) {
@@ -96,6 +102,44 @@ export const AdminSettingsProvider: React.FC<{ children: React.ReactNode }> = ({
     return () => window.removeEventListener('storage', handler);
   }, []);
 
+  // Firestore real-time sync for maintenance mode (cross-device/browser)
+  useEffect(() => {
+    const ref = doc(db, 'system_config', 'site_settings');
+    const unsub = onSnapshot(ref, (snap) => {
+      if (snap.exists()) {
+        const data = snap.data() as Record<string, unknown>;
+        setSettings(prev => {
+          const next = {
+            ...prev,
+            ...(typeof data.maintenanceMode === 'boolean' ? { maintenanceMode: data.maintenanceMode } : {}),
+            ...(typeof data.maintenanceMessage === 'string' && data.maintenanceMessage ? { maintenanceMessage: data.maintenanceMessage } : {}),
+          };
+          saveSettings(next);
+          return next;
+        });
+      }
+    }, () => {});
+    return () => unsub();
+  }, []);
+
+  // Firestore real-time sync for logo/branding
+  useEffect(() => {
+    const ref = doc(db, 'system_config', 'branding');
+    const unsub = onSnapshot(ref, (snap) => {
+      if (snap.exists()) {
+        const data = snap.data() as Record<string, unknown>;
+        if (typeof data.logoUrl === 'string' && data.logoUrl) {
+          setSettings(prev => {
+            const next = { ...prev, logoUrl: data.logoUrl as string };
+            saveSettings(next);
+            return next;
+          });
+        }
+      }
+    }, () => {});
+    return () => unsub();
+  }, []);
+
   const update = useCallback((patch: Partial<AdminSettings>) => {
     setSettings(prev => {
       const next = { ...prev, ...patch };
@@ -104,13 +148,26 @@ export const AdminSettingsProvider: React.FC<{ children: React.ReactNode }> = ({
     });
   }, []);
 
-  const setMaintenanceMode = (on: boolean) => update({ maintenanceMode: on });
-  const setMaintenanceMessage = (msg: string) => update({ maintenanceMessage: msg });
-  const setActiveTheme = (theme: string) => update({ activeTheme: theme });
-  const setFeatures = (features: FeatureFlag[]) => update({ features });
-  const setAIConfig = (provider: string, model: string, apiKey: string) => update({ aiProvider: provider, aiModel: model, aiApiKey: apiKey });
+  const setMaintenanceMode = useCallback((on: boolean) => {
+    update({ maintenanceMode: on });
+    setDoc(doc(db, 'system_config', 'site_settings'), { maintenanceMode: on }, { merge: true }).catch(() => {});
+  }, [update]);
 
-  const toggleFeature = (key: string) => {
+  const setMaintenanceMessage = useCallback((msg: string) => {
+    update({ maintenanceMessage: msg });
+    setDoc(doc(db, 'system_config', 'site_settings'), { maintenanceMessage: msg }, { merge: true }).catch(() => {});
+  }, [update]);
+
+  const setLogoUrl = useCallback((url: string) => {
+    update({ logoUrl: url });
+    setDoc(doc(db, 'system_config', 'branding'), { logoUrl: url }, { merge: true }).catch(() => {});
+  }, [update]);
+
+  const setActiveTheme = useCallback((theme: string) => update({ activeTheme: theme }), [update]);
+  const setFeatures = useCallback((features: FeatureFlag[]) => update({ features }), [update]);
+  const setAIConfig = useCallback((provider: string, model: string, apiKey: string) => update({ aiProvider: provider, aiModel: model, aiApiKey: apiKey }), [update]);
+
+  const toggleFeature = useCallback((key: string) => {
     setSettings(prev => {
       const next = {
         ...prev,
@@ -119,15 +176,15 @@ export const AdminSettingsProvider: React.FC<{ children: React.ReactNode }> = ({
       saveSettings(next);
       return next;
     });
-  };
+  }, []);
 
-  const addFeature = (f: FeatureFlag) => {
+  const addFeature = useCallback((f: FeatureFlag) => {
     setSettings(prev => {
       const next = { ...prev, features: [...prev.features, f] };
       saveSettings(next);
       return next;
     });
-  };
+  }, []);
 
   const isFeatureEnabled = (key: string) => {
     const f = settings.features.find(feat => feat.key === key);
@@ -145,6 +202,7 @@ export const AdminSettingsProvider: React.FC<{ children: React.ReactNode }> = ({
       setActiveTheme,
       setAIConfig,
       isFeatureEnabled,
+      setLogoUrl,
     }}>
       {children}
     </AdminSettingsContext.Provider>

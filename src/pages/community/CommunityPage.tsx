@@ -20,11 +20,6 @@ interface FirestorePost {
   image?: string | null;
 }
 
-const mockQuestions = [
-  { id: 1, title: 'How to prepare for Amazon SDE interview?', answers: 5, category: 'Interview Prep' },
-  { id: 2, title: 'Best resources to learn React in 2024?', answers: 12, category: 'Web Dev' },
-  { id: 3, title: 'Is it too late to switch to tech?', answers: 8, category: 'Career' },
-];
 
 const CREATOR_ROLES = ['admin', 'staff', 'company'];
 
@@ -259,21 +254,9 @@ export const CommunityPage: React.FC = () => {
             <Card>
               <CardHeader title="Suggested Users" />
               <CardContent>
-                <div className="space-y-3">
-                  {[
-                    { name: 'Alice Brown', role: 'SDE at Google' },
-                    { name: 'Bob Wilson', role: 'Full Stack Dev' },
-                    { name: 'Carol Davis', role: 'UX Designer' },
-                  ].map((u) => (
-                    <div key={u.name} className="flex items-center justify-between">
-                      <div>
-                        <p className="text-sm font-medium text-gray-900 dark:text-white">{u.name}</p>
-                        <p className="text-xs text-gray-500 dark:text-gray-400">{u.role}</p>
-                      </div>
-                      <Button variant="ghost" size="sm">Follow</Button>
-                    </div>
-                  ))}
-                </div>
+                <p className="text-sm text-gray-400 dark:text-gray-500 text-center py-4">
+                  Suggestions coming soon
+                </p>
               </CardContent>
             </Card>
           </div>
@@ -287,36 +270,24 @@ export const CommunityPage: React.FC = () => {
               <Input placeholder="Search questions..." icon={<Search className="w-5 h-5" />} />
               <Button variant="primary">Ask Question</Button>
             </div>
-            {mockQuestions.map((q) => (
-              <Card key={q.id} hover className="cursor-pointer">
-                <CardContent>
-                  <h3 className="font-semibold text-gray-900 dark:text-white mb-2">{q.title}</h3>
-                  <div className="flex items-center gap-4 text-sm text-gray-500 dark:text-gray-400">
-                    <span className="px-2 py-1 bg-gray-100 dark:bg-gray-800 rounded text-gray-600 dark:text-gray-300">{q.category}</span>
-                    <span>{q.answers} answers</span>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
+            <Card>
+              <CardContent>
+                <div className="py-8 flex flex-col items-center justify-center text-center">
+                  <MessageCircle className="w-10 h-10 text-gray-300 dark:text-gray-600 mb-3" />
+                  <p className="font-medium text-gray-700 dark:text-gray-300 mb-1">No questions yet</p>
+                  <p className="text-sm text-gray-400 dark:text-gray-500">Be the first to ask a question!</p>
+                </div>
+              </CardContent>
+            </Card>
           </div>
           <div>
             <Card>
               <CardHeader title="Top Contributors" />
               <CardContent>
                 <div className="space-y-3">
-                  {[
-                    { name: 'Expert1', answers: 150 },
-                    { name: 'Expert2', answers: 120 },
-                    { name: 'Expert3', answers: 95 },
-                  ].map((u, i) => (
-                    <div key={u.name} className="flex items-center gap-3">
-                      <span className="w-6 h-6 bg-primary-100 dark:bg-primary-900/30 rounded-full flex items-center justify-center text-xs font-bold text-primary-600 dark:text-primary-400">
-                        {i + 1}
-                      </span>
-                      <span className="flex-1 text-sm text-gray-700 dark:text-gray-300">{u.name}</span>
-                      <span className="text-sm text-gray-500 dark:text-gray-400">{u.answers}</span>
-                    </div>
-                  ))}
+                  <p className="text-sm text-gray-400 dark:text-gray-500 text-center py-4">
+                  No contributors yet
+                </p>
                 </div>
               </CardContent>
             </Card>
@@ -339,29 +310,12 @@ export const CommunityPage: React.FC = () => {
             )}
           </div>
 
-          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {[
-              { name: 'Web Dev India', members: 1240, category: 'Technology', color: 'bg-blue-500' },
-              { name: 'Campus Placements 2025', members: 3800, category: 'Career', color: 'bg-green-500' },
-              { name: 'Data Science Hub', members: 870, category: 'Technology', color: 'bg-purple-500' },
-              { name: 'Startup Founders', members: 420, category: 'Entrepreneurship', color: 'bg-orange-500' },
-              { name: 'Design & UI/UX', members: 650, category: 'Design', color: 'bg-pink-500' },
-              { name: 'Open Source Contributors', members: 310, category: 'Technology', color: 'bg-teal-500' },
-            ].map((group) => (
-              <Card key={group.name} hover className="cursor-pointer">
-                <CardContent>
-                  <div className={`w-10 h-10 rounded-xl ${group.color} flex items-center justify-center mb-3`}>
-                    <Users className="w-5 h-5 text-white" />
-                  </div>
-                  <h3 className="font-semibold text-gray-900 dark:text-white mb-1">{group.name}</h3>
-                  <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">{group.category}</p>
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs text-gray-500 dark:text-gray-400">{group.members.toLocaleString()} members</span>
-                    <Button variant="ghost" size="sm">Join</Button>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
+          <div className="flex flex-col items-center justify-center py-12 text-center">
+            <Users className="w-12 h-12 text-gray-300 dark:text-gray-600 mb-3" />
+            <p className="font-medium text-gray-700 dark:text-gray-300 mb-1">No groups yet</p>
+            <p className="text-sm text-gray-400 dark:text-gray-500">
+              Groups created by admin, staff, and company accounts will appear here.
+            </p>
           </div>
 
           {!canCreateGroup && (
