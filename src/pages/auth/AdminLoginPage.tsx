@@ -4,12 +4,9 @@ import { ShieldCheck, Mail, Lock, ArrowRight, Eye, EyeOff, Moon, Sun, AlertTrian
 import { useAuth } from '../../contexts/AuthContext';
 import { useTheme } from '../../contexts/ThemeContext';
 
-const ADMIN_EMAILS = ['hackifypro@gmail.com', 'hackifyoro@gmail.com'];
-const FIREBASE_ADMIN_EMAIL = 'hackifypro@gmail.com';
-
 export const AdminLoginPage: React.FC = () => {
   const navigate = useNavigate();
-  const { signIn } = useAuth();
+  const { signIn, fetchProfile, signOut } = useAuth();
   const { isDark, toggleTheme } = useTheme();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -26,49 +23,38 @@ export const AdminLoginPage: React.FC = () => {
     setLoading(true);
     setError('');
 
-    const enteredEmail = formData.email.trim().toLowerCase();
+    const { error: firebaseError } = await signIn(formData.email.trim().toLowerCase(), formData.password);
 
-    if (!ADMIN_EMAILS.includes(enteredEmail)) {
-      setError('Access denied. Invalid administrator credentials.');
+    if (firebaseError) {
+      const code = (firebaseError as any)?.code || '';
+      if (code === 'auth/too-many-requests') {
+        setError('Too many failed attempts. Please wait a few minutes and try again.');
+      } else if (code === 'auth/network-request-failed') {
+        setError('Network error. Please check your internet connection.');
+      } else {
+        setError('Access denied. Invalid administrator credentials.');
+      }
       setLoading(false);
       return;
     }
 
-    const { error: firebaseError } = await signIn(FIREBASE_ADMIN_EMAIL, formData.password);
-
-    if (!firebaseError) {
-      try {
-        const { auth } = await import('../../services/firebase');
-        const { getFirestore, doc, getDoc } = await import('firebase/firestore');
-        const currentUser = auth.currentUser;
-        if (currentUser) {
-          const db = getFirestore();
-          const snap = await getDoc(doc(db, 'profiles', currentUser.uid));
-          const role = snap.data()?.role;
-          if (role && role !== 'admin') {
-            await auth.signOut();
-            setError('Access denied. This portal is for administrators only.');
-            setLoading(false);
-            return;
-          }
-        }
-      } catch {
-        // Firestore check failed — AuthContext will handle role on next load
-      }
-      navigate('/admin');
+    const { auth } = await import('../../services/firebase');
+    const currentUser = auth.currentUser;
+    if (!currentUser) {
+      setError('Authentication failed. Please try again.');
+      setLoading(false);
       return;
     }
 
-    const code = (firebaseError as any)?.code || '';
-
-    if (code === 'auth/too-many-requests') {
-      setError('Too many failed attempts. Please wait a few minutes and try again.');
-    } else if (code === 'auth/network-request-failed') {
-      setError('Network error. Please check your internet connection and try again.');
-    } else {
-      setError('Access denied. Invalid administrator credentials.');
+    const userProfile = await fetchProfile(currentUser.uid);
+    if (!userProfile || userProfile.role !== 'admin') {
+      await signOut();
+      setError('Access denied. This portal is for administrators only.');
+      setLoading(false);
+      return;
     }
-    setLoading(false);
+
+    navigate('/admin');
   };
 
   return (
@@ -121,7 +107,7 @@ export const AdminLoginPage: React.FC = () => {
           <div className="mb-5 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl flex items-start gap-2">
             <AlertTriangle className="w-4 h-4 text-red-500 mt-0.5 flex-shrink-0" />
             <p className="text-xs text-red-600 dark:text-red-400">
-              Authorized personnel only. Email/password login — no social sign-in allowed.
+              Authorized personnel only. Your account must have admin role assigned in the system.
             </p>
           </div>
 

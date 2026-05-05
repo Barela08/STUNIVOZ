@@ -46,8 +46,6 @@ export interface PendingLinkInfo {
   provider: 'google' | 'github';
 }
 
-const ADMIN_SESSION_KEY = 'stunivoz_admin_session';
-
 interface AuthContextType {
   user: User | null;
   profile: Profile | null;
@@ -61,7 +59,6 @@ interface AuthContextType {
   signOut: () => Promise<void>;
   updateProfile: (data: Partial<Profile>) => Promise<{ error: any }>;
   fetchProfile: (uid: string) => Promise<Profile | null>;
-  adminCredentialSignIn: (role: UserRole, email: string) => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -109,43 +106,22 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   useEffect(() => {
-    const SESSION_MAX_AGE_MS = 8 * 60 * 60 * 1000; // 8 hours
-    const savedSession = localStorage.getItem(ADMIN_SESSION_KEY);
-    if (savedSession) {
-      try {
-        const parsed = JSON.parse(savedSession) as Profile & { _savedAt?: number };
-        const savedAt = parsed._savedAt || 0;
-        const isExpired = Date.now() - savedAt > SESSION_MAX_AGE_MS;
-        if (isExpired) {
-          localStorage.removeItem(ADMIN_SESSION_KEY);
-        } else if (parsed.role === 'admin') {
-          setProfile(parsed);
-          setLoading(false);
-        }
-      } catch {
-        localStorage.removeItem(ADMIN_SESSION_KEY);
-      }
-    }
+    // Clear any stale localStorage sessions from old mock-login code
+    localStorage.removeItem('stunivoz_admin_session');
 
     const timeout = setTimeout(() => setLoading(false), 5000);
+
     const unsubscribe = onAuthStateChangedListener(async (firebaseUser: User | null) => {
       clearTimeout(timeout);
       setUser(firebaseUser);
       if (firebaseUser) {
-        const p = await fetchProfile(firebaseUser.uid);
-        if (p) {
-          if (p.role === 'admin') {
-            localStorage.setItem(ADMIN_SESSION_KEY, JSON.stringify({ ...p, _savedAt: Date.now() }));
-          }
-        }
+        await fetchProfile(firebaseUser.uid);
       } else {
-        const savedSession = localStorage.getItem(ADMIN_SESSION_KEY);
-        if (!savedSession) {
-          setProfile(null);
-        }
+        setProfile(null);
       }
       setLoading(false);
     });
+
     return () => { clearTimeout(timeout); unsubscribe(); };
   }, []);
 
@@ -155,19 +131,31 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (result.success && result.user) {
         const now = new Date().toISOString();
         const existing = await fetchProfile(result.user.uid);
-        await setDocument('profiles', result.user.uid, {
-          id: result.user.uid,
-          email,
-          full_name: existing?.full_name || email.split('@')[0],
-          role: existing?.role || 'student',
-          provider: existing?.provider || 'email',
-          last_login: now,
-          updated_at: now,
-          ...(existing ? {} : { created_at: now }),
-        });
+
+        if (existing) {
+          // Existing user: ONLY update login metadata, never touch role
+          await setDocument('profiles', result.user.uid, {
+            last_login: now,
+            updated_at: now,
+          });
+        } else {
+          // Brand-new user with no profile: create as student
+          await setDocument('profiles', result.user.uid, {
+            id: result.user.uid,
+            email,
+            full_name: email.split('@')[0],
+            role: 'student' as UserRole,
+            provider: 'email',
+            created_at: now,
+            last_login: now,
+            updated_at: now,
+          });
+          await fetchProfile(result.user.uid);
+        }
 
         await incrementLoginCount(result.user.uid);
 
+        // Handle pending OAuth link
         if (pendingCredRef.current) {
           try {
             await linkPendingCredential(pendingCredRef.current);
@@ -258,9 +246,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         return {
           error: {
             code: 'auth/account-link-required',
-            email,
-            methods,
-            provider: 'google',
+            email, methods, provider: 'google',
             message: 'account-link-required',
           }
         };
@@ -312,9 +298,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         return {
           error: {
             code: 'auth/account-link-required',
-            email,
-            methods,
-            provider: 'github',
+            email, methods, provider: 'github',
             message: 'account-link-required',
           }
         };
@@ -325,25 +309,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const signOut = async () => {
     await logoutUser();
-    localStorage.removeItem(ADMIN_SESSION_KEY);
+    localStorage.removeItem('stunivoz_admin_session');
     clearPendingLink();
     setUser(null);
     setProfile(null);
-  };
-
-  const adminCredentialSignIn = (role: UserRole, email: string) => {
-    const mockProfile: Profile = {
-      id: `admin-${role}-001`,
-      email,
-      full_name: role === 'admin' ? 'STUNIVOZ Admin' : role === 'staff' ? 'STUNIVOZ Staff' : 'Company User',
-      role,
-      headline: role === 'admin' ? 'Platform Administrator' : undefined,
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-    };
-    setProfile(mockProfile);
-    // Save with _savedAt so the 8-hour expiry check in useEffect works correctly
-    localStorage.setItem(ADMIN_SESSION_KEY, JSON.stringify({ ...mockProfile, _savedAt: Date.now() }));
   };
 
   const updateProfile = async (data: Partial<Profile>) => {
@@ -371,7 +340,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       signIn, signUp,
       signInWithGoogleOAuth,
       signInWithGitHubOAuth,
-      signOut, updateProfile, fetchProfile, adminCredentialSignIn
+      signOut, updateProfile, fetchProfile,
     }}>
       {children}
     </AuthContext.Provider>

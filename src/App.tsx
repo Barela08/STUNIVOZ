@@ -122,17 +122,14 @@ const RoleRoute: React.FC<{ children: React.ReactNode; role: UserRole; loginPath
 
   if (loading) return <div className="min-h-screen flex items-center justify-center dark:bg-gray-950"><Loading size="lg" text="Loading..." /></div>;
 
-  // Admin portal allows localStorage session (8-hour expiry enforced in AuthContext)
-  const hasAdminSession = role === 'admin' && profile?.role === 'admin';
+  // Must have a real Firebase session
+  if (!user) return <Navigate to={loginPath} replace />;
 
-  // No authentication at all → redirect to login
-  if (!user && !hasAdminSession) return <Navigate to={loginPath} replace />;
+  // Firebase user authenticated but Firestore profile not yet loaded — wait to prevent race condition
+  if (!profile) return <div className="min-h-screen flex items-center justify-center dark:bg-gray-950"><Loading size="lg" text="Verifying access..." /></div>;
 
-  // Firebase user is authenticated but profile hasn't loaded from Firestore yet → wait (prevents race condition bypass)
-  if (user && !profile) return <div className="min-h-screen flex items-center justify-center dark:bg-gray-950"><Loading size="lg" text="Verifying access..." /></div>;
-
-  // User has a different role than required → redirect
-  if (profile && profile.role !== role) return <Navigate to={loginPath} replace />;
+  // Wrong role → redirect to the correct login page
+  if (profile.role !== role) return <Navigate to={loginPath} replace />;
 
   // Maintenance mode — admins bypass, everyone else sees maintenance screen
   if (maintenanceMode && role !== 'admin') return <MaintenancePage message={maintenanceMessage} />;
@@ -144,9 +141,11 @@ const PublicRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { user, profile, loading } = useAuth();
   if (loading) return <div className="min-h-screen flex items-center justify-center dark:bg-gray-950"><Loading size="lg" text="Loading..." /></div>;
   if (user) {
-    if (profile?.role === 'company') return <Navigate to="/provider" replace />;
-    if (profile?.role === 'admin') return <Navigate to="/admin" replace />;
-    if (profile?.role === 'staff') return <Navigate to="/staff" replace />;
+    // Wait for profile to load before deciding where to redirect
+    if (!profile) return <div className="min-h-screen flex items-center justify-center dark:bg-gray-950"><Loading size="lg" text="Loading..." /></div>;
+    if (profile.role === 'company') return <Navigate to="/provider" replace />;
+    if (profile.role === 'admin') return <Navigate to="/admin" replace />;
+    if (profile.role === 'staff') return <Navigate to="/staff" replace />;
     return <Navigate to="/dashboard" replace />;
   }
   return <>{children}</>;
