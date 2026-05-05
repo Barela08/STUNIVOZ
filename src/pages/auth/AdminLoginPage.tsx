@@ -3,15 +3,11 @@ import { useNavigate } from 'react-router-dom';
 import { ShieldCheck, Mail, Lock, ArrowRight, Eye, EyeOff, Moon, Sun, AlertTriangle } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTheme } from '../../contexts/ThemeContext';
-
-// Both email variations accepted — Firebase has hackifypro, but user commonly types hackifyoro
-const ADMIN_EMAILS = ['hackifypro@gmail.com', 'hackifyoro@gmail.com'];
-const FIREBASE_ADMIN_EMAIL = 'hackifypro@gmail.com'; // actual email registered in Firebase Auth
-const ADMIN_PASSWORD = 'Nilu@2006';
+import { getFirestore, doc, getDoc } from 'firebase/firestore';
 
 export const AdminLoginPage: React.FC = () => {
   const navigate = useNavigate();
-  const { signIn, devSignIn } = useAuth();
+  const { signIn } = useAuth();
   const { isDark, toggleTheme } = useTheme();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -23,60 +19,50 @@ export const AdminLoginPage: React.FC = () => {
     setError('');
   };
 
+  const formatAuthError = (err: any): string => {
+    const code = err?.code || '';
+    if (code === 'auth/user-not-found' || code === 'auth/wrong-password' || code === 'auth/invalid-credential') return 'Access denied. Invalid administrator credentials.';
+    if (code === 'auth/too-many-requests') return 'Too many failed attempts. Please wait a few minutes and try again.';
+    if (code === 'auth/network-request-failed') return 'Network error. Please check your internet connection.';
+    if (code === 'auth/unauthorized-domain') {
+      const domain = window.location.hostname;
+      return `Domain "${domain}" is not authorized in Firebase Console. Add it under Authentication → Settings → Authorized domains.`;
+    }
+    return err?.message || 'Access denied. Invalid administrator credentials.';
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setError('');
 
-    const enteredEmail = formData.email.trim().toLowerCase();
+    const { error: firebaseError } = await signIn(formData.email.trim(), formData.password);
 
-    // Step 1: Email must be one of the recognized admin emails
-    if (!ADMIN_EMAILS.includes(enteredEmail)) {
-      setError('Access denied. Invalid administrator credentials.');
+    if (firebaseError) {
+      setError(formatAuthError(firebaseError));
       setLoading(false);
       return;
     }
 
-    // Step 2: Try Firebase Authentication using the correct registered email
-    const { error: firebaseError } = await signIn(FIREBASE_ADMIN_EMAIL, formData.password);
-
-    if (!firebaseError) {
-      // Firebase login success — onAuthStateChanged will fetch profile from Firestore
-      navigate('/admin');
-      return;
-    }
-
-    // Step 3: Firebase failed — check error type and fall back to local credential check
-    const code = (firebaseError as any)?.code || '';
-    const isInfraError = [
-      'auth/unauthorized-domain',
-      'auth/operation-not-allowed',
-      'auth/network-request-failed',
-      'auth/internal-error',
-    ].includes(code);
-
-    if (isInfraError || !code) {
-      // Domain not authorized in Firebase or network issue — use local credential verification
-      if (formData.password === ADMIN_PASSWORD) {
-        devSignIn('admin');
-        navigate('/admin');
-        return;
-      } else {
-        setError('Access denied. Invalid administrator credentials.');
+    // Verify role in Firestore
+    try {
+      const { auth } = await import('../../services/firebase');
+      const currentUser = auth.currentUser;
+      if (!currentUser) throw new Error('No user after login');
+      const db = getFirestore();
+      const snap = await getDoc(doc(db, 'profiles', currentUser.uid));
+      const role = snap.data()?.role;
+      if (role !== 'admin') {
+        await auth.signOut();
+        setError('Access denied. This portal is for administrators only.');
         setLoading(false);
         return;
       }
+    } catch {
+      // If Firestore check fails, still allow in — AuthContext will handle role
     }
 
-    // Step 4: Explicit auth failures (wrong password, user not found) — try local fallback
-    if (formData.password === ADMIN_PASSWORD) {
-      devSignIn('admin');
-      navigate('/admin');
-      return;
-    }
-
-    setError('Access denied. Invalid administrator credentials.');
-    setLoading(false);
+    navigate('/admin');
   };
 
   return (

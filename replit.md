@@ -124,6 +124,17 @@ npm run dev    # Starts on http://0.0.0.0:5000
 - Build: `npm run build`
 - Public dir: `dist`
 
+## Security Fixes (May 2026)
+- Removed all "Dev Mode" bypass buttons from Admin, Staff, and Company login pages
+- Admin login now uses pure Firebase Authentication (no hardcoded password fallback, no devSignIn)
+- Removed `devSignIn` function entirely from AuthContext — all auth goes through Firebase
+- Firebase API key moved to environment variable (`VITE_FIREBASE_API_KEY`)
+
+## Admin API System
+- "Add API" modal now only requires pasting an API key
+- Service name, category, endpoint, and description are auto-detected from the key prefix (OpenAI `sk-`, Google `AIzaSy`, SendGrid `SG.`, Slack `xoxb-`, GitHub `ghp_`, etc.)
+- Editing an existing API also triggers auto-detection when the key is changed
+
 ## Known Non-Breaking Warnings
 - Vite HMR: "useAuth export is incompatible" — full-tree reload on AuthContext HMR, harmless in production
 - React Router v6 future flag warnings — non-breaking

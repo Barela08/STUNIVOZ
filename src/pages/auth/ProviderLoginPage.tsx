@@ -6,7 +6,7 @@ import { useTheme } from '../../contexts/ThemeContext';
 
 export const ProviderLoginPage: React.FC = () => {
   const navigate = useNavigate();
-  const { signIn, fetchProfile, signOut, devSignIn } = useAuth();
+  const { signIn, fetchProfile, signOut } = useAuth();
   const { isDark, toggleTheme } = useTheme();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -168,19 +168,7 @@ export const ProviderLoginPage: React.FC = () => {
             </button>
           </form>
 
-          {/* Dev Bypass */}
-          <div className="mt-6 p-4 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-xl">
-            <p className="text-xs font-semibold text-yellow-700 dark:text-yellow-400 mb-2 uppercase tracking-wide">Dev Mode — Skip Firebase Auth</p>
-            <button
-              type="button"
-              onClick={() => { devSignIn('company'); navigate('/provider'); }}
-              className="w-full py-2.5 px-4 rounded-lg font-semibold text-sm text-yellow-800 dark:text-yellow-200 bg-yellow-100 dark:bg-yellow-800/40 hover:bg-yellow-200 dark:hover:bg-yellow-700/40 border border-yellow-300 dark:border-yellow-700 transition-all"
-            >
-              Enter as Dev Company (no password needed)
-            </button>
-          </div>
-
-          <p className="mt-4 text-center text-sm dark:text-gray-500 text-gray-400">
+          <p className="mt-6 text-center text-sm dark:text-gray-500 text-gray-400">
             New company?{' '}
             <Link to="/provider/register" className="text-blue-500 hover:text-blue-600 font-medium">
               Register here

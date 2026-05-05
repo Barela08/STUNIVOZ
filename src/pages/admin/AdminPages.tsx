@@ -1921,14 +1921,143 @@ export const CourseManagementPage: React.FC = () => {
   );
 };
 
-// ── API Edit Modal ────────────────────────────────────────────────────────────
+// ── API Key Auto-Detection ────────────────────────────────────────────────────
+function detectApiFromKey(key: string): { name: string; category: string; endpoint: string; description: string } {
+  const k = key.trim();
+  if (k.startsWith('sk-') && k.length > 20) return { name: 'OpenAI', category: 'AI', endpoint: 'api.openai.com/v1', description: 'OpenAI GPT models for AI-powered features.' };
+  if (k.startsWith('AIzaSy')) return { name: 'Google / Firebase', category: 'Auth', endpoint: 'identitytoolkit.googleapis.com', description: 'Google / Firebase API for authentication and cloud services.' };
+  if (k.startsWith('SG.')) return { name: 'SendGrid Email', category: 'Email', endpoint: 'api.sendgrid.com/v3', description: 'SendGrid transactional email service.' };
+  if (k.startsWith('xoxb-') || k.startsWith('xoxp-')) return { name: 'Slack', category: 'Analytics', endpoint: 'slack.com/api', description: 'Slack API for notifications and workspace integration.' };
+  if (k.startsWith('ghp_') || k.startsWith('github_pat_')) return { name: 'GitHub API', category: 'Skills', endpoint: 'api.github.com', description: 'GitHub API for repository and profile data.' };
+  if (k.startsWith('AKIA') || k.includes('aws')) return { name: 'AWS', category: 'Analytics', endpoint: 'amazonaws.com', description: 'Amazon Web Services API.' };
+  if (k.length > 10) return { name: 'Custom API', category: 'Analytics', endpoint: 'api.example.com', description: 'Custom API integration for STUNIVOZ platform.' };
+  return { name: '', category: 'Analytics', endpoint: '', description: '' };
+}
+
+// ── Add API Modal (API Key Only) ──────────────────────────────────────────────
 interface ApiRecord { id: number; name: string; category: string; endpoint: string; calls: number; limit: number; status: string; latency: string; apiKey?: string; description?: string; webhookUrl?: string }
 
+const AddAPIModal: React.FC<{ onSave: (a: ApiRecord) => void; onClose: () => void; nextId: number }> = ({ onSave, onClose, nextId }) => {
+  const [apiKey, setApiKey] = useState('');
+  const [detected, setDetected] = useState<ReturnType<typeof detectApiFromKey> | null>(null);
+  const [connecting, setConnecting] = useState(false);
+  const [connected, setConnected] = useState(false);
+  const [error, setError] = useState('');
+
+  const handleKeyChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setApiKey(e.target.value);
+    setDetected(null);
+    setConnected(false);
+    setError('');
+  };
+
+  const handleConnect = () => {
+    if (!apiKey.trim()) { setError('Please enter an API key.'); return; }
+    setConnecting(true); setError('');
+    setTimeout(() => {
+      const info = detectApiFromKey(apiKey);
+      setDetected(info);
+      setConnecting(false);
+      setConnected(true);
+    }, 1200);
+  };
+
+  const handleSave = () => {
+    if (!detected) return;
+    onSave({
+      id: nextId,
+      name: detected.name,
+      category: detected.category,
+      endpoint: detected.endpoint,
+      calls: 0,
+      limit: 10000,
+      status: 'Online',
+      latency: (30 + Math.floor(Math.random() * 100)) + 'ms',
+      apiKey,
+      description: detected.description,
+      webhookUrl: '',
+    });
+    onClose();
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-40 flex items-center justify-center p-4">
+      <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-2xl w-full max-w-md border border-gray-200 dark:border-gray-700">
+        <div className="flex items-center justify-between p-5 border-b border-gray-100 dark:border-gray-800">
+          <div className="flex items-center gap-2"><Key className="w-5 h-5 text-blue-500" /><h2 className="font-bold text-gray-900 dark:text-white">Add API Integration</h2></div>
+          <button onClick={onClose} className="p-1.5 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800"><X className="w-4 h-4 text-gray-500" /></button>
+        </div>
+        <div className="p-5 space-y-4">
+          <p className="text-sm text-gray-500 dark:text-gray-400">Paste your API key below. We'll automatically detect the service and configure everything for you.</p>
+          <div>
+            <label className="block text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1.5">API Key <span className="text-red-500">*</span></label>
+            <div className="flex gap-2">
+              <input
+                type="password"
+                value={apiKey}
+                onChange={handleKeyChange}
+                placeholder="Paste your API key here..."
+                className="flex-1 px-3 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm font-mono focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all"
+              />
+              <button
+                onClick={handleConnect}
+                disabled={connecting || !apiKey.trim()}
+                className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white text-sm font-semibold transition-all whitespace-nowrap"
+              >
+                {connecting ? <><RefreshCw className="w-3.5 h-3.5 animate-spin" /> Detecting…</> : 'Connect →'}
+              </button>
+            </div>
+            {error && <p className="text-xs text-red-500 mt-1">{error}</p>}
+          </div>
+
+          {connected && detected && (
+            <div className="p-4 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-xl space-y-3">
+              <div className="flex items-center gap-2">
+                <CheckCircle className="w-4 h-4 text-green-600 dark:text-green-400 shrink-0" />
+                <span className="text-sm font-semibold text-green-700 dark:text-green-300">Service detected — ready to connect</span>
+              </div>
+              <div className="grid grid-cols-2 gap-2 text-xs">
+                <div><span className="text-gray-500">Service</span><p className="font-semibold text-gray-800 dark:text-gray-200 mt-0.5">{detected.name}</p></div>
+                <div><span className="text-gray-500">Category</span><p className="font-semibold text-gray-800 dark:text-gray-200 mt-0.5">{detected.category}</p></div>
+                <div className="col-span-2"><span className="text-gray-500">Endpoint</span><p className="font-mono text-gray-700 dark:text-gray-300 mt-0.5">{detected.endpoint}</p></div>
+              </div>
+            </div>
+          )}
+        </div>
+        <div className="flex gap-3 p-5 border-t border-gray-100 dark:border-gray-800">
+          <button onClick={onClose} className="flex-1 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300 text-sm font-medium hover:bg-gray-50 dark:hover:bg-gray-800 transition-all">Cancel</button>
+          <button onClick={handleSave} disabled={!connected || !detected} className="flex-1 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 disabled:opacity-40 text-white font-semibold text-sm transition-all flex items-center justify-center gap-2"><Save className="w-4 h-4" /> Add Integration</button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// ── API Edit Modal ────────────────────────────────────────────────────────────
 const APIEditModal: React.FC<{ api: ApiRecord; onSave: (a: ApiRecord) => void; onClose: () => void }> = ({ api, onSave, onClose }) => {
-  const [form, setForm] = useState({ ...api, apiKey: api.apiKey || '••••••••••••' + Math.random().toString(36).slice(-6).toUpperCase(), description: api.description || `${api.name} integration for STUNIVOZ platform.`, webhookUrl: api.webhookUrl || '' });
+  const [form, setForm] = useState({ ...api, apiKey: api.apiKey || '', description: api.description || `${api.name} integration for STUNIVOZ platform.`, webhookUrl: api.webhookUrl || '' });
+  const [showKey, setShowKey] = useState(false);
+  const [detecting, setDetecting] = useState(false);
   const [pinging, setPinging] = useState(false);
   const [pingResult, setPingResult] = useState<{ ok: boolean; ms: number } | null>(null);
   const set = (k: string, v: string | number) => setForm(f => ({ ...f, [k]: v }));
+
+  const handleKeyChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const key = e.target.value;
+    set('apiKey', key);
+    if (key.length > 8) {
+      setDetecting(true);
+      setTimeout(() => {
+        const detected = detectApiFromKey(key);
+        if (detected.name && detected.name !== 'Custom API') {
+          setForm(f => ({ ...f, apiKey: key, name: detected.name, category: detected.category, endpoint: detected.endpoint, description: detected.description }));
+        } else {
+          setForm(f => ({ ...f, apiKey: key }));
+        }
+        setDetecting(false);
+      }, 600);
+    }
+  };
 
   const pingEndpoint = () => {
     setPinging(true); setPingResult(null);
@@ -1943,9 +2072,26 @@ const APIEditModal: React.FC<{ api: ApiRecord; onSave: (a: ApiRecord) => void; o
           <button onClick={onClose} className="p-1.5 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800"><X className="w-4 h-4 text-gray-500" /></button>
         </div>
         <div className="p-5 space-y-4 max-h-[70vh] overflow-y-auto">
+          <div>
+            <label className="block text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1.5">API Key</label>
+            <div className="relative flex gap-2">
+              <input
+                type={showKey ? 'text' : 'password'}
+                value={form.apiKey}
+                onChange={handleKeyChange}
+                placeholder="Paste a new key to auto-detect service…"
+                className="flex-1 px-3 py-2 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm font-mono focus:outline-none focus:border-blue-500 transition-all"
+              />
+              <button onClick={() => setShowKey(s => !s)} className="px-3 py-2 rounded-xl border border-gray-200 dark:border-gray-700 text-xs font-semibold text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-all">
+                {showKey ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+              </button>
+            </div>
+            {detecting && <p className="text-xs text-blue-500 mt-1 flex items-center gap-1"><RefreshCw className="w-3 h-3 animate-spin" /> Auto-detecting service…</p>}
+            <p className="text-xs text-gray-400 mt-1">Changing the key auto-fills name, category, and endpoint.</p>
+          </div>
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs font-medium text-gray-500 mb-1">API Name</label>
+              <label className="block text-xs font-medium text-gray-500 mb-1">Service Name</label>
               <input value={form.name} onChange={e => set('name', e.target.value)} className="w-full px-3 py-2 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm focus:outline-none focus:border-blue-500 transition-all" />
             </div>
             <div>
@@ -1964,15 +2110,6 @@ const APIEditModal: React.FC<{ api: ApiRecord; onSave: (a: ApiRecord) => void; o
               </button>
             </div>
             {pingResult && <p className={`text-xs mt-1 font-semibold ${pingResult.ok ? 'text-green-600' : 'text-red-600'}`}>{pingResult.ok ? `✓ Endpoint live — ${pingResult.ms}ms` : `✗ Endpoint unreachable — ${pingResult.ms}ms timeout`}</p>}
-          </div>
-          <div>
-            <label className="block text-xs font-medium text-gray-500 mb-1">API Key (masked)</label>
-            <div className="flex gap-2">
-              <input value={form.apiKey} readOnly className="flex-1 px-3 py-2 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-sm font-mono text-gray-500 focus:outline-none" />
-              <button onClick={() => set('apiKey', 'sk-' + Math.random().toString(36).slice(-20).toUpperCase())} className="flex items-center gap-1.5 px-3 py-2 rounded-xl border border-gray-200 dark:border-gray-700 text-xs font-semibold text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-all">
-                <RefreshCw className="w-3 h-3" /> Rotate
-              </button>
-            </div>
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div>
@@ -2014,6 +2151,7 @@ export const APISystemPage: React.FC = () => {
     { id: 5, name: 'GitHub API', category: 'Skills', endpoint: 'api.github.com', calls: 2100, limit: 5000, status: 'Online', latency: '68ms' },
   ]);
   const [editingApi, setEditingApi] = useState<ApiRecord | null>(null);
+  const [addingApi, setAddingApi] = useState(false);
   const [refreshingId, setRefreshingId] = useState<number | null>(null);
   const [toast, setToast] = useState('');
   const showToast = (msg: string) => { setToast(msg); setTimeout(() => setToast(''), 3000); };
@@ -2030,10 +2168,11 @@ export const APISystemPage: React.FC = () => {
   return (
     <div className="space-y-6 animate-fade-in">
       {editingApi && <APIEditModal api={editingApi} onSave={a => { setApis(prev => prev.map(x => x.id === a.id ? a : x)); setEditingApi(null); showToast('API settings saved'); }} onClose={() => setEditingApi(null)} />}
+      {addingApi && <AddAPIModal nextId={Math.max(...apis.map(a => a.id)) + 1} onSave={a => { setApis(prev => [...prev, a]); setAddingApi(false); showToast('API integration added successfully'); }} onClose={() => setAddingApi(false)} />}
       {toast && <div className="fixed bottom-6 right-6 z-50 flex items-center gap-2 px-4 py-3 bg-gray-900 dark:bg-gray-100 text-white dark:text-gray-900 text-sm font-medium rounded-xl shadow-xl"><CheckCircle className="w-4 h-4 text-green-400" /> {toast}</div>}
 
       <TableHeader title="API System Control" subtitle="Manage external APIs, rate limits, and integrations."
-        actions={<button className="flex items-center gap-2 px-3 py-2 text-sm text-white bg-red-600 rounded-xl hover:bg-red-700 transition-all font-semibold"><Plus className="w-4 h-4" /> Add API</button>}
+        actions={<button onClick={() => setAddingApi(true)} className="flex items-center gap-2 px-3 py-2 text-sm text-white bg-blue-600 rounded-xl hover:bg-blue-700 transition-all font-semibold"><Plus className="w-4 h-4" /> Add API</button>}
       />
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {[

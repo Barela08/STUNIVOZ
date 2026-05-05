@@ -49,7 +49,6 @@ interface AuthContextType {
   signOut: () => Promise<void>;
   updateProfile: (data: Partial<Profile>) => Promise<{ error: any }>;
   fetchProfile: (uid: string) => Promise<Profile | null>;
-  devSignIn: (role: UserRole) => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -233,23 +232,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setProfile(null);
   };
 
-  // devSignIn — saves to localStorage so session persists across page refreshes on Vercel
-  const devSignIn = (role: UserRole) => {
-    const mockProfile: Profile = {
-      id: `admin-stunivoz-001`,
-      email: 'hackifypro@gmail.com',
-      full_name: 'STUNIVOZ Admin',
-      role,
-      headline: 'Platform Administrator',
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-    };
-    setProfile(mockProfile);
-    if (role === 'admin') {
-      localStorage.setItem(ADMIN_SESSION_KEY, JSON.stringify(mockProfile));
-    }
-  };
-
   const updateProfile = async (data: Partial<Profile>) => {
     if (!user) return { error: new Error('No user logged in') };
     try {
@@ -274,7 +256,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       signIn, signUp,
       signInWithGoogleOAuth,
       signInWithGitHubOAuth,
-      signOut, updateProfile, fetchProfile, devSignIn
+      signOut, updateProfile, fetchProfile
     }}>
       {children}
     </AuthContext.Provider>
