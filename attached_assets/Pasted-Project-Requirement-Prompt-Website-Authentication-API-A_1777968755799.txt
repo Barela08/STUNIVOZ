@@ -1,0 +1,68 @@
+Project Requirement Prompt (Website Authentication & API Automation)
+
+We have developed a website using Firebase, and we need the following features and fixes to be implemented properly:
+
+1. Login System Fix
+   Currently, when navigating to any page and clicking on login, the system logs in automatically without asking for credentials.
+   This is incorrect behavior.
+   The system must require proper authentication:
+
+- Users should be prompted to enter Email/Username and Password.
+- No automatic login should occur unless a valid authenticated session already exists.
+- If a session exists, only then allow auto-login; otherwise, always show the login form.
+
+2. Firebase Authentication Integration
+   The entire authentication system must be handled using Firebase Authentication.
+   Ensure:
+
+- Secure login and logout functionality.
+- Proper session management.
+- Protection of restricted pages (only accessible after login).
+
+3. Admin Panel – API Key Handling
+   In the admin panel, there is currently a field asking for both API Key and Name (manual input).
+   This needs to be improved.
+
+New Requirement:
+
+- Only the API Key input field should be required.
+- Once the API Key is entered:
+  - The system should automatically fetch or generate associated details (like name or metadata).
+  - No manual name input should be required.
+  - Everything should be handled automatically in the backend.
+
+4. Automation & User Experience
+   The system should be:
+
+- Fully automated where possible.
+- Minimal manual input required from the user.
+
+Ensure smooth UX:
+
+- Clean login flow
+- No unnecessary fields
+- Fast and responsive behavior
+
+5. Firebase-Based Backend
+   All backend functionality must rely on Firebase services, including:
+
+- Authentication
+- Database (Firestore or Realtime DB)
+- API handling logic (if applicable)
+
+Ensure proper Firebase rules and security configurations.
+
+6. Error Handling & Validation
+   Show proper error messages:
+
+- Invalid login credentials
+- Missing API key
+
+Validate inputs before processing.
+
+Goal:
+Create a secure, user-friendly, and automated system where:
+
+- Login works correctly with proper authentication.
+- Admin API handling is simplified (API key only).
+- Firebase manages everything efficiently.
