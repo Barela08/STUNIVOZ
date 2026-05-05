@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ShieldCheck, Mail, Lock, ArrowRight, Eye, EyeOff, Moon, Sun, AlertTriangle } from 'lucide-react';
+import { ShieldCheck, Mail, Lock, ArrowRight, Eye, EyeOff, Moon, Sun, AlertTriangle, KeyRound, CheckCircle } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTheme } from '../../contexts/ThemeContext';
 import { loginUser } from '../../services/firebase';
@@ -13,6 +13,14 @@ export const AdminLoginPage: React.FC = () => {
   const [error, setError] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [formData, setFormData] = useState({ email: '', password: '' });
+
+  // Setup panel state
+  const [showSetup, setShowSetup] = useState(false);
+  const [setupLoading, setSetupLoading] = useState(false);
+  const [setupError, setSetupError] = useState('');
+  const [setupSuccess, setSetupSuccess] = useState('');
+  const [setupData, setSetupData] = useState({ email: '', password: '', confirmPassword: '', setupKey: '' });
+  const [showSetupPassword, setShowSetupPassword] = useState(false);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -38,11 +46,12 @@ export const AdminLoginPage: React.FC = () => {
       } else if (code === 'auth/network-request-failed') {
         setError('Network error. Please check your internet connection.');
       } else if (code === 'auth/user-not-found' || code === 'auth/wrong-password' || code === 'auth/invalid-credential') {
-        setError(`Invalid email or password. Please check your credentials and try again. (code: ${code})`);
+        setError(`Invalid email or password. (code: ${code}) — Use "Fix Admin Access" below if your account was never set up.`);
+        setShowSetup(true);
       } else if (code === 'auth/user-disabled') {
         setError('This account has been disabled. Contact support.');
       } else if (code === 'auth/operation-not-allowed') {
-        setError('Email/password sign-in is not enabled. Contact the system administrator.');
+        setError('Email/password sign-in is not enabled in Firebase. Enable it in the Firebase Console.');
       } else {
         setError(`Login failed. (code: ${code || 'unknown'})`);
       }
@@ -59,6 +68,52 @@ export const AdminLoginPage: React.FC = () => {
     }
 
     navigate('/admin');
+  };
+
+  const handleSetupChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setSetupData({ ...setupData, [e.target.name]: e.target.value });
+    setSetupError('');
+    setSetupSuccess('');
+  };
+
+  const handleSetupSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSetupError('');
+    setSetupSuccess('');
+
+    if (setupData.password !== setupData.confirmPassword) {
+      setSetupError('Passwords do not match.');
+      return;
+    }
+    if (setupData.password.length < 8) {
+      setSetupError('Password must be at least 8 characters.');
+      return;
+    }
+
+    setSetupLoading(true);
+    try {
+      const res = await fetch('/api/auth/provision-admin', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: setupData.email.trim().toLowerCase(),
+          password: setupData.password,
+          setupKey: setupData.setupKey.trim(),
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setSetupError(data.error || 'Setup failed. Please try again.');
+      } else {
+        setSetupSuccess('Admin credentials set! You can now log in above.');
+        setFormData(prev => ({ ...prev, email: setupData.email.trim().toLowerCase() }));
+        setSetupData({ email: '', password: '', confirmPassword: '', setupKey: '' });
+      }
+    } catch {
+      setSetupError('Network error. Please check your connection.');
+    } finally {
+      setSetupLoading(false);
+    }
   };
 
   return (
@@ -86,7 +141,7 @@ export const AdminLoginPage: React.FC = () => {
         </div>
       </div>
 
-      <div className="flex-1 flex items-center justify-center p-8 relative">
+      <div className="flex-1 flex items-center justify-center p-8 relative overflow-y-auto">
         <button
           onClick={toggleTheme}
           className="absolute top-6 right-6 p-2.5 rounded-xl bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 transition-all"
@@ -94,7 +149,7 @@ export const AdminLoginPage: React.FC = () => {
           {isDark ? <Sun className="w-5 h-5 text-yellow-400" /> : <Moon className="w-5 h-5 text-gray-600" />}
         </button>
 
-        <div className="w-full max-w-md animate-slide-up">
+        <div className="w-full max-w-md animate-slide-up py-8">
           <div className="flex items-center gap-3 mb-8">
             <img src="/stunivoz-new-logo.png" alt="STUNIVOZ" className="h-12 w-auto object-contain" />
             <div>
@@ -186,6 +241,106 @@ export const AdminLoginPage: React.FC = () => {
                 Student login
               </a>
             </p>
+          </div>
+
+          {/* Fix Admin Access Panel */}
+          <div className="mt-8">
+            <button
+              type="button"
+              onClick={() => { setShowSetup(v => !v); setSetupError(''); setSetupSuccess(''); }}
+              className="w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl border border-dashed dark:border-gray-700 border-gray-300 text-sm dark:text-gray-400 text-gray-500 hover:border-red-400 hover:text-red-500 transition-all"
+            >
+              <KeyRound className="w-4 h-4" />
+              {showSetup ? 'Hide' : 'Fix Admin Access'} (first-time setup / account missing)
+            </button>
+
+            {showSetup && (
+              <div className="mt-4 p-5 rounded-2xl border dark:border-gray-700 border-gray-200 dark:bg-gray-900/50 bg-gray-50">
+                <p className="text-xs dark:text-gray-400 text-gray-500 mb-4">
+                  Use this if your admin account exists in Firestore but not in Firebase Auth. You'll need the <strong>Setup Key</strong> from your Replit environment variables (<code>ADMIN_SETUP_KEY</code>).
+                </p>
+
+                {setupError && (
+                  <div className="mb-4 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl">
+                    <p className="text-xs text-red-600 dark:text-red-400">{setupError}</p>
+                  </div>
+                )}
+
+                {setupSuccess && (
+                  <div className="mb-4 p-3 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-xl flex items-center gap-2">
+                    <CheckCircle className="w-4 h-4 text-green-500 flex-shrink-0" />
+                    <p className="text-xs text-green-600 dark:text-green-400">{setupSuccess}</p>
+                  </div>
+                )}
+
+                <form onSubmit={handleSetupSubmit} className="space-y-3">
+                  <div>
+                    <label className="block text-xs font-medium dark:text-gray-300 text-gray-600 mb-1">Admin Email</label>
+                    <input
+                      name="email"
+                      type="email"
+                      placeholder="admin@stunivoz.com"
+                      value={setupData.email}
+                      onChange={handleSetupChange}
+                      required
+                      className="w-full px-3 py-2 text-sm rounded-lg border dark:border-gray-700 border-gray-200 dark:bg-gray-800 bg-white dark:text-white text-gray-900 focus:outline-none focus:border-red-500 transition-all"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium dark:text-gray-300 text-gray-600 mb-1">New Password</label>
+                    <div className="relative">
+                      <input
+                        name="password"
+                        type={showSetupPassword ? 'text' : 'password'}
+                        placeholder="Min. 8 characters"
+                        value={setupData.password}
+                        onChange={handleSetupChange}
+                        required
+                        className="w-full px-3 py-2 pr-9 text-sm rounded-lg border dark:border-gray-700 border-gray-200 dark:bg-gray-800 bg-white dark:text-white text-gray-900 focus:outline-none focus:border-red-500 transition-all"
+                      />
+                      <button type="button" onClick={() => setShowSetupPassword(v => !v)} className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400">
+                        {showSetupPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                      </button>
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium dark:text-gray-300 text-gray-600 mb-1">Confirm Password</label>
+                    <input
+                      name="confirmPassword"
+                      type="password"
+                      placeholder="Re-enter password"
+                      value={setupData.confirmPassword}
+                      onChange={handleSetupChange}
+                      required
+                      className="w-full px-3 py-2 text-sm rounded-lg border dark:border-gray-700 border-gray-200 dark:bg-gray-800 bg-white dark:text-white text-gray-900 focus:outline-none focus:border-red-500 transition-all"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium dark:text-gray-300 text-gray-600 mb-1">Setup Key</label>
+                    <input
+                      name="setupKey"
+                      type="password"
+                      placeholder="ADMIN_SETUP_KEY from Replit Secrets"
+                      value={setupData.setupKey}
+                      onChange={handleSetupChange}
+                      required
+                      className="w-full px-3 py-2 text-sm rounded-lg border dark:border-gray-700 border-gray-200 dark:bg-gray-800 bg-white dark:text-white text-gray-900 focus:outline-none focus:border-red-500 transition-all"
+                    />
+                  </div>
+                  <button
+                    type="submit"
+                    disabled={setupLoading}
+                    className="w-full py-2.5 px-4 rounded-lg text-sm font-semibold text-white bg-gradient-to-r from-gray-700 to-gray-800 hover:from-gray-800 hover:to-gray-900 dark:from-gray-600 dark:to-gray-700 transition-all flex items-center justify-center gap-2 disabled:opacity-60"
+                  >
+                    {setupLoading ? (
+                      <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                    ) : (
+                      <>Set Admin Credentials <ArrowRight className="w-4 h-4" /></>
+                    )}
+                  </button>
+                </form>
+              </div>
+            )}
           </div>
         </div>
       </div>

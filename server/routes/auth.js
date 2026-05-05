@@ -94,6 +94,74 @@ router.post('/reset-password', async (req, res) => {
   }
 });
 
+// POST /api/auth/provision-admin
+// Creates or fixes a Firebase Auth account for an email that already has role='admin' in Firestore
+router.post('/provision-admin', async (req, res) => {
+  const { email, password, setupKey } = req.body;
+
+  if (!process.env.ADMIN_SETUP_KEY || setupKey !== process.env.ADMIN_SETUP_KEY) {
+    return res.status(403).json({ error: 'Invalid setup key.' });
+  }
+  if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    return res.status(400).json({ error: 'A valid email is required.' });
+  }
+  if (!password || password.length < 8) {
+    return res.status(400).json({ error: 'Password must be at least 8 characters.' });
+  }
+
+  try {
+    const adminSDK = getFirebaseAdmin();
+    const db = adminSDK.firestore();
+
+    // Must already have role='admin' in Firestore profiles
+    const snap = await db.collection('profiles')
+      .where('email', '==', email.trim().toLowerCase())
+      .where('role', '==', 'admin')
+      .limit(1)
+      .get();
+
+    if (snap.empty) {
+      return res.status(403).json({ error: 'No admin profile found for this email. Make sure the account has role=admin in Firestore first.' });
+    }
+
+    const profileData = snap.docs[0].data();
+    let uid;
+
+    try {
+      // User already exists in Firebase Auth — just update password
+      const existing = await adminSDK.auth().getUserByEmail(email.trim().toLowerCase());
+      await adminSDK.auth().updateUser(existing.uid, { password });
+      uid = existing.uid;
+    } catch (err) {
+      if (err.code === 'auth/user-not-found') {
+        // Create the Firebase Auth user from scratch
+        const newUser = await adminSDK.auth().createUser({
+          email: email.trim().toLowerCase(),
+          password,
+          displayName: profileData.full_name || '',
+          emailVerified: true,
+        });
+        uid = newUser.uid;
+
+        // Sync Firestore profile to new uid if it differs
+        if (snap.docs[0].id !== uid) {
+          await db.collection('profiles').doc(uid).set(
+            { ...profileData, id: uid, updatedAt: new Date().toISOString() },
+            { merge: true }
+          );
+        }
+      } else {
+        throw err;
+      }
+    }
+
+    return res.json({ success: true, message: 'Admin credentials set successfully. You can now log in.' });
+  } catch (err) {
+    console.error('Provision admin error:', err);
+    return res.status(500).json({ error: err.message || 'Failed to provision admin account.' });
+  }
+});
+
 // GET /api/auth/verify-reset-token?token=xxx
 router.get('/verify-reset-token', (req, res) => {
   const { token } = req.query;
