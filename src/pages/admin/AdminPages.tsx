@@ -23,6 +23,7 @@ import {
   deleteExpiredPosts,
   FirestoreInternship, FirestoreEvent, FirestoreCourse,
 } from '../../services/contentService';
+import { discoverInternships, discoverEvents, discoverCourses } from '../../services/aiService';
 
 // ── CSV Export Utility ────────────────────────────────────────────────────────
 function exportToCSV(rows: Record<string, unknown>[], filename: string) {
@@ -116,6 +117,182 @@ import {
   AreaChart as ReAreaChart, Area, BarChart, Bar,
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer
 } from 'recharts';
+
+// ── AI Discover Modal ──────────────────────────────────────────────────────────
+interface AIDiscoverModalProps {
+  type: 'internship' | 'event' | 'course';
+  onSave: (items: any[]) => Promise<void>;
+  onClose: () => void;
+}
+
+const AIDiscoverModal: React.FC<AIDiscoverModalProps> = ({ type, onSave, onClose }) => {
+  const [topic, setTopic] = React.useState('');
+  const [count, setCount] = React.useState(5);
+  const [loading, setLoading] = React.useState(false);
+  const [error, setError] = React.useState('');
+  const [results, setResults] = React.useState<any[]>([]);
+  const [selected, setSelected] = React.useState<Set<number>>(new Set());
+  const [saving, setSaving] = React.useState(false);
+
+  const typeLabel = type === 'internship' ? 'Internships' : type === 'event' ? 'Events' : 'Courses';
+  const placeholder = type === 'internship' ? 'e.g. React internships in Bangalore, 2025' : type === 'event' ? 'e.g. AI/ML hackathons and webinars 2025' : 'e.g. Python machine learning beginner courses';
+
+  const discover = async () => {
+    if (!topic.trim()) return;
+    setLoading(true); setError(''); setResults([]); setSelected(new Set());
+    try {
+      let data: any[];
+      if (type === 'internship') data = await discoverInternships(topic, count);
+      else if (type === 'event') data = await discoverEvents(topic, count);
+      else data = await discoverCourses(topic, count);
+      setResults(data);
+      setSelected(new Set(data.map((_, i) => i).filter(i => !data[i].isScam)));
+    } catch (err: any) {
+      setError(err.message || 'AI discovery failed. Check your API key in Admin → AI Settings.');
+    } finally { setLoading(false); }
+  };
+
+  const toggleSelect = (i: number) => {
+    setSelected(prev => { const n = new Set(prev); n.has(i) ? n.delete(i) : n.add(i); return n; });
+  };
+
+  const handleSave = async () => {
+    const toSave = results.filter((_, i) => selected.has(i));
+    if (!toSave.length) return;
+    setSaving(true);
+    await onSave(toSave);
+    setSaving(false);
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+      <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-2xl w-full max-w-2xl border border-gray-200 dark:border-gray-700 flex flex-col" style={{ maxHeight: '90vh' }}>
+        <div className="flex items-center justify-between p-5 border-b border-gray-100 dark:border-gray-800 flex-shrink-0">
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-8 rounded-lg bg-purple-100 dark:bg-purple-900/30 flex items-center justify-center">
+              <Sparkles className="w-4 h-4 text-purple-600 dark:text-purple-400" />
+            </div>
+            <div>
+              <h2 className="font-bold text-gray-900 dark:text-white text-sm">AI Discover {typeLabel}</h2>
+              <p className="text-xs text-gray-500 dark:text-gray-400">Powered by AI · Scam verified · Auto-filled</p>
+            </div>
+          </div>
+          <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-all"><X className="w-4 h-4 text-gray-500" /></button>
+        </div>
+
+        <div className="p-5 space-y-4 flex-shrink-0">
+          <div className="p-3 bg-purple-50 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-800 rounded-xl">
+            <p className="text-xs text-purple-700 dark:text-purple-300">AI will discover real {typeLabel.toLowerCase()} from across the web, verify them for legitimacy, and auto-fill all details. Scam listings are flagged automatically.</p>
+          </div>
+          <div className="flex gap-3">
+            <div className="flex-1">
+              <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">Search Topic</label>
+              <input
+                value={topic} onChange={e => setTopic(e.target.value)}
+                onKeyDown={e => e.key === 'Enter' && discover()}
+                placeholder={placeholder}
+                className="w-full px-3 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-sm focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20 transition-all"
+              />
+            </div>
+            <div className="w-20 flex-shrink-0">
+              <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">Count</label>
+              <select value={count} onChange={e => setCount(Number(e.target.value))}
+                className="w-full px-2 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-sm focus:outline-none focus:border-purple-500 transition-all">
+                {[3, 5, 7, 10].map(n => <option key={n} value={n}>{n}</option>)}
+              </select>
+            </div>
+            <div className="flex items-end flex-shrink-0">
+              <button onClick={discover} disabled={loading || !topic.trim()}
+                className="px-4 py-2.5 rounded-xl bg-purple-600 hover:bg-purple-700 disabled:opacity-50 text-white font-semibold text-sm flex items-center gap-2 transition-all whitespace-nowrap shadow-lg shadow-purple-500/20">
+                {loading ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
+                {loading ? 'Searching...' : 'Discover'}
+              </button>
+            </div>
+          </div>
+          {error && (
+            <div className="flex items-start gap-2 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl">
+              <AlertTriangle className="w-4 h-4 text-red-500 flex-shrink-0 mt-0.5" />
+              <p className="text-xs text-red-600 dark:text-red-400">{error}</p>
+            </div>
+          )}
+        </div>
+
+        {results.length > 0 ? (
+          <>
+            <div className="px-5 py-2 bg-gray-50 dark:bg-gray-800/50 border-y border-gray-100 dark:border-gray-800 flex items-center justify-between flex-shrink-0">
+              <p className="text-xs font-semibold text-gray-600 dark:text-gray-400">{results.length} found · {selected.size} selected</p>
+              <div className="flex gap-2">
+                <button onClick={() => setSelected(new Set(results.map((_, i) => i).filter(i => !results[i].isScam)))}
+                  className="text-xs px-2.5 py-1 rounded-lg bg-purple-100 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400 font-medium hover:bg-purple-200 dark:hover:bg-purple-900/50 transition-all">
+                  Select Valid
+                </button>
+                <button onClick={() => setSelected(new Set())}
+                  className="text-xs px-2.5 py-1 rounded-lg bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 font-medium hover:bg-gray-200 dark:hover:bg-gray-600 transition-all">
+                  None
+                </button>
+              </div>
+            </div>
+            <div className="flex-1 overflow-y-auto p-4 space-y-2.5 min-h-0">
+              {results.map((item, i) => (
+                <div key={i}
+                  onClick={() => !item.isScam && toggleSelect(i)}
+                  className={`p-3.5 rounded-xl border transition-all ${item.isScam ? 'opacity-60 cursor-not-allowed border-red-200 dark:border-red-900 bg-red-50/50 dark:bg-red-900/10' : `cursor-pointer ${selected.has(i) ? 'border-purple-400 dark:border-purple-600 bg-purple-50 dark:bg-purple-900/10 shadow-sm' : 'border-gray-200 dark:border-gray-700 hover:border-purple-300 dark:hover:border-purple-700 hover:bg-gray-50 dark:hover:bg-gray-800/50'}`}`}>
+                  <div className="flex items-start gap-3">
+                    <div className={`w-5 h-5 rounded-md border-2 flex items-center justify-center flex-shrink-0 mt-0.5 transition-all ${selected.has(i) && !item.isScam ? 'bg-purple-500 border-purple-500' : 'border-gray-300 dark:border-gray-600'}`}>
+                      {selected.has(i) && !item.isScam && <CheckCircle className="w-3.5 h-3.5 text-white" />}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <p className="font-semibold text-gray-900 dark:text-white text-sm">{item.title}</p>
+                        {item.isScam
+                          ? <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400">⚠ Flagged</span>
+                          : <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400">✓ Verified</span>
+                        }
+                      </div>
+                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                        {item.company || item.host || item.instructor || item.platform}
+                        {item.location ? ` · ${item.location}` : ''}
+                        {item.date ? ` · ${item.date}` : ''}
+                        {item.category ? ` · ${item.category}` : ''}
+                      </p>
+                      {item.description && <p className="text-xs text-gray-600 dark:text-gray-400 mt-1.5 line-clamp-2">{item.description}</p>}
+                      {item.isScam && item.scamReason && <p className="text-xs text-red-500 mt-1 font-medium">⚠ {item.scamReason}</p>}
+                      <div className="flex flex-wrap gap-1.5 mt-2">
+                        {item.stipend && <span className="text-xs px-2 py-0.5 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 rounded-full border border-blue-100 dark:border-blue-900">{item.stipend}</span>}
+                        {item.duration && <span className="text-xs px-2 py-0.5 bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 rounded-full">{item.duration}</span>}
+                        {item.type && <span className="text-xs px-2 py-0.5 bg-purple-50 dark:bg-purple-900/20 text-purple-600 dark:text-purple-400 rounded-full border border-purple-100 dark:border-purple-900">{item.type}</span>}
+                        {item.level && <span className="text-xs px-2 py-0.5 bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400 rounded-full border border-green-100 dark:border-green-900">{item.level}</span>}
+                        {item.isFree !== undefined && <span className={`text-xs px-2 py-0.5 rounded-full border ${item.isFree ? 'bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400 border-green-100 dark:border-green-900' : 'bg-orange-50 dark:bg-orange-900/20 text-orange-600 dark:text-orange-400 border-orange-100 dark:border-orange-900'}`}>{item.isFree ? 'Free' : item.price || 'Paid'}</span>}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+            <div className="p-4 border-t border-gray-100 dark:border-gray-800 flex gap-3 flex-shrink-0">
+              <button onClick={onClose} className="flex-1 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300 font-medium text-sm hover:bg-gray-50 dark:hover:bg-gray-800 transition-all">Cancel</button>
+              <button onClick={handleSave} disabled={selected.size === 0 || saving}
+                className="flex-1 py-2.5 rounded-xl bg-purple-600 hover:bg-purple-700 disabled:opacity-50 text-white font-semibold text-sm flex items-center justify-center gap-2 transition-all shadow-lg shadow-purple-500/20">
+                {saving ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
+                {saving ? 'Adding...' : `Add ${selected.size} ${typeLabel}`}
+              </button>
+            </div>
+          </>
+        ) : !loading && (
+          <div className="flex-1 flex items-center justify-center p-8 text-center">
+            <div>
+              <div className="w-16 h-16 rounded-2xl bg-purple-50 dark:bg-purple-900/20 flex items-center justify-center mx-auto mb-4">
+                <Sparkles className="w-8 h-8 text-purple-400 dark:text-purple-600" />
+              </div>
+              <p className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Ready to Discover</p>
+              <p className="text-xs text-gray-400 dark:text-gray-500">Enter a topic and click Discover to find {typeLabel.toLowerCase()} automatically</p>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
 
 // ── Shared helpers ──────────────────────────────────────────────────────────
 const TT = { borderRadius: '10px', border: 'none', boxShadow: '0 10px 25px -5px rgba(0,0,0,0.15)', fontSize: '12px' };
@@ -974,6 +1151,7 @@ export const InternshipManagementPage: React.FC = () => {
   const [aiVerifying, setAiVerifying] = useState<number | null>(null);
   const [deletingId, setDeletingId] = useState<number | null>(null);
   const [toast, setToast] = useState('');
+  const [showAIDiscover, setShowAIDiscover] = useState(false);
   const showToast = (msg: string) => { setToast(msg); setTimeout(() => setToast(''), 3000); };
 
   useEffect(() => {
@@ -1012,6 +1190,19 @@ export const InternshipManagementPage: React.FC = () => {
 
   return (
     <div className="space-y-6 animate-fade-in">
+      {showAIDiscover && (
+        <AIDiscoverModal type="internship" onClose={() => setShowAIDiscover(false)} onSave={async (items) => {
+          let added = 0;
+          for (const item of items) {
+            try {
+              await addInternship({ title: item.title, company: item.company, location: item.location, type: item.type, stipend: item.stipend || '', duration: item.duration || '', skills: item.skills || '', description: item.description || '', applyUrl: item.applyUrl || '', expiresAt: item.expiresAt || '', status: 'Published', verified: true, applicants: 0 });
+              added++;
+            } catch {}
+          }
+          setShowAIDiscover(false);
+          showToast(`Added ${added} internship(s) via AI Discover`);
+        }} />
+      )}
       {showAddModal && <AddInternshipModal existing={listings} onSave={handleAddListing} onClose={() => setShowAddModal(false)} />}
       {editingItem && <InternshipEditModal item={editingItem} onSave={u => {
         if (u.firestoreId) updateInternship(u.firestoreId, { title: u.title, company: u.company, location: u.location, type: u.type, stipend: u.stipend || '', duration: u.duration || '', skills: u.skills || '', description: u.description || '', applyUrl: u.applyUrl || '', status: u.status, verified: u.verified || false }).catch(() => {});
@@ -1039,6 +1230,7 @@ export const InternshipManagementPage: React.FC = () => {
       <TableHeader title="Internship Management" subtitle="Global moderation of all internship listings."
         actions={<>
           <button onClick={() => exportToCSV(listings.map(l => ({ Title: l.title, Company: l.company, Location: l.location, Type: l.type, Applicants: l.applicants, Status: l.status })), 'internships.csv')} className="flex items-center gap-2 px-3 py-2 text-sm text-gray-600 dark:text-gray-300 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700 transition-all"><Download className="w-4 h-4" /> Export CSV</button>
+          <button onClick={() => setShowAIDiscover(true)} className="flex items-center gap-2 px-3 py-2 text-sm text-white bg-purple-600 rounded-xl hover:bg-purple-700 transition-all font-semibold shadow-lg shadow-purple-500/20"><Sparkles className="w-4 h-4" /> AI Discover</button>
           <button onClick={() => setShowAddModal(true)} className="flex items-center gap-2 px-3 py-2 text-sm text-white bg-red-600 rounded-xl hover:bg-red-700 transition-all font-semibold"><Plus className="w-4 h-4" /> Add Listing</button>
         </>}
       />
@@ -1299,6 +1491,7 @@ export const EventManagementPage: React.FC = () => {
   const [aiVerifying, setAiVerifying] = useState<number | null>(null);
   const [deletingId, setDeletingId] = useState<number | null>(null);
   const [toast, setToast] = useState('');
+  const [showAIDiscover, setShowAIDiscover] = useState(false);
   const showToast = (msg: string) => { setToast(msg); setTimeout(() => setToast(''), 3000); };
 
   useEffect(() => {
@@ -1330,6 +1523,19 @@ export const EventManagementPage: React.FC = () => {
 
   return (
     <div className="space-y-6 animate-fade-in">
+      {showAIDiscover && (
+        <AIDiscoverModal type="event" onClose={() => setShowAIDiscover(false)} onSave={async (items) => {
+          let added = 0;
+          for (const item of items) {
+            try {
+              await addEvent({ title: item.title, host: item.host, date: item.date, location: item.location || 'Virtual', type: item.type, description: item.description || '', link: item.link || '', expiresAt: item.expiresAt || '', status: 'Published', verified: true, registrations: 0 });
+              added++;
+            } catch {}
+          }
+          setShowAIDiscover(false);
+          showToast(`Added ${added} event(s) via AI Discover`);
+        }} />
+      )}
       {showAddModal && <AddEventModal existing={events} onSave={handleAddEvent} onClose={() => setShowAddModal(false)} />}
       {editingItem && <EventEditModal item={editingItem} onSave={e => {
         if (e.firestoreId) updateEvent(e.firestoreId, { title: e.title, host: e.host, date: e.date, location: e.location || '', type: e.type, description: e.description || '', link: e.link || '', status: e.status }).catch(() => {});
@@ -1354,6 +1560,7 @@ export const EventManagementPage: React.FC = () => {
       <TableHeader title="Event Management" subtitle="Global moderation of all event listings."
         actions={<>
           <button onClick={() => exportToCSV(events.map(e => ({ Title: e.title, Host: e.host, Date: e.date, Type: e.type, Registrations: e.registrations, Status: e.status })), 'events.csv')} className="flex items-center gap-2 px-3 py-2 text-sm text-gray-600 dark:text-gray-300 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700 transition-all"><Download className="w-4 h-4" /> Export CSV</button>
+          <button onClick={() => setShowAIDiscover(true)} className="flex items-center gap-2 px-3 py-2 text-sm text-white bg-purple-600 rounded-xl hover:bg-purple-700 transition-all font-semibold shadow-lg shadow-purple-500/20"><Sparkles className="w-4 h-4" /> AI Discover</button>
           <button onClick={() => setShowAddModal(true)} className="flex items-center gap-2 px-3 py-2 text-sm text-white bg-red-600 rounded-xl hover:bg-red-700 transition-all font-semibold"><Plus className="w-4 h-4" /> Add Event</button>
         </>}
       />
@@ -1590,6 +1797,7 @@ export const CourseManagementPage: React.FC = () => {
   const [aiVerifying, setAiVerifying] = useState<number | null>(null);
   const [deletingId, setDeletingId] = useState<number | null>(null);
   const [toast, setToast] = useState('');
+  const [showAIDiscover, setShowAIDiscover] = useState(false);
   const showToast = (msg: string) => { setToast(msg); setTimeout(() => setToast(''), 3000); };
 
   useEffect(() => {
@@ -1615,6 +1823,19 @@ export const CourseManagementPage: React.FC = () => {
 
   return (
     <div className="space-y-6 animate-fade-in">
+      {showAIDiscover && (
+        <AIDiscoverModal type="course" onClose={() => setShowAIDiscover(false)} onSave={async (items) => {
+          let added = 0;
+          for (const item of items) {
+            try {
+              await addCourse({ title: item.title, instructor: item.instructor, platform: item.platform || '', category: item.category, duration: item.duration || '', level: item.level || '', description: item.description || '', link: item.link || '', isFree: item.isFree || false, price: item.price || '', expiresAt: '', status: 'Published', verified: true, students: 0, rating: 0 });
+              added++;
+            } catch {}
+          }
+          setShowAIDiscover(false);
+          showToast(`Added ${added} course(s) via AI Discover`);
+        }} />
+      )}
       {showAddModal && <AddCourseModal existing={courses} onSave={handleAddCourse} onClose={() => setShowAddModal(false)} />}
       {editingItem && <CourseEditModal item={editingItem} onSave={c => {
         if (c.firestoreId) updateCourse(c.firestoreId, { title: c.title, instructor: c.instructor, category: c.category, duration: c.duration || '', level: c.level || '', description: c.description || '', link: c.link || '', status: c.status }).catch(() => {});
@@ -1639,6 +1860,7 @@ export const CourseManagementPage: React.FC = () => {
       <TableHeader title="Course Management" subtitle="Add, edit, and organise platform courses."
         actions={<>
           <button onClick={() => exportToCSV(courses.map(c => ({ Title: c.title, Instructor: c.instructor, Category: c.category, Students: c.students, Rating: c.rating, Revenue: c.revenue, Status: c.status })), 'courses.csv')} className="flex items-center gap-2 px-3 py-2 text-sm text-gray-600 dark:text-gray-300 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700 transition-all"><Download className="w-4 h-4" /> Export CSV</button>
+          <button onClick={() => setShowAIDiscover(true)} className="flex items-center gap-2 px-3 py-2 text-sm text-white bg-purple-600 rounded-xl hover:bg-purple-700 transition-all font-semibold shadow-lg shadow-purple-500/20"><Sparkles className="w-4 h-4" /> AI Discover</button>
           <button onClick={() => setShowAddModal(true)} className="flex items-center gap-2 px-3 py-2 text-sm text-white bg-red-600 rounded-xl hover:bg-red-700 transition-all font-semibold"><Plus className="w-4 h-4" /> Add Course</button>
         </>}
       />
@@ -1883,28 +2105,75 @@ export const APISystemPage: React.FC = () => {
 
 // ── AI Control ───────────────────────────────────────────────────────────────
 export const AIControlPage: React.FC = () => {
-  const [models, setModels] = useState([
-    { id: 1, name: 'Resume AI Generator', model: 'GPT-4o', requests: 2840, success: 98.2, enabled: true },
-    { id: 2, name: 'ATS Analyzer', model: 'GPT-4', requests: 5120, success: 99.1, enabled: true },
-    { id: 3, name: 'Career Chatbot', model: 'GPT-3.5-turbo', requests: 12400, success: 97.8, enabled: true },
-    { id: 4, name: 'Mock Interview AI', model: 'GPT-4o', requests: 980, success: 96.5, enabled: false },
-    { id: 5, name: 'Skill Gap Analyzer', model: 'GPT-4', requests: 1640, success: 98.9, enabled: true },
-    { id: 6, name: 'Cover Letter Gen', model: 'GPT-4o', requests: 3200, success: 99.4, enabled: true },
-  ]);
+  const { aiProvider, aiModel, aiApiKey, setAIConfig } = useAdminSettings();
+  const [provider, setProvider] = useState(aiProvider || 'gemini');
+  const [model, setModel] = useState(aiModel || 'gemini-1.5-flash');
+  const [apiKey, setApiKey] = useState(aiApiKey || '');
+  const [showKey, setShowKey] = useState(false);
+  const [saved, setSaved] = useState(false);
+  const [testing, setTesting] = useState(false);
+  const [testResult, setTestResult] = useState<{ ok: boolean; msg: string } | null>(null);
 
-  const toggle = (id: number) => {
-    setModels(prev => prev.map(m => m.id === id ? { ...m, enabled: !m.enabled } : m));
+  const GEMINI_MODELS = [
+    { value: 'gemini-2.0-flash-exp', label: 'Gemini 2.0 Flash (Experimental)' },
+    { value: 'gemini-1.5-flash', label: 'Gemini 1.5 Flash (Free · Recommended)' },
+    { value: 'gemini-1.5-pro', label: 'Gemini 1.5 Pro (Paid)' },
+    { value: 'gemini-1.0-pro', label: 'Gemini 1.0 Pro' },
+  ];
+  const OPENAI_MODELS = [
+    { value: 'gpt-4o-mini', label: 'GPT-4o Mini (Affordable)' },
+    { value: 'gpt-4o', label: 'GPT-4o (Recommended)' },
+    { value: 'gpt-4-turbo', label: 'GPT-4 Turbo' },
+    { value: 'gpt-3.5-turbo', label: 'GPT-3.5 Turbo (Budget)' },
+  ];
+
+  const handleProviderChange = (p: string) => {
+    setProvider(p);
+    setModel(p === 'gemini' ? 'gemini-1.5-flash' : 'gpt-4o-mini');
+    setTestResult(null);
   };
+
+  const handleSave = () => {
+    setAIConfig(provider, model, apiKey);
+    setSaved(true);
+    setTimeout(() => setSaved(false), 2500);
+    setTestResult(null);
+  };
+
+  const handleTest = async () => {
+    if (!apiKey) { setTestResult({ ok: false, msg: 'Please enter an API key first.' }); return; }
+    setTesting(true); setTestResult(null);
+    try {
+      const url = provider === 'gemini'
+        ? `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`
+        : 'https://api.openai.com/v1/chat/completions';
+      const body = provider === 'gemini'
+        ? JSON.stringify({ contents: [{ role: 'user', parts: [{ text: 'Say "OK" in one word.' }] }] })
+        : JSON.stringify({ model, messages: [{ role: 'user', content: 'Say "OK" in one word.' }], max_tokens: 5 });
+      const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+      if (provider === 'openai') headers['Authorization'] = `Bearer ${apiKey}`;
+      const res = await fetch(url, { method: 'POST', headers, body });
+      if (res.ok) setTestResult({ ok: true, msg: `Connection successful! ${provider === 'gemini' ? 'Gemini' : 'OpenAI'} API is working.` });
+      else { const err = await res.json().catch(() => ({})); setTestResult({ ok: false, msg: err?.error?.message || `API error: ${res.status}` }); }
+    } catch (e: any) {
+      setTestResult({ ok: false, msg: e?.message || 'Connection failed.' });
+    } finally { setTesting(false); }
+  };
+
+  const apiKeyLink = provider === 'gemini'
+    ? { url: 'https://aistudio.google.com/app/apikey', label: 'Get free Gemini API key at aistudio.google.com' }
+    : { url: 'https://platform.openai.com/api-keys', label: 'Get OpenAI API key at platform.openai.com' };
 
   return (
     <div className="space-y-6 animate-fade-in">
-      <TableHeader title="AI System Control" subtitle="Manage AI models, usage limits, and feature availability." />
+      <TableHeader title="AI Settings" subtitle="Configure the AI provider, model, and API key used for content discovery and the career chatbot." />
+
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {[
-          { label: 'Total AI Requests', value: '26.2k', icon: Cpu, color: 'text-purple-500', bg: 'bg-purple-50 dark:bg-purple-900/20' },
-          { label: 'Active Models', value: '5', icon: Zap, color: 'text-blue-500', bg: 'bg-blue-50 dark:bg-blue-900/20' },
-          { label: 'Success Rate', value: '98.3%', icon: CheckCircle, color: 'text-green-500', bg: 'bg-green-50 dark:bg-green-900/20' },
-          { label: 'Avg Latency', value: '380ms', icon: Activity, color: 'text-orange-500', bg: 'bg-orange-50 dark:bg-orange-900/20' },
+          { label: 'AI Provider', value: provider === 'gemini' ? 'Google Gemini' : 'OpenAI', icon: Cpu, color: 'text-purple-500', bg: 'bg-purple-50 dark:bg-purple-900/20' },
+          { label: 'Active Model', value: model.split('-').slice(0, 3).join('-'), icon: Zap, color: 'text-blue-500', bg: 'bg-blue-50 dark:bg-blue-900/20' },
+          { label: 'API Key', value: apiKey ? '●●●●●●●●' : 'Not set', icon: Key, color: apiKey ? 'text-green-500' : 'text-red-500', bg: apiKey ? 'bg-green-50 dark:bg-green-900/20' : 'bg-red-50 dark:bg-red-900/20' },
+          { label: 'Status', value: apiKey ? 'Configured' : 'Needs Setup', icon: CheckCircle, color: apiKey ? 'text-green-500' : 'text-yellow-500', bg: apiKey ? 'bg-green-50 dark:bg-green-900/20' : 'bg-yellow-50 dark:bg-yellow-900/20' },
         ].map((s, i) => (
           <Card key={i} className="!p-4">
             <div className="flex items-center gap-3">
@@ -1912,29 +2181,116 @@ export const AIControlPage: React.FC = () => {
                 <s.icon className={`w-5 h-5 ${s.color}`} />
               </div>
               <div>
-                <div className="text-xl font-bold text-gray-900 dark:text-white">{s.value}</div>
+                <div className="text-sm font-bold text-gray-900 dark:text-white truncate">{s.value}</div>
                 <div className="text-xs text-gray-500 dark:text-gray-400">{s.label}</div>
               </div>
             </div>
           </Card>
         ))}
       </div>
+
       <Card>
-        <CardContent className="divide-y divide-gray-100 dark:divide-gray-800">
-          {models.map(m => (
-            <div key={m.id} className="flex items-center justify-between py-4">
-              <div className="flex items-center gap-4">
-                <div className={`w-2 h-10 rounded-full ${m.enabled ? 'bg-purple-500' : 'bg-gray-200 dark:bg-gray-700'}`} />
-                <div>
-                  <p className="font-semibold text-gray-900 dark:text-white text-sm">{m.name}</p>
-                  <p className="text-xs text-gray-500 dark:text-gray-400">{m.model} · {m.requests.toLocaleString()} requests · {m.success}% success</p>
-                </div>
-              </div>
-              <button onClick={() => toggle(m.id)} className={`transition-colors ${m.enabled ? 'text-purple-500 hover:text-purple-600' : 'text-gray-400 hover:text-gray-600'}`}>
-                {m.enabled ? <ToggleRight className="w-9 h-9" /> : <ToggleLeft className="w-9 h-9" />}
+        <CardHeader title="AI Configuration" subtitle="Changes apply immediately to AI Discover and the Career Chatbot" />
+        <CardContent className="space-y-5">
+          {/* Provider selection */}
+          <div>
+            <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-2">AI Provider</label>
+            <div className="grid grid-cols-2 gap-3">
+              {[
+                { id: 'gemini', label: 'Google Gemini', desc: 'Free tier available', badge: 'Recommended' },
+                { id: 'openai', label: 'OpenAI', desc: 'GPT-3.5 to GPT-4o', badge: 'Paid' },
+              ].map(p => (
+                <button
+                  key={p.id} onClick={() => handleProviderChange(p.id)}
+                  className={`p-4 rounded-xl border-2 text-left transition-all ${provider === p.id ? 'border-purple-500 bg-purple-50 dark:bg-purple-900/10' : 'border-gray-200 dark:border-gray-700 hover:border-purple-300 dark:hover:border-purple-700'}`}
+                >
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="font-semibold text-gray-900 dark:text-white text-sm">{p.label}</span>
+                    <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${p.id === 'gemini' ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400' : 'bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-400'}`}>{p.badge}</span>
+                  </div>
+                  <p className="text-xs text-gray-500 dark:text-gray-400">{p.desc}</p>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Model selection */}
+          <div>
+            <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-2">Model</label>
+            <select
+              value={model} onChange={e => setModel(e.target.value)}
+              className="w-full px-3 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-sm focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20 transition-all"
+            >
+              {(provider === 'gemini' ? GEMINI_MODELS : OPENAI_MODELS).map(m => (
+                <option key={m.value} value={m.value}>{m.label}</option>
+              ))}
+            </select>
+          </div>
+
+          {/* API Key */}
+          <div>
+            <div className="flex items-center justify-between mb-2">
+              <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">API Key</label>
+              <a href={apiKeyLink.url} target="_blank" rel="noopener noreferrer"
+                className="text-xs text-purple-500 hover:text-purple-600 flex items-center gap-1">
+                <ExternalLink className="w-3 h-3" /> {apiKeyLink.label}
+              </a>
+            </div>
+            <div className="relative">
+              <Key className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+              <input
+                type={showKey ? 'text' : 'password'}
+                value={apiKey} onChange={e => setApiKey(e.target.value)}
+                placeholder={provider === 'gemini' ? 'AIza...' : 'sk-...'}
+                className="w-full pl-9 pr-16 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-sm focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20 transition-all font-mono"
+              />
+              <button onClick={() => setShowKey(!showKey)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 font-medium">
+                {showKey ? 'Hide' : 'Show'}
               </button>
             </div>
-          ))}
+            <p className="text-xs text-gray-400 dark:text-gray-500 mt-1.5">Your API key is stored locally in your browser and never sent to our servers.</p>
+          </div>
+
+          {testResult && (
+            <div className={`flex items-start gap-2 p-3 rounded-xl border ${testResult.ok ? 'bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800' : 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800'}`}>
+              {testResult.ok ? <CheckCircle className="w-4 h-4 text-green-500 flex-shrink-0 mt-0.5" /> : <AlertTriangle className="w-4 h-4 text-red-500 flex-shrink-0 mt-0.5" />}
+              <p className={`text-xs ${testResult.ok ? 'text-green-700 dark:text-green-300' : 'text-red-600 dark:text-red-400'}`}>{testResult.msg}</p>
+            </div>
+          )}
+
+          <div className="flex gap-3 pt-1">
+            <button onClick={handleTest} disabled={testing || !apiKey}
+              className="flex items-center gap-2 px-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 font-medium text-sm hover:bg-gray-50 dark:hover:bg-gray-800 disabled:opacity-50 transition-all">
+              {testing ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Activity className="w-4 h-4" />}
+              Test Connection
+            </button>
+            <button onClick={handleSave}
+              className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl bg-purple-600 hover:bg-purple-700 text-white font-semibold text-sm shadow-lg shadow-purple-500/20 transition-all">
+              {saved ? <><CheckCircle className="w-4 h-4" /> Saved!</> : <><Save className="w-4 h-4" /> Save Settings</>}
+            </button>
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader title="How AI Features Work" />
+        <CardContent>
+          <div className="grid md:grid-cols-3 gap-4">
+            {[
+              { icon: Sparkles, title: 'AI Discover', desc: 'Automatically finds and imports internships, events, and courses from across the web — up to 10 at a time.', color: 'text-purple-500', bg: 'bg-purple-50 dark:bg-purple-900/20' },
+              { icon: Bot, title: 'Career Chatbot', desc: 'AI-powered career advisor on the Career Guidance page, helping students with internships, resumes, and interviews.', color: 'text-blue-500', bg: 'bg-blue-50 dark:bg-blue-900/20' },
+              { icon: ShieldCheck, title: 'Scam Detection', desc: 'Every AI-discovered listing is verified for legitimacy. Suspicious entries are flagged before you add them.', color: 'text-green-500', bg: 'bg-green-50 dark:bg-green-900/20' },
+            ].map((f, i) => (
+              <div key={i} className={`p-4 rounded-xl ${f.bg} border border-gray-100 dark:border-gray-800`}>
+                <div className={`w-9 h-9 rounded-lg bg-white dark:bg-gray-800 flex items-center justify-center mb-3 shadow-sm`}>
+                  <f.icon className={`w-5 h-5 ${f.color}`} />
+                </div>
+                <p className="font-semibold text-gray-900 dark:text-white text-sm mb-1">{f.title}</p>
+                <p className="text-xs text-gray-500 dark:text-gray-400 leading-relaxed">{f.desc}</p>
+              </div>
+            ))}
+          </div>
         </CardContent>
       </Card>
     </div>

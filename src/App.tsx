@@ -9,6 +9,7 @@ import { LoginPage } from './pages/auth/LoginPage';
 import { SignupPage } from './pages/auth/SignupPage';
 import { ForgotPasswordPage } from './pages/auth/ForgotPasswordPage';
 import { ProviderLoginPage } from './pages/auth/ProviderLoginPage';
+import { ProviderRegisterPage } from './pages/auth/ProviderRegisterPage';
 import { AdminLoginPage } from './pages/auth/AdminLoginPage';
 import { StaffLoginPage } from './pages/auth/StaffLoginPage';
 import { HomePage } from './pages/home/HomePage';
@@ -145,6 +146,7 @@ const AppRoutes: React.FC = () => {
 
       {/* Portal Login Pages (no auth redirect — anyone can visit) */}
       <Route path="/provider/login" element={<ProviderLoginPage />} />
+      <Route path="/provider/register" element={<ProviderRegisterPage />} />
       <Route path="/admin/login" element={<AdminLoginPage />} />
       <Route path="/staff/login" element={<StaffLoginPage />} />
 

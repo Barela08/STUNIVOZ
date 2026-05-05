@@ -13,6 +13,9 @@ interface AdminSettings {
   maintenanceMessage: string;
   features: FeatureFlag[];
   activeTheme: string;
+  aiProvider: string;
+  aiModel: string;
+  aiApiKey: string;
 }
 
 interface AdminSettingsContextType extends AdminSettings {
@@ -22,6 +25,7 @@ interface AdminSettingsContextType extends AdminSettings {
   setFeatures: (features: FeatureFlag[]) => void;
   addFeature: (f: FeatureFlag) => void;
   setActiveTheme: (theme: string) => void;
+  setAIConfig: (provider: string, model: string, apiKey: string) => void;
   isFeatureEnabled: (key: string) => boolean;
 }
 
@@ -47,6 +51,9 @@ const DEFAULT_SETTINGS: AdminSettings = {
   maintenanceMessage: "We are undergoing scheduled maintenance. We'll be back in 30 minutes.",
   features: DEFAULT_FEATURES,
   activeTheme: 'default',
+  aiProvider: 'gemini',
+  aiModel: 'gemini-1.5-flash',
+  aiApiKey: '',
 };
 
 function loadSettings(): AdminSettings {
@@ -100,8 +107,8 @@ export const AdminSettingsProvider: React.FC<{ children: React.ReactNode }> = ({
   const setMaintenanceMode = (on: boolean) => update({ maintenanceMode: on });
   const setMaintenanceMessage = (msg: string) => update({ maintenanceMessage: msg });
   const setActiveTheme = (theme: string) => update({ activeTheme: theme });
-
   const setFeatures = (features: FeatureFlag[]) => update({ features });
+  const setAIConfig = (provider: string, model: string, apiKey: string) => update({ aiProvider: provider, aiModel: model, aiApiKey: apiKey });
 
   const toggleFeature = (key: string) => {
     setSettings(prev => {
@@ -136,6 +143,7 @@ export const AdminSettingsProvider: React.FC<{ children: React.ReactNode }> = ({
       setFeatures,
       addFeature,
       setActiveTheme,
+      setAIConfig,
       isFeatureEnabled,
     }}>
       {children}

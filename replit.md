@@ -52,42 +52,67 @@ src/
                          signInWithGitHubOAuth, updateProfile, fetchProfile
                          Profile interface includes role?: UserRole
     ThemeContext.tsx   — Dark/Light mode (localStorage + OS preference, sets .dark on <html>)
+    AdminSettingsContext.tsx — Feature flags, maintenance mode, AI config (provider/model/apiKey)
+                               Stored in localStorage key 'stunivoz_admin_settings'
   services/
     firebase.ts        — Firebase config + helpers: addDocument, getDocument, setDocument,
                          getCollection, updateDocument, deleteDocument, uploadFile,
                          signInWithGoogle, signInWithGitHub (GithubAuthProvider)
+    contentService.ts  — Firestore CRUD for internships/events/courses + real-time subscriptions
+    aiService.ts       — Gemini/OpenAI API integration; discoverInternships/Events/Courses();
+                         careerChatReply(); reads config from localStorage 'stunivoz_admin_settings'
   components/
     common/            — Button, Input, Card (dark: variants), Loading
     Layout/            — Layout (student), AdminLayout, ProviderLayout, StaffLayout
                          All layouts have dark mode + theme toggle button
   pages/
     admin/             — AdminDashboardPage + AdminPages (UserMgmt, CompanyMgmt,
-                         InternshipMgmt, EventMgmt, CourseMgmt, FeatureControl, etc.)
-    auth/              — LoginPage (Email+Google+GitHub), SignupPage, ForgotPasswordPage,
-                         ProviderLoginPage, AdminLoginPage, StaffLoginPage
+                         InternshipMgmt [AI Discover], EventMgmt [AI Discover],
+                         CourseMgmt [AI Discover], AIControlPage [real settings], etc.)
+    auth/              — LoginPage (Email+Google+GitHub), SignupPage (Email+Google+GitHub),
+                         ForgotPasswordPage, ProviderLoginPage, ProviderRegisterPage,
+                         AdminLoginPage, StaffLoginPage
     provider/          — ProviderDashboardPage, PostInternshipPage, PostEventPage, ApplicantsPage
     staff/             — StaffDashboardPage, StaffPages
-    (student pages)    — dashboard, profile, internships, events, courses, resume, career,
-                         skills, practice, community, planner, settings, ats, gamification, etc.
+    career/            — CareerPage with AI-powered career chatbot (real Gemini/OpenAI)
+    (other student pages) — dashboard, profile, internships, events, courses, resume,
+                            skills, practice, community, planner, settings, ats, gamification, etc.
   types/index.ts       — Shared TypeScript interfaces
 public/
   logo.png             — STUNIVOZ logo
 ```
 
 ## Key Features Implemented
-1. **GitHub Login** — GithubAuthProvider from firebase/auth; students only; if non-student role tries GitHub → auto sign-out + error
+1. **GitHub Login** — GithubAuthProvider from firebase/auth; students only; role check enforced
 2. **Google Login** — Students only; same role check
-3. **Dark/Light Mode** — ThemeContext with localStorage persistence + OS preference detection; toggle in all layouts and auth pages; Tailwind `darkMode: 'class'`
-4. **Separate Portal Logins** — /provider/login (blue), /admin/login (red), /staff/login (emerald); email only; distinct branding per portal
-5. **Role-Based Routing** — RoleRoute component checks Firebase profile.role; mismatched role → redirect to portal login
-6. **Premium UI** — Glassmorphism right panels on all auth pages, gradient buttons, rounded cards, smooth transitions
-7. **Card dark mode** — `dark:bg-gray-800 dark:border-gray-700` via Tailwind class
-8. **AuthContext** — fetchProfile returns Profile (can be used externally by portal login pages)
-9. **ProfilePage** — Full edit mode with Firebase save
-10. **CommunityPage** — Working post feed + likes
-11. **SettingsPage** — Real auth data, password reset, sign out
-12. **PostInternshipPage / PostEventPage** — Firebase submission with success/error feedback
-13. **AdminPages** — 5 expanded tables + FeatureControl toggles + AdminNotifications compose
+3. **GitHub + Google on Signup** — SignupPage now has Google and GitHub OAuth buttons
+4. **Dark/Light Mode** — ThemeContext with localStorage persistence + OS preference detection
+5. **Separate Portal Logins** — /provider/login (blue), /admin/login (red), /staff/login (emerald)
+6. **Company Registration** — /provider/register: full form (company name, contact, industry, size, email, phone, website, password); creates Firestore profile with role='company'; success redirect
+7. **AI Discovery (Admin)** — "AI Discover" button in Internship/Event/Course admin pages opens a modal where admin enters a search topic. AI generates up to 10 realistic listings, scam-verifies them, and admin selects which to bulk-import to Firestore.
+8. **AI Settings (Admin → AI)** — AIControlPage fully rebuilt: provider selection (Gemini/OpenAI), model dropdown, API key input with show/hide, test connection button, save button. Stored in localStorage.
+9. **AI Career Chatbot** — CareerPage chatbot uses real Gemini/OpenAI via aiService.careerChatReply(). Falls back to built-in responses if no API key configured, shows a gentle notice.
+10. **Role-Based Routing** — RoleRoute component checks Firebase profile.role
+11. **Content Management** — Firestore CRUD for internships/events/courses with real-time subscriptions
+12. **Admin Feature Flags** — FeatureControlPage with toggles for 12 platform features
+13. **AdminPages** — 5 expanded tables + AI discovery + AI control + feature flags + notifications
+
+## AI Service Configuration
+The AI service reads from localStorage key `stunivoz_admin_settings`:
+- `aiProvider`: 'gemini' | 'openai' (default: 'gemini')
+- `aiModel`: model name (default: 'gemini-1.5-flash')
+- `aiApiKey`: API key string
+
+### Getting a free Gemini API key:
+1. Go to https://aistudio.google.com/app/apikey
+2. Create a free API key
+3. In Admin Panel → AI Settings → paste the key → Save
+
+### AI Discover prompts:
+- Internships: generates realistic Indian job market listings (company, role, stipend, skills, apply URL)
+- Events: generates hackathons, webinars, workshops with dates in 2025-2026
+- Courses: generates real course recommendations from Udemy, Coursera, NPTEL, etc.
+- Each item includes `isScam: boolean` field — flagged items are shown with a warning and cannot be selected
 
 ## Development
 ```bash

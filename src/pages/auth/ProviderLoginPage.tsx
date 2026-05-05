@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { Building2, Mail, Lock, ArrowRight, Eye, EyeOff, Moon, Sun, AlertCircle } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTheme } from '../../contexts/ThemeContext';
@@ -181,10 +181,16 @@ export const ProviderLoginPage: React.FC = () => {
           </div>
 
           <p className="mt-4 text-center text-sm dark:text-gray-500 text-gray-400">
-            Not a company?{' '}
-            <a href="/login" className="text-primary-500 hover:text-primary-600 font-medium">
+            New company?{' '}
+            <Link to="/provider/register" className="text-blue-500 hover:text-blue-600 font-medium">
+              Register here
+            </Link>
+          </p>
+          <p className="mt-2 text-center text-sm dark:text-gray-500 text-gray-400">
+            Are you a student?{' '}
+            <Link to="/login" className="text-blue-500 hover:text-blue-600 font-medium">
               Student login
-            </a>
+            </Link>
           </p>
         </div>
       </div>
