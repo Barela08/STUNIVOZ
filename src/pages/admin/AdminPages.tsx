@@ -3545,6 +3545,7 @@ const AiHelpUrlCard: React.FC = () => {
 interface StaffRecord {
   id: number; name: string; email: string; role: string;
   joined: string; actions: number; status: string; assignedRoleId?: string;
+  promotions?: number;
 }
 
 const AddStaffModal: React.FC<{ onAdd: (s: StaffRecord) => void; onClose: () => void }> = ({ onAdd, onClose }) => {
@@ -3889,6 +3890,7 @@ export const StaffManagementPage: React.FC = () => {
                 <th className="px-5 py-3 font-medium">Portal Role</th>
                 <th className="px-5 py-3 font-medium">Joined</th>
                 <th className="px-5 py-3 font-medium">Actions</th>
+                <th className="px-5 py-3 font-medium">Promotions</th>
                 <th className="px-5 py-3 font-medium">Status</th>
                 <th className="px-5 py-3 font-medium text-right">Controls</th>
               </tr>
@@ -3915,6 +3917,18 @@ export const StaffManagementPage: React.FC = () => {
                   </td>
                   <td className="px-5 py-4 text-xs text-gray-500 dark:text-gray-400">{s.joined}</td>
                   <td className="px-5 py-4 text-sm font-bold text-gray-900 dark:text-white">{s.actions}</td>
+                  <td className="px-5 py-4">
+                    <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-1.5 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg px-2 py-1">
+                        <Star className="w-3.5 h-3.5 text-amber-500 fill-amber-500" />
+                        <span className="text-sm font-bold text-amber-600 dark:text-amber-400">{s.promotions ?? 0}</span>
+                      </div>
+                      <button title="Give Promotion" onClick={() => { setStaff(prev => prev.map(m => m.id === s.id ? { ...m, promotions: (m.promotions ?? 0) + 1 } : m)); showToast(`🎉 Promotion given to ${s.name}!`); }}
+                        className="p-1.5 rounded-lg bg-amber-100 dark:bg-amber-900/30 hover:bg-amber-200 dark:hover:bg-amber-800 text-amber-600 transition-colors text-xs font-semibold flex items-center gap-1">
+                        <Plus className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  </td>
                   <td className="px-5 py-4"><StatusBadge status={s.status} /></td>
                   <td className="px-5 py-4 text-right">
                     <div className="flex items-center justify-end gap-1">
@@ -3935,7 +3949,7 @@ export const StaffManagementPage: React.FC = () => {
                 </tr>
               ))}
               {staff.length === 0 && (
-                <tr><td colSpan={7} className="px-5 py-10 text-center text-gray-400 text-sm">No staff members yet. Add your first staff member above.</td></tr>
+                <tr><td colSpan={8} className="px-5 py-10 text-center text-gray-400 text-sm">No staff members yet. Add your first staff member above.</td></tr>
               )}
             </tbody>
           </table>
@@ -3949,25 +3963,50 @@ export const StaffManagementPage: React.FC = () => {
   );
 };
 
-// ── Create Ad Modal ───────────────────────────────────────────────────────────
-interface AdRecord { id: number; title: string; advertiser: string; placement: string; views: number; clicks: number; ctr: string; status: string; budget: string; mediaType?: string; ctaLabel?: string; targetUrl?: string; duration?: number }
+// ── Create Ad Modal (Firestore-backed) ────────────────────────────────────────
+interface AdRecord {
+  firestoreId?: string; title: string; advertiser: string; placement: string;
+  views: number; clicks: number; status: string; budget: string;
+  mediaType: string; ctaLabel: string; targetUrl: string; duration: number;
+  imageUrl?: string; videoUrl?: string; textContent?: string; featured?: boolean;
+  createdAt?: number;
+}
 
-const CreateAdModal: React.FC<{ onAdd: (a: AdRecord) => void; onClose: () => void }> = ({ onAdd, onClose }) => {
-  const [form, setForm] = useState({ title: '', advertiser: '', placement: 'Dashboard Banner', mediaType: 'Image', ctaLabel: 'Learn More', targetUrl: '', budget: '', duration: 30 });
-  const [preview, setPreview] = useState(false);
+const CreateAdModal: React.FC<{ onClose: () => void }> = ({ onClose }) => {
+  const [form, setForm] = useState({ title: '', advertiser: '', placement: 'Dashboard Banner', mediaType: 'Image', ctaLabel: 'Learn More', targetUrl: '', budget: '', duration: 30, imageUrl: '', videoUrl: '', textContent: '' });
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [uploading, setUploading] = useState(false);
+  const [saving, setSaving] = useState(false);
   const [created, setCreated] = useState(false);
+  const [error, setError] = useState('');
   const set = (k: string, v: string | number) => setForm(f => ({ ...f, [k]: v }));
-
-  const handleCreate = () => {
-    if (!form.title.trim() || !form.advertiser.trim()) return;
-    setCreated(true);
-    setTimeout(() => {
-      onAdd({ id: Date.now(), title: form.title, advertiser: form.advertiser, placement: form.placement, views: 0, clicks: 0, ctr: '0.0%', status: 'Active', budget: form.budget || '₹0', mediaType: form.mediaType, ctaLabel: form.ctaLabel, targetUrl: form.targetUrl, duration: form.duration });
-      onClose();
-    }, 1200);
-  };
-
   const placements = ['Dashboard Banner', 'Internships Sidebar', 'Profile Page', 'Courses Page', 'Community Feed', 'Events Page', 'Home Hero', 'Email Footer'];
+
+  const handleCreate = async () => {
+    setError('');
+    if (!form.title.trim() || !form.advertiser.trim()) { setError('Title and Advertiser are required.'); return; }
+    setSaving(true);
+    let imageUrl = form.imageUrl;
+    if (imageFile) {
+      setUploading(true);
+      const result = await uploadFile(imageFile, `advertisements/${Date.now()}_${imageFile.name}`);
+      setUploading(false);
+      if (!result.url) { setError('Image upload failed. Try a URL instead.'); setSaving(false); return; }
+      imageUrl = result.url;
+    }
+    try {
+      await addDoc(collection(db, 'advertisements'), {
+        title: form.title.trim(), advertiser: form.advertiser.trim(), placement: form.placement,
+        mediaType: form.mediaType, ctaLabel: form.ctaLabel, targetUrl: form.targetUrl,
+        budget: form.budget || '₹0', duration: form.duration,
+        imageUrl: imageUrl || '', videoUrl: form.videoUrl || '', textContent: form.textContent || '',
+        views: 0, clicks: 0, status: 'Active', featured: false, createdAt: Date.now(),
+      });
+      setCreated(true);
+      setTimeout(onClose, 1000);
+    } catch (e: any) { setError(e.message || 'Failed to save ad. Check Firestore rules.'); }
+    setSaving(false);
+  };
 
   return (
     <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-40 flex items-center justify-center p-4">
@@ -3977,11 +4016,12 @@ const CreateAdModal: React.FC<{ onAdd: (a: AdRecord) => void; onClose: () => voi
           <button onClick={onClose} className="p-1.5 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800"><X className="w-4 h-4 text-gray-500" /></button>
         </div>
         <div className="p-5 space-y-4 max-h-[75vh] overflow-y-auto">
-          {created && <div className="flex items-center gap-2 p-3 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-xl"><CheckCircle className="w-4 h-4 text-green-600" /><span className="text-sm text-green-700 dark:text-green-400 font-medium">Ad created and published!</span></div>}
+          {created && <div className="flex items-center gap-2 p-3 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-xl"><CheckCircle className="w-4 h-4 text-green-600" /><span className="text-sm text-green-700 dark:text-green-400 font-medium">Ad saved to Firestore!</span></div>}
+          {error && <div className="flex items-center gap-2 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl"><XCircle className="w-4 h-4 text-red-600" /><span className="text-sm text-red-700 dark:text-red-400">{error}</span></div>}
 
           {/* Media Type */}
           <div>
-            <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Ad Media Type</label>
+            <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Ad Content Type</label>
             <div className="grid grid-cols-3 gap-2">
               {[{ type: 'Image', icon: '🖼️' }, { type: 'Video', icon: '🎬' }, { type: 'Text', icon: '📝' }].map(m => (
                 <button key={m.type} onClick={() => set('mediaType', m.type)} className={`flex flex-col items-center gap-1.5 p-3 rounded-xl border-2 transition-all text-sm font-medium ${form.mediaType === m.type ? 'border-orange-500 bg-orange-50 dark:bg-orange-900/20 text-orange-600' : 'border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 hover:border-orange-300'}`}>
@@ -3991,109 +4031,162 @@ const CreateAdModal: React.FC<{ onAdd: (a: AdRecord) => void; onClose: () => voi
             </div>
           </div>
 
+          {/* Content based on media type */}
+          {form.mediaType === 'Image' && (
+            <div className="space-y-2">
+              <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide">Image Content</label>
+              <div className="flex items-center gap-2">
+                <input type="file" accept="image/*" id="adImageFile" className="hidden" onChange={e => { if (e.target.files?.[0]) { setImageFile(e.target.files[0]); set('imageUrl', ''); } }} />
+                <label htmlFor="adImageFile" className="flex items-center gap-2 px-3 py-2 rounded-xl border border-dashed border-orange-300 dark:border-orange-700 text-orange-600 dark:text-orange-400 text-xs font-medium hover:bg-orange-50 dark:hover:bg-orange-900/20 cursor-pointer transition-all">
+                  <Upload className="w-4 h-4" /> {imageFile ? imageFile.name : 'Upload Image'}
+                </label>
+                <span className="text-xs text-gray-400">or</span>
+              </div>
+              <input value={form.imageUrl} onChange={e => { set('imageUrl', e.target.value); setImageFile(null); }} placeholder="Paste image URL (https://...)" className="w-full px-3 py-2 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm text-gray-900 dark:text-white focus:outline-none focus:border-orange-500 transition-all" />
+              {(imageFile || form.imageUrl) && (
+                <img src={imageFile ? URL.createObjectURL(imageFile) : form.imageUrl} alt="preview" className="w-full h-32 object-cover rounded-xl border border-gray-200 dark:border-gray-700" onError={e => (e.currentTarget.style.display = 'none')} />
+              )}
+            </div>
+          )}
+
+          {form.mediaType === 'Video' && (
+            <div>
+              <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Video URL</label>
+              <input value={form.videoUrl} onChange={e => set('videoUrl', e.target.value)} placeholder="YouTube, Vimeo, or direct video URL" className="w-full px-3 py-2 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm text-gray-900 dark:text-white focus:outline-none focus:border-orange-500 transition-all" />
+              {form.videoUrl && form.videoUrl.includes('youtube') && (
+                <div className="mt-2 rounded-xl overflow-hidden border border-gray-200 dark:border-gray-700 aspect-video">
+                  <iframe src={`https://www.youtube.com/embed/${form.videoUrl.split('v=')[1]?.split('&')[0] || ''}`} className="w-full h-full" allowFullScreen />
+                </div>
+              )}
+            </div>
+          )}
+
+          {form.mediaType === 'Text' && (
+            <div>
+              <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Ad Body Text</label>
+              <textarea value={form.textContent} onChange={e => set('textContent', e.target.value)} placeholder="Write the full ad copy here. This text will appear in the ad banner." rows={4} className="w-full px-3 py-2 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm text-gray-900 dark:text-white focus:outline-none focus:border-orange-500 transition-all resize-none" />
+            </div>
+          )}
+
           {/* Basic Info */}
           <div className="grid grid-cols-2 gap-3">
             <div className="col-span-2">
-              <label className="block text-xs font-medium text-gray-500 mb-1">Ad Title / Headline</label>
+              <label className="block text-xs font-medium text-gray-500 mb-1">Ad Title / Headline *</label>
               <input value={form.title} onChange={e => set('title', e.target.value)} placeholder="e.g. Google Cloud Certification 2025" className="w-full px-3 py-2 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm text-gray-900 dark:text-white focus:outline-none focus:border-orange-500 transition-all" />
             </div>
             <div>
-              <label className="block text-xs font-medium text-gray-500 mb-1">Advertiser</label>
-              <input value={form.advertiser} onChange={e => set('advertiser', e.target.value)} placeholder="e.g. Google" className="w-full px-3 py-2 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm focus:outline-none focus:border-orange-500 transition-all" />
+              <label className="block text-xs font-medium text-gray-500 mb-1">Advertiser *</label>
+              <input value={form.advertiser} onChange={e => set('advertiser', e.target.value)} placeholder="e.g. Google" className="w-full px-3 py-2 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm text-gray-900 dark:text-white focus:outline-none focus:border-orange-500 transition-all" />
             </div>
             <div>
               <label className="block text-xs font-medium text-gray-500 mb-1">Budget</label>
-              <input value={form.budget} onChange={e => set('budget', e.target.value)} placeholder="₹25,000" className="w-full px-3 py-2 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm focus:outline-none focus:border-orange-500 transition-all" />
+              <input value={form.budget} onChange={e => set('budget', e.target.value)} placeholder="₹25,000" className="w-full px-3 py-2 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm text-gray-900 dark:text-white focus:outline-none focus:border-orange-500 transition-all" />
             </div>
           </div>
 
           {/* Placement */}
           <div>
             <label className="block text-xs font-medium text-gray-500 mb-1">Ad Placement</label>
-            <select value={form.placement} onChange={e => set('placement', e.target.value)} className="w-full px-3 py-2 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm focus:outline-none focus:border-orange-500">
+            <select value={form.placement} onChange={e => set('placement', e.target.value)} className="w-full px-3 py-2 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm text-gray-900 dark:text-white focus:outline-none focus:border-orange-500">
               {placements.map(p => <option key={p}>{p}</option>)}
             </select>
           </div>
 
-          {/* CTA + URL */}
+          {/* CTA + Duration + URL */}
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs font-medium text-gray-500 mb-1">CTA Button Label</label>
-              <select value={form.ctaLabel} onChange={e => set('ctaLabel', e.target.value)} className="w-full px-3 py-2 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm focus:outline-none focus:border-orange-500">
+              <label className="block text-xs font-medium text-gray-500 mb-1">CTA Button</label>
+              <select value={form.ctaLabel} onChange={e => set('ctaLabel', e.target.value)} className="w-full px-3 py-2 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm text-gray-900 dark:text-white focus:outline-none focus:border-orange-500">
                 <option>Learn More</option><option>Apply Now</option><option>Get Started</option><option>Sign Up Free</option><option>Explore</option><option>View Offer</option>
               </select>
             </div>
             <div>
               <label className="block text-xs font-medium text-gray-500 mb-1">Duration (days)</label>
-              <input type="number" min="1" max="365" value={form.duration} onChange={e => set('duration', parseInt(e.target.value))} className="w-full px-3 py-2 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm focus:outline-none focus:border-orange-500" />
+              <input type="number" min="1" max="365" value={form.duration} onChange={e => set('duration', parseInt(e.target.value))} className="w-full px-3 py-2 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm text-gray-900 dark:text-white focus:outline-none focus:border-orange-500" />
             </div>
           </div>
           <div>
-            <label className="block text-xs font-medium text-gray-500 mb-1">Target URL</label>
-            <input value={form.targetUrl} onChange={e => set('targetUrl', e.target.value)} placeholder="https://example.com/landing-page" className="w-full px-3 py-2 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm font-mono focus:outline-none focus:border-orange-500 transition-all" />
-          </div>
-
-          {/* Preview */}
-          <div>
-            <button onClick={() => setPreview(!preview)} className="w-full flex items-center justify-center gap-2 py-2 rounded-xl border border-orange-200 dark:border-orange-800 text-orange-600 dark:text-orange-400 text-sm font-medium hover:bg-orange-50 dark:hover:bg-orange-900/20 transition-all">
-              <Eye className="w-4 h-4" /> {preview ? 'Hide' : 'Show'} Preview
-            </button>
-            {preview && (
-              <div className="mt-3 p-4 border-2 border-dashed border-orange-300 dark:border-orange-800 rounded-xl bg-orange-50 dark:bg-orange-900/10">
-                <p className="text-xs text-orange-500 font-semibold uppercase tracking-wide mb-2">Ad Preview — {form.placement}</p>
-                <div className="bg-gradient-to-r from-orange-500 to-red-500 rounded-xl p-4 text-white">
-                  <div className="text-xs opacity-80 mb-1">{form.advertiser || 'Advertiser'} · Sponsored</div>
-                  <p className="font-bold text-sm mb-2">{form.title || 'Ad Headline Here'}</p>
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs bg-white/20 px-2 py-1 rounded-lg">{form.mediaType} Ad</span>
-                    <span className="text-xs bg-white text-orange-600 px-3 py-1 rounded-lg font-bold">{form.ctaLabel}</span>
-                  </div>
-                  <p className="text-xs opacity-60 mt-2">Duration: {form.duration} days · Budget: {form.budget || '₹0'}</p>
-                </div>
-              </div>
-            )}
+            <label className="block text-xs font-medium text-gray-500 mb-1">Target URL (click destination)</label>
+            <input value={form.targetUrl} onChange={e => set('targetUrl', e.target.value)} placeholder="https://example.com/landing-page" className="w-full px-3 py-2 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm font-mono text-gray-900 dark:text-white focus:outline-none focus:border-orange-500 transition-all" />
           </div>
         </div>
         <div className="flex gap-3 p-5 border-t border-gray-100 dark:border-gray-800">
           <button onClick={onClose} className="flex-1 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300 text-sm font-medium hover:bg-gray-50 dark:hover:bg-gray-800 transition-all">Cancel</button>
-          <button onClick={handleCreate} disabled={!form.title.trim() || !form.advertiser.trim() || created} className="flex-1 py-2.5 rounded-xl bg-orange-600 hover:bg-orange-700 disabled:opacity-50 text-white font-semibold text-sm transition-all flex items-center justify-center gap-2"><Megaphone className="w-4 h-4" /> Create Ad</button>
+          <button onClick={handleCreate} disabled={!form.title.trim() || !form.advertiser.trim() || saving || created}
+            className="flex-1 py-2.5 rounded-xl bg-orange-600 hover:bg-orange-700 disabled:opacity-50 text-white font-semibold text-sm transition-all flex items-center justify-center gap-2">
+            {uploading ? <><span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> Uploading...</> : saving ? <><span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> Saving...</> : <><Megaphone className="w-4 h-4" /> Create Ad</>}
+          </button>
         </div>
       </div>
     </div>
   );
 };
 
-// ── Ads Management ────────────────────────────────────────────────────────────
+// ── Ads Management (Firestore real-time) ──────────────────────────────────────
 export const AdsSystemPage: React.FC = () => {
   const [ads, setAds] = useState<AdRecord[]>([]);
   const [showCreate, setShowCreate] = useState(false);
   const [toast, setToast] = useState('');
   const showToast = (msg: string) => { setToast(msg); setTimeout(() => setToast(''), 3000); };
 
-  const toggle = (id: number) => {
-    setAds(prev => prev.map(a => a.id === id ? { ...a, status: a.status === 'Active' ? 'Inactive' : 'Active' } : a));
-    showToast('Ad status updated');
+  useEffect(() => {
+    const unsub = onSnapshot(collection(db, 'advertisements'), snap => {
+      const list: AdRecord[] = snap.docs.map(d => ({ firestoreId: d.id, ...d.data() } as AdRecord));
+      list.sort((a, b) => (b.createdAt ?? 0) - (a.createdAt ?? 0));
+      setAds(list);
+    });
+    return unsub;
+  }, []);
+
+  const toggleStatus = async (ad: AdRecord) => {
+    if (!ad.firestoreId) return;
+    const next = ad.status === 'Active' ? 'Inactive' : 'Active';
+    await updateDoc(doc(db, 'advertisements', ad.firestoreId), { status: next });
+    showToast(`Ad "${ad.title}" is now ${next}`);
   };
 
-  const deleteAd = (id: number) => {
-    const title = ads.find(a => a.id === id)?.title;
-    setAds(prev => prev.filter(a => a.id !== id));
-    showToast(`Ad "${title}" removed`);
+  const setFeatured = async (ad: AdRecord) => {
+    if (!ad.firestoreId) return;
+    const batch = ads.map(a => updateDoc(doc(db, 'advertisements', a.firestoreId!), { featured: a.firestoreId === ad.firestoreId }));
+    await Promise.all(batch);
+    showToast(`"${ad.title}" is now the featured ad shown to users`);
   };
 
-  const totalViews = ads.reduce((sum, a) => sum + a.views, 0);
-  const totalClicks = ads.reduce((sum, a) => sum + a.clicks, 0);
+  const deleteAd = async (ad: AdRecord) => {
+    if (!ad.firestoreId) return;
+    await deleteDoc(doc(db, 'advertisements', ad.firestoreId));
+    showToast(`Ad "${ad.title}" removed`);
+  };
+
+  const totalViews = ads.reduce((sum, a) => sum + (a.views ?? 0), 0);
+  const totalClicks = ads.reduce((sum, a) => sum + (a.clicks ?? 0), 0);
   const activeAds = ads.filter(a => a.status === 'Active').length;
+  const featuredAd = ads.find(a => a.featured);
   const avgCtr = ads.length > 0 ? ((totalClicks / Math.max(totalViews, 1)) * 100).toFixed(1) + '%' : '0.0%';
 
   return (
     <div className="space-y-6 animate-fade-in">
-      {showCreate && <CreateAdModal onAdd={a => { setAds(prev => [a, ...prev]); showToast('New ad created and published!'); }} onClose={() => setShowCreate(false)} />}
-      {toast && <div className="fixed bottom-6 right-6 z-50 flex items-center gap-2 px-4 py-3 bg-gray-900 dark:bg-gray-100 text-white dark:text-gray-900 text-sm font-medium rounded-xl shadow-xl"><CheckCircle className="w-4 h-4 text-green-400" /> {toast}</div>}
+      {showCreate && <CreateAdModal onClose={() => setShowCreate(false)} />}
+      {toast && <div className="fixed bottom-6 right-6 z-50 flex items-center gap-2 px-4 py-3 bg-gray-900 dark:bg-gray-100 text-white dark:text-gray-900 text-sm font-medium rounded-xl shadow-xl"><CheckCircle className="w-4 h-4 text-green-400 dark:text-green-600" /> {toast}</div>}
 
-      <TableHeader title="Ads Management" subtitle="Create and manage platform advertisements."
+      <TableHeader title="Ads Management" subtitle="Create and manage platform advertisements in real-time."
         actions={<button onClick={() => setShowCreate(true)} className="flex items-center gap-2 px-3 py-2 text-sm text-white bg-red-600 rounded-xl hover:bg-red-700 transition-all font-semibold"><Plus className="w-4 h-4" /> Create Ad</button>}
       />
+
+      {featuredAd && (
+        <div className="p-4 rounded-2xl bg-gradient-to-r from-orange-500 to-red-500 text-white flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <Star className="w-6 h-6 fill-white" />
+            <div>
+              <p className="text-xs font-semibold opacity-80 uppercase tracking-wide">Currently Featured Ad (shown to all users)</p>
+              <p className="font-bold text-lg">{featuredAd.title}</p>
+              <p className="text-sm opacity-80">{featuredAd.advertiser} · {featuredAd.placement} · {featuredAd.mediaType}</p>
+            </div>
+          </div>
+          {featuredAd.imageUrl && <img src={featuredAd.imageUrl} alt="featured" className="h-16 w-24 object-cover rounded-xl border-2 border-white/30" />}
+        </div>
+      )}
+
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {[
           { label: 'Total Impressions', value: totalViews >= 1000 ? `${(totalViews / 1000).toFixed(1)}k` : totalViews.toString(), icon: Eye, color: 'text-blue-500', bg: 'bg-blue-50 dark:bg-blue-900/20' },
@@ -4114,16 +4207,17 @@ export const AdsSystemPage: React.FC = () => {
           </Card>
         ))}
       </div>
+
       <Card>
         <div className="overflow-x-auto">
           <table className="w-full text-left">
             <thead className="bg-gray-50 dark:bg-gray-800/50 text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide">
               <tr>
                 <th className="px-5 py-3 font-medium">Ad</th>
+                <th className="px-5 py-3 font-medium">Content</th>
                 <th className="px-5 py-3 font-medium">Placement</th>
                 <th className="px-5 py-3 font-medium">Views</th>
                 <th className="px-5 py-3 font-medium">Clicks</th>
-                <th className="px-5 py-3 font-medium">CTR</th>
                 <th className="px-5 py-3 font-medium">Budget</th>
                 <th className="px-5 py-3 font-medium">Status</th>
                 <th className="px-5 py-3 font-medium text-right">Controls</th>
@@ -4131,23 +4225,42 @@ export const AdsSystemPage: React.FC = () => {
             </thead>
             <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
               {ads.map(ad => (
-                <tr key={ad.id} className="hover:bg-gray-50 dark:hover:bg-gray-800/40 transition-colors">
+                <tr key={ad.firestoreId} className={`hover:bg-gray-50 dark:hover:bg-gray-800/40 transition-colors ${ad.featured ? 'bg-orange-50/50 dark:bg-orange-900/10' : ''}`}>
                   <td className="px-5 py-4">
-                    <p className="font-semibold text-gray-900 dark:text-white text-sm">{ad.title}</p>
-                    <p className="text-xs text-gray-500 dark:text-gray-400">{ad.advertiser}</p>
+                    <div className="flex items-center gap-2">
+                      {ad.featured && <Star className="w-4 h-4 text-orange-500 fill-orange-400 flex-shrink-0" />}
+                      <div>
+                        <p className="font-semibold text-gray-900 dark:text-white text-sm">{ad.title}</p>
+                        <p className="text-xs text-gray-500 dark:text-gray-400">{ad.advertiser}</p>
+                      </div>
+                    </div>
+                  </td>
+                  <td className="px-5 py-4">
+                    {ad.mediaType === 'Image' && ad.imageUrl ? (
+                      <img src={ad.imageUrl} alt="ad" className="h-10 w-16 object-cover rounded-lg border border-gray-200 dark:border-gray-700" />
+                    ) : ad.mediaType === 'Video' ? (
+                      <span className="inline-flex items-center gap-1 text-xs text-purple-600 dark:text-purple-400 font-medium"><Video className="w-3.5 h-3.5" /> Video</span>
+                    ) : ad.textContent ? (
+                      <span className="text-xs text-gray-500 dark:text-gray-400 line-clamp-2 max-w-[120px]">{ad.textContent}</span>
+                    ) : (
+                      <span className="text-xs text-gray-400">{ad.mediaType}</span>
+                    )}
                   </td>
                   <td className="px-5 py-4 text-xs text-gray-600 dark:text-gray-400">{ad.placement}</td>
-                  <td className="px-5 py-4 text-sm font-medium text-gray-900 dark:text-white">{ad.views.toLocaleString()}</td>
-                  <td className="px-5 py-4 text-sm text-gray-600 dark:text-gray-400">{ad.clicks.toLocaleString()}</td>
-                  <td className="px-5 py-4 text-sm font-bold text-blue-600 dark:text-blue-400">{ad.ctr}</td>
+                  <td className="px-5 py-4 text-sm font-medium text-gray-900 dark:text-white">{(ad.views ?? 0).toLocaleString()}</td>
+                  <td className="px-5 py-4 text-sm text-gray-600 dark:text-gray-400">{(ad.clicks ?? 0).toLocaleString()}</td>
                   <td className="px-5 py-4 text-sm text-gray-600 dark:text-gray-400">{ad.budget}</td>
                   <td className="px-5 py-4"><StatusBadge status={ad.status} /></td>
                   <td className="px-5 py-4 text-right">
                     <div className="flex items-center justify-end gap-1">
-                      <button onClick={() => toggle(ad.id)} title={ad.status === 'Active' ? 'Deactivate' : 'Activate'} className={`${ad.status === 'Active' ? 'text-green-500' : 'text-gray-400'} hover:opacity-70 transition-all`}>
+                      <button onClick={() => setFeatured(ad)} title={ad.featured ? 'Currently Featured' : 'Set as Featured (show to users)'}
+                        className={`p-1.5 rounded-lg transition-colors ${ad.featured ? 'text-orange-500 bg-orange-50 dark:bg-orange-900/20' : 'text-gray-400 hover:text-orange-500 hover:bg-orange-50 dark:hover:bg-orange-900/20'}`}>
+                        <Star className={`w-4 h-4 ${ad.featured ? 'fill-orange-400' : ''}`} />
+                      </button>
+                      <button onClick={() => toggleStatus(ad)} title={ad.status === 'Active' ? 'Deactivate' : 'Activate'} className={`${ad.status === 'Active' ? 'text-green-500' : 'text-gray-400'} hover:opacity-70 transition-all`}>
                         {ad.status === 'Active' ? <ToggleRight className="w-7 h-7" /> : <ToggleLeft className="w-7 h-7" />}
                       </button>
-                      <button onClick={() => deleteAd(ad.id)} title="Delete Ad" className="p-1.5 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 text-gray-400 hover:text-red-600 transition-colors">
+                      <button onClick={() => deleteAd(ad)} title="Delete Ad" className="p-1.5 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 text-gray-400 hover:text-red-600 transition-colors">
                         <Trash2 className="w-4 h-4" />
                       </button>
                     </div>
@@ -4155,7 +4268,7 @@ export const AdsSystemPage: React.FC = () => {
                 </tr>
               ))}
               {ads.length === 0 && (
-                <tr><td colSpan={8} className="px-5 py-10 text-center text-gray-400 text-sm">No ads created yet. Click "Create Ad" to publish your first advertisement.</td></tr>
+                <tr><td colSpan={8} className="px-5 py-10 text-center text-gray-400 text-sm">No ads yet. Click "Create Ad" to publish your first advertisement to Firestore.</td></tr>
               )}
             </tbody>
           </table>

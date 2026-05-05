@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
-import { Trash2, LogOut, ChevronRight, CheckCircle, AlertCircle } from 'lucide-react';
+import { Trash2, LogOut, ChevronRight, CheckCircle, AlertCircle, Lock, Eye, EyeOff } from 'lucide-react';
 import { Card, CardHeader, CardContent, Button, Input } from '../../components/common';
 import { useAuth } from '../../contexts/AuthContext';
-import { resetPassword } from '../../services/firebase';
+import { changePassword } from '../../services/firebase';
 
 export const SettingsPage: React.FC = () => {
   const auth = useAuth();
@@ -15,8 +15,13 @@ export const SettingsPage: React.FC = () => {
   const [profileSaving, setProfileSaving] = useState(false);
   const [profileStatus, setProfileStatus] = useState<'idle' | 'success' | 'error'>('idle');
 
-  const [pwdStatus, setPwdStatus] = useState<'idle' | 'success' | 'error'>('idle');
   const [pwdLoading, setPwdLoading] = useState(false);
+  const [pwdError, setPwdError] = useState('');
+  const [pwdSuccess, setPwdSuccess] = useState(false);
+  const [showCurrent, setShowCurrent] = useState(false);
+  const [showNew, setShowNew] = useState(false);
+  const [showConfirm, setShowConfirm] = useState(false);
+  const [pwdForm, setPwdForm] = useState({ current: '', newPwd: '', confirm: '' });
 
   const [settings, setSettings] = useState({
     emailNotifications: true,
@@ -42,16 +47,25 @@ export const SettingsPage: React.FC = () => {
     }
   };
 
-  const handlePasswordReset = async () => {
-    if (!user?.email) return;
+  const handlePasswordChange = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setPwdError('');
+    if (pwdForm.newPwd !== pwdForm.confirm) { setPwdError('New passwords do not match.'); return; }
+    if (pwdForm.newPwd.length < 8) { setPwdError('New password must be at least 8 characters.'); return; }
+    if (pwdForm.newPwd === pwdForm.current) { setPwdError('New password must differ from current password.'); return; }
     setPwdLoading(true);
-    setPwdStatus('idle');
-    const result = await resetPassword(user.email);
+    const result = await changePassword(pwdForm.current, pwdForm.newPwd);
     setPwdLoading(false);
     if (result.success) {
-      setPwdStatus('success');
+      setPwdSuccess(true);
+      setPwdForm({ current: '', newPwd: '', confirm: '' });
+      setTimeout(() => setPwdSuccess(false), 5000);
     } else {
-      setPwdStatus('error');
+      const code = result.error?.code || '';
+      if (code === 'auth/wrong-password' || code === 'auth/invalid-credential') setPwdError('Current password is incorrect.');
+      else if (code === 'auth/weak-password') setPwdError('New password is too weak.');
+      else if (code === 'auth/requires-recent-login') setPwdError('Session expired. Sign out and sign in again, then retry.');
+      else setPwdError(result.error?.message || 'Failed to change password. Try again.');
     }
   };
 
@@ -113,26 +127,46 @@ export const SettingsPage: React.FC = () => {
 
           {/* Password */}
           <Card>
-            <CardHeader title="Change Password" subtitle="Send a password reset link to your email" />
+            <CardHeader title="Change Password" subtitle="Update your account password directly" />
             <CardContent>
-              <div className="space-y-4">
-                {pwdStatus === 'success' && (
+              <form onSubmit={handlePasswordChange} className="space-y-4">
+                {pwdSuccess && (
                   <div className="flex items-center gap-2 p-3 bg-green-50 border border-green-200 rounded-lg text-sm text-green-700">
-                    <CheckCircle className="w-4 h-4" /> Password reset email sent! Check your inbox.
+                    <CheckCircle className="w-4 h-4" /> Password changed successfully!
                   </div>
                 )}
-                {pwdStatus === 'error' && (
+                {pwdError && (
                   <div className="flex items-center gap-2 p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">
-                    <AlertCircle className="w-4 h-4" /> Failed to send reset email. Please try again.
+                    <AlertCircle className="w-4 h-4" /> {pwdError}
                   </div>
                 )}
-                <p className="text-sm text-gray-500">
-                  We'll send a password reset link to <strong>{user?.email}</strong>.
-                </p>
-                <Button variant="primary" onClick={handlePasswordReset} loading={pwdLoading}>
-                  Send Reset Link
+                {[
+                  { label: 'Current Password', key: 'current', show: showCurrent, toggle: () => setShowCurrent(v => !v) },
+                  { label: 'New Password', key: 'newPwd', show: showNew, toggle: () => setShowNew(v => !v) },
+                  { label: 'Confirm New Password', key: 'confirm', show: showConfirm, toggle: () => setShowConfirm(v => !v) },
+                ].map(({ label, key, show, toggle }) => (
+                  <div key={key}>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">{label}</label>
+                    <div className="relative">
+                      <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                      <input
+                        type={show ? 'text' : 'password'}
+                        value={pwdForm[key as keyof typeof pwdForm]}
+                        onChange={e => setPwdForm(f => ({ ...f, [key]: e.target.value }))}
+                        placeholder={label}
+                        required
+                        className="w-full pl-9 pr-10 py-2.5 rounded-lg border border-gray-200 bg-white text-gray-900 text-sm focus:outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 transition-all"
+                      />
+                      <button type="button" onClick={toggle} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
+                        {show ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                      </button>
+                    </div>
+                  </div>
+                ))}
+                <Button type="submit" variant="primary" loading={pwdLoading}>
+                  Update Password
                 </Button>
-              </div>
+              </form>
             </CardContent>
           </Card>
 

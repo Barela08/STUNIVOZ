@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { LayoutDashboard, Users, FileCheck, ShieldAlert, Flag, LogOut, Menu, X, Shield, Bell, Moon, Sun } from 'lucide-react';
+import { LayoutDashboard, Users, FileCheck, ShieldAlert, Flag, LogOut, Menu, X, Bell, Moon, Sun, Lock, Eye, EyeOff, CheckCircle } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTheme } from '../../contexts/ThemeContext';
+import { changePassword } from '../../services/firebase';
 
 interface StaffLayoutProps {
   children: React.ReactNode;
@@ -21,6 +22,35 @@ export const StaffLayout: React.FC<StaffLayoutProps> = ({ children }) => {
   const location = useLocation();
   const { profile, signOut } = useAuth();
   const { isDark, toggleTheme } = useTheme();
+
+  const [showChangePwd, setShowChangePwd] = useState(false);
+  const [pwdLoading, setPwdLoading] = useState(false);
+  const [pwdError, setPwdError] = useState('');
+  const [pwdSuccess, setPwdSuccess] = useState(false);
+  const [showCurrent, setShowCurrent] = useState(false);
+  const [showNew, setShowNew] = useState(false);
+  const [showConfirm, setShowConfirm] = useState(false);
+  const [pwdForm, setPwdForm] = useState({ current: '', newPwd: '', confirm: '' });
+
+  const openChangePwd = () => { setPwdForm({ current: '', newPwd: '', confirm: '' }); setPwdError(''); setPwdSuccess(false); setShowChangePwd(true); };
+
+  const handleChangePwd = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setPwdError('');
+    if (pwdForm.newPwd !== pwdForm.confirm) { setPwdError('New passwords do not match.'); return; }
+    if (pwdForm.newPwd.length < 8) { setPwdError('New password must be at least 8 characters.'); return; }
+    if (pwdForm.newPwd === pwdForm.current) { setPwdError('New password must differ from current.'); return; }
+    setPwdLoading(true);
+    const result = await changePassword(pwdForm.current, pwdForm.newPwd);
+    setPwdLoading(false);
+    if (result.success) { setPwdSuccess(true); setPwdForm({ current: '', newPwd: '', confirm: '' }); }
+    else {
+      const code = result.error?.code || '';
+      if (code === 'auth/wrong-password' || code === 'auth/invalid-credential') setPwdError('Current password is incorrect.');
+      else if (code === 'auth/requires-recent-login') setPwdError('Session expired. Sign out and back in, then retry.');
+      else setPwdError(result.error?.message || 'Failed to change password.');
+    }
+  };
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-950 transition-colors duration-300">
@@ -84,22 +114,18 @@ export const StaffLayout: React.FC<StaffLayoutProps> = ({ children }) => {
                 <p className="text-xs text-emerald-300 truncate">{profile?.email || ''}</p>
               </div>
             </div>
-            <div className="flex gap-2">
-              <button
-                onClick={toggleTheme}
-                className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl text-xs text-emerald-300 hover:bg-emerald-800 hover:text-white transition-all font-medium"
-              >
+            <div className="flex gap-2 mb-2">
+              <button onClick={toggleTheme} className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl text-xs text-emerald-300 hover:bg-emerald-800 hover:text-white transition-all font-medium">
                 {isDark ? <Sun className="w-4 h-4 text-yellow-400" /> : <Moon className="w-4 h-4" />}
                 {isDark ? 'Light' : 'Dark'}
               </button>
-              <button
-                onClick={signOut}
-                className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl text-xs text-red-400 hover:bg-red-900/30 hover:text-red-300 transition-all font-medium"
-              >
-                <LogOut className="w-4 h-4" />
-                Sign Out
+              <button onClick={signOut} className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl text-xs text-red-400 hover:bg-red-900/30 hover:text-red-300 transition-all font-medium">
+                <LogOut className="w-4 h-4" /> Sign Out
               </button>
             </div>
+            <button onClick={openChangePwd} className="w-full flex items-center justify-center gap-1.5 py-2 rounded-xl text-xs text-emerald-300 hover:bg-emerald-800 hover:text-white transition-all font-medium">
+              <Lock className="w-4 h-4" /> Change Password
+            </button>
           </div>
         </div>
       </aside>
@@ -108,6 +134,9 @@ export const StaffLayout: React.FC<StaffLayoutProps> = ({ children }) => {
         <header className="hidden lg:flex items-center justify-between h-16 px-6 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800 sticky top-0 z-30 transition-colors">
           <h2 className="text-xl font-bold text-gray-800 dark:text-white">Staff Moderation Panel</h2>
           <div className="flex items-center gap-3">
+            <button onClick={openChangePwd} className="flex items-center gap-2 px-3 py-2 rounded-xl text-sm text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 transition-all border border-gray-200 dark:border-gray-700">
+              <Lock className="w-4 h-4" /> Change Password
+            </button>
             <button onClick={toggleTheme} className="p-2.5 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 transition-all">
               {isDark ? <Sun className="w-5 h-5 text-yellow-400" /> : <Moon className="w-5 h-5 text-gray-500" />}
             </button>
@@ -121,6 +150,67 @@ export const StaffLayout: React.FC<StaffLayoutProps> = ({ children }) => {
         </header>
         <div className="p-4 lg:p-6">{children}</div>
       </main>
+
+      {showChangePwd && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+          <div className="w-full max-w-md bg-white dark:bg-gray-900 rounded-2xl shadow-2xl border border-gray-200 dark:border-gray-700">
+            <div className="flex items-center justify-between p-6 border-b border-gray-100 dark:border-gray-800">
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded-xl bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center">
+                  <Lock className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-gray-900 dark:text-white text-base">Change Password</h3>
+                  <p className="text-xs text-gray-500 dark:text-gray-400">{profile?.email}</p>
+                </div>
+              </div>
+              <button onClick={() => setShowChangePwd(false)} className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
+                <X className="w-5 h-5 text-gray-500" />
+              </button>
+            </div>
+            <div className="p-6">
+              {pwdSuccess ? (
+                <div className="text-center py-4">
+                  <div className="w-16 h-16 rounded-2xl bg-green-100 dark:bg-green-900/30 flex items-center justify-center mx-auto mb-4">
+                    <CheckCircle className="w-8 h-8 text-green-500" />
+                  </div>
+                  <h4 className="font-bold text-gray-900 dark:text-white mb-1">Password Changed!</h4>
+                  <p className="text-sm text-gray-500 mb-5">Your password has been updated successfully.</p>
+                  <button onClick={() => setShowChangePwd(false)} className="px-6 py-2.5 rounded-xl bg-green-500 hover:bg-green-600 text-white text-sm font-semibold transition-colors">Done</button>
+                </div>
+              ) : (
+                <form onSubmit={handleChangePwd} className="space-y-4">
+                  {pwdError && <div className="p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl"><p className="text-sm text-red-600 dark:text-red-400">{pwdError}</p></div>}
+                  {[
+                    { label: 'Current Password', key: 'current', show: showCurrent, toggle: () => setShowCurrent(v => !v) },
+                    { label: 'New Password', key: 'newPwd', show: showNew, toggle: () => setShowNew(v => !v) },
+                    { label: 'Confirm New Password', key: 'confirm', show: showConfirm, toggle: () => setShowConfirm(v => !v) },
+                  ].map(({ label, key, show, toggle }) => (
+                    <div key={key}>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{label}</label>
+                      <div className="relative">
+                        <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                        <input type={show ? 'text' : 'password'} value={pwdForm[key as keyof typeof pwdForm]}
+                          onChange={e => setPwdForm(f => ({ ...f, [key]: e.target.value }))} placeholder={label} required
+                          className="w-full pl-9 pr-10 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-sm focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 transition-all" />
+                        <button type="button" onClick={toggle} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
+                          {show ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                  <div className="flex gap-3 pt-2">
+                    <button type="button" onClick={() => setShowChangePwd(false)} className="flex-1 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 text-sm font-medium text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">Cancel</button>
+                    <button type="submit" disabled={pwdLoading} className="flex-1 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-semibold transition-colors disabled:opacity-60 flex items-center justify-center gap-2">
+                      {pwdLoading ? <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : 'Update Password'}
+                    </button>
+                  </div>
+                </form>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
