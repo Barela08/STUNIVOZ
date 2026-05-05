@@ -154,12 +154,19 @@ export const HomePage: React.FC = () => {
                 {' '}– a cybersecurity learning platform
               </p>
             </div>
-            <div className="flex gap-6">
+            <div className="flex flex-wrap gap-x-6 gap-y-2 justify-center">
               <Link to="/internships" className="hover:text-white transition-colors">Internships</Link>
               <Link to="/courses" className="hover:text-white transition-colors">Courses</Link>
               <Link to="/events" className="hover:text-white transition-colors">Events</Link>
             </div>
-            <p className="text-sm text-center">© 2026 STUNIVOZ. All rights reserved.</p>
+            <div className="flex flex-col items-center gap-2">
+              <div className="flex flex-wrap gap-x-4 gap-y-1 justify-center text-sm">
+                <Link to="/help" className="hover:text-white transition-colors">Help Center</Link>
+                <Link to="/privacy" className="hover:text-white transition-colors">Privacy Policy</Link>
+                <Link to="/terms" className="hover:text-white transition-colors">Terms of Service</Link>
+              </div>
+              <p className="text-sm text-center">© 2026 STUNIVOZ. All rights reserved.</p>
+            </div>
           </div>
         </div>
       </footer>

@@ -33,6 +33,9 @@ import { NotificationsPage } from './pages/notifications/NotificationsPage';
 import { GamificationPage } from './pages/gamification/GamificationPage';
 import { ContentHubPage } from './pages/content/ContentHubPage';
 import { AiHelpPage } from './pages/ai-help/AiHelpPage';
+import { HelpCenterPage } from './pages/help/HelpCenterPage';
+import { PrivacyPolicyPage } from './pages/help/PrivacyPolicyPage';
+import { TermsOfServicePage } from './pages/help/TermsOfServicePage';
 
 // Provider Pages
 import { ProviderLayout } from './components/Layout/ProviderLayout';
@@ -229,6 +232,11 @@ const AppRoutes: React.FC = () => {
       <Route path="/admin/roadmaps" element={<RoleRoute role="admin" loginPath="/admin/login"><AdminLayout><RoadmapManagementPage /></AdminLayout></RoleRoute>} />
       <Route path="/admin/mentors" element={<RoleRoute role="admin" loginPath="/admin/login"><AdminLayout><MentorsManagementPage /></AdminLayout></RoleRoute>} />
       <Route path="/admin/env-config" element={<RoleRoute role="admin" loginPath="/admin/login"><AdminLayout><EnvConfigPage /></AdminLayout></RoleRoute>} />
+
+      {/* Help / Legal Pages */}
+      <Route path="/help" element={<Layout><HelpCenterPage /></Layout>} />
+      <Route path="/privacy" element={<Layout><PrivacyPolicyPage /></Layout>} />
+      <Route path="/terms" element={<Layout><TermsOfServicePage /></Layout>} />
 
       {/* Default */}
       <Route path="/" element={<HomePage />} />

@@ -4,7 +4,8 @@ import {
   GraduationCap, LayoutDashboard, FileText, Briefcase, Calendar,
   BookOpen, Users, Settings, LogOut, Menu, X, Bell, Search,
   ChevronDown, Sparkles, Target, TrendingUp, MessageSquare,
-  Brain, MenuSquare, Star, Globe, Moon, Sun, Award, BellRing, Map, Bot, LogIn
+  Brain, MenuSquare, Star, Globe, Moon, Sun, Award, BellRing, Map, Bot, LogIn,
+  HelpCircle, Shield
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTheme } from '../../contexts/ThemeContext';
@@ -104,8 +105,21 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
             ))}
           </nav>
 
-          {/* Creator Credit */}
+          {/* Help & Legal Links */}
           <div className="px-4 py-2 border-t border-gray-100 dark:border-gray-800 bg-gray-50 dark:bg-gray-900/50">
+            <div className="flex items-center justify-center gap-3 mb-2">
+              <Link to="/help" className="flex items-center gap-1 text-[10px] text-gray-400 dark:text-gray-500 hover:text-primary-500 dark:hover:text-primary-400 transition-colors font-medium">
+                <HelpCircle className="w-3 h-3" /> Help
+              </Link>
+              <span className="text-gray-300 dark:text-gray-700">·</span>
+              <Link to="/privacy" className="flex items-center gap-1 text-[10px] text-gray-400 dark:text-gray-500 hover:text-primary-500 dark:hover:text-primary-400 transition-colors font-medium">
+                <Shield className="w-3 h-3" /> Privacy
+              </Link>
+              <span className="text-gray-300 dark:text-gray-700">·</span>
+              <Link to="/terms" className="text-[10px] text-gray-400 dark:text-gray-500 hover:text-primary-500 dark:hover:text-primary-400 transition-colors font-medium">
+                Terms
+              </Link>
+            </div>
             <p className="text-[10px] text-gray-400 dark:text-gray-600 text-center leading-relaxed">
               Created by <span className="font-semibold text-gray-500 dark:text-gray-500">Nilesh Barela</span>
               <br />Founder, <a href="https://hackifypro.com" target="_blank" rel="noopener noreferrer" className="text-primary-500 hover:text-primary-600 font-semibold">HackifyPro</a>

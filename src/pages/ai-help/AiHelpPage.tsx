@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { Bot, Loader2, RefreshCw, ExternalLink, Globe } from 'lucide-react';
+import { Bot, Loader2, RefreshCw } from 'lucide-react';
 import { db } from '../../services/firebase';
 import { doc, onSnapshot } from 'firebase/firestore';
 
 export const AiHelpPage: React.FC = () => {
   const [embedUrl, setEmbedUrl] = useState<string>('');
+  const [aiName, setAiName] = useState<string>('AI Help Assistant');
   const [loading, setLoading] = useState(true);
   const [iframeKey, setIframeKey] = useState(0);
 
@@ -14,6 +15,7 @@ export const AiHelpPage: React.FC = () => {
       (snap) => {
         if (snap.exists()) {
           setEmbedUrl(snap.data()?.embedUrl || '');
+          setAiName(snap.data()?.aiName || 'AI Help Assistant');
         }
         setLoading(false);
       },
@@ -23,10 +25,6 @@ export const AiHelpPage: React.FC = () => {
   }, []);
 
   const reload = () => setIframeKey(k => k + 1);
-
-  const displayHost = () => {
-    try { return new URL(embedUrl).hostname; } catch { return embedUrl; }
-  };
 
   if (loading) {
     return (
@@ -55,20 +53,12 @@ export const AiHelpPage: React.FC = () => {
 
   return (
     <div className="flex flex-col h-[calc(100vh-5rem)] -m-4 lg:-m-6">
-      {/* Browser-style top bar */}
-      <div className="flex items-center gap-2 px-3 lg:px-4 py-2.5 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800 flex-shrink-0">
-        {/* Icon + title */}
+      {/* Title bar */}
+      <div className="flex items-center gap-3 px-3 lg:px-4 py-2.5 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800 flex-shrink-0">
         <div className="w-7 h-7 rounded-lg bg-primary-500 flex items-center justify-center flex-shrink-0">
           <Bot className="w-4 h-4 text-white" />
         </div>
-
-        {/* URL bar */}
-        <div className="flex-1 flex items-center gap-2 px-3 py-1.5 bg-gray-100 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 min-w-0">
-          <Globe className="w-3.5 h-3.5 text-gray-400 flex-shrink-0" />
-          <span className="text-xs text-gray-600 dark:text-gray-400 truncate font-mono">{embedUrl}</span>
-        </div>
-
-        {/* Reload */}
+        <span className="flex-1 text-sm font-semibold text-gray-800 dark:text-gray-200 truncate">{aiName}</span>
         <button
           onClick={reload}
           title="Reload"
@@ -76,32 +66,16 @@ export const AiHelpPage: React.FC = () => {
         >
           <RefreshCw className="w-4 h-4" />
         </button>
-
-        {/* Open in new tab */}
-        <a
-          href={embedUrl}
-          target="_blank"
-          rel="noopener noreferrer"
-          title="Open in browser tab"
-          className="p-1.5 rounded-lg text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 transition-all flex-shrink-0"
-        >
-          <ExternalLink className="w-4 h-4" />
-        </a>
       </div>
 
-      {/* Host label */}
-      <div className="px-3 lg:px-4 py-1 bg-gray-50 dark:bg-gray-950 border-b border-gray-100 dark:border-gray-800 flex-shrink-0">
-        <span className="text-xs text-gray-400 dark:text-gray-600">{displayHost()}</span>
-      </div>
-
-      {/* Iframe — always try to load */}
+      {/* Iframe */}
       <div className="flex-1 relative bg-white dark:bg-gray-950">
         <iframe
           key={iframeKey}
           src={embedUrl}
           className="w-full h-full border-0"
           allow="microphone; camera; clipboard-write"
-          title="AI Help Assistant"
+          title={aiName}
           sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-popups-to-escape-sandbox allow-downloads"
         />
       </div>
