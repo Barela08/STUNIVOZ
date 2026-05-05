@@ -2,7 +2,8 @@ import { initializeApp, getApps, getApp } from 'firebase/app';
 import {
   getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword,
   signOut, onAuthStateChanged, signInWithPopup, GoogleAuthProvider, GithubAuthProvider,
-  fetchSignInMethodsForEmail, linkWithCredential, OAuthCredential
+  fetchSignInMethodsForEmail, linkWithCredential, OAuthCredential,
+  updatePassword, reauthenticateWithCredential, EmailAuthProvider
 } from 'firebase/auth';
 import { getFirestore, collection, addDoc, getDocs, doc, updateDoc, deleteDoc, serverTimestamp, setDoc, getDoc, onSnapshot, query, orderBy, increment } from 'firebase/firestore';
 import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
@@ -172,6 +173,19 @@ export const uploadFile = async (file: File, path: string) => {
     const url = await getDownloadURL(snapshot.ref);
     return { success: true, url };
   } catch (error) {
+    return { success: false, error };
+  }
+};
+
+export const changePassword = async (currentPassword: string, newPassword: string) => {
+  try {
+    const user = auth.currentUser;
+    if (!user || !user.email) throw new Error('No authenticated user');
+    const credential = EmailAuthProvider.credential(user.email, currentPassword);
+    await reauthenticateWithCredential(user, credential);
+    await updatePassword(user, newPassword);
+    return { success: true };
+  } catch (error: any) {
     return { success: false, error };
   }
 };
