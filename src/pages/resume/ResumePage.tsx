@@ -1,7 +1,10 @@
-import React, { useState, useRef } from 'react';
-import { FileText, Plus, Download, Share, Eye, Edit, Trash2, CheckCircle, AlertCircle, Sparkles, X, Save, ExternalLink, Upload, FileDown } from 'lucide-react';
+import React, { useState, useRef, useEffect } from 'react';
+import { FileText, Plus, Download, Share, Eye, Edit, Trash2, CheckCircle, AlertCircle, Sparkles, X, Save, ExternalLink, Upload, FileDown, Loader2 } from 'lucide-react';
 import { Card, CardHeader, CardContent, Button, Input, Textarea, FileUpload } from '../../components/common';
 import type { UploadResult } from '../../services/uploadService';
+import { useAuth } from '../../contexts/AuthContext';
+import { db } from '../../services/firebase';
+import { doc, getDoc, setDoc, updateDoc, arrayUnion, arrayRemove } from 'firebase/firestore';
 
 type Resume = {
   id: string;
@@ -33,7 +36,10 @@ const blankForm = (): ResumeForm => ({
   achievements: [],
 });
 
+type UploadedFile = { name: string; size: string; date: string; url: string; public_id: string };
+
 export const ResumePage: React.FC = () => {
+  const { user } = useAuth();
   const [activeTab, setActiveTab] = useState<'builder' | 'upload'>('builder');
   const [resumes, setResumes] = useState<Resume[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -46,11 +52,52 @@ export const ResumePage: React.FC = () => {
   const [editTitle, setEditTitle] = useState('');
   const [saving, setSaving] = useState(false);
   const [toast, setToast] = useState<{ msg: string; type: 'success' | 'error' } | null>(null);
-  const [uploadedFiles, setUploadedFiles] = useState<{ name: string; size: string; date: string; url: string }[]>([]);
+  const [uploadedFiles, setUploadedFiles] = useState<UploadedFile[]>([]);
+  const [loadingUploads, setLoadingUploads] = useState(false);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
   const [shareLink, setShareLink] = useState<string | null>(null);
   const [generating, setGenerating] = useState(false);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Load uploaded resumes from Firestore on mount
+  useEffect(() => {
+    if (!user) return;
+    setLoadingUploads(true);
+    const ref = doc(db, 'uploaded_resumes', user.uid);
+    getDoc(ref).then(snap => {
+      if (snap.exists()) {
+        setUploadedFiles(snap.data()?.files || []);
+      }
+    }).catch(() => {}).finally(() => setLoadingUploads(false));
+  }, [user]);
+
+  // Save a new uploaded file to Firestore
+  const saveUploadToFirestore = async (file: UploadedFile) => {
+    if (!user) return;
+    const ref = doc(db, 'uploaded_resumes', user.uid);
+    try {
+      const snap = await getDoc(ref);
+      if (snap.exists()) {
+        await updateDoc(ref, { files: arrayUnion(file) });
+      } else {
+        await setDoc(ref, { files: [file], uid: user.uid });
+      }
+    } catch (err) {
+      console.error('Error saving upload to Firestore:', err);
+    }
+  };
+
+  // Delete an uploaded file from Firestore
+  const deleteUploadFromFirestore = async (file: UploadedFile) => {
+    if (!user) return;
+    const ref = doc(db, 'uploaded_resumes', user.uid);
+    try {
+      await updateDoc(ref, { files: arrayRemove(file) });
+    } catch (err) {
+      console.error('Error deleting upload from Firestore:', err);
+    }
+  };
 
   const selected = resumes.find(r => r.id === selectedId) || null;
 
@@ -643,15 +690,18 @@ ATS Score: ${selected.atsScore}/100
                   folder="stunivoz/resumes"
                   accept="application/pdf,image/jpeg,image/png"
                   label="Upload Resume (PDF or Image)"
-                  onSuccess={(result: UploadResult) => {
+                  onSuccess={async (result: UploadResult) => {
                     const kb = (result.bytes / 1024).toFixed(0);
-                    setUploadedFiles(prev => [{
+                    const newFile: UploadedFile = {
                       name: result.public_id.split('/').pop() || 'resume',
                       size: `${kb} KB`,
                       date: new Date().toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }),
                       url: result.secure_url,
-                    }, ...prev]);
-                    showToast('Resume uploaded to Cloudinary!');
+                      public_id: result.public_id,
+                    };
+                    setUploadedFiles(prev => [newFile, ...prev]);
+                    await saveUploadToFirestore(newFile);
+                    showToast('Resume uploaded and saved!');
                   }}
                   onError={(err) => showToast(err, 'error')}
                 />
@@ -664,23 +714,50 @@ ATS Score: ${selected.atsScore}/100
             <Card padding="none">
               <div className="p-4 border-b border-gray-100">
                 <h3 className="font-semibold text-gray-900">Uploaded Resumes</h3>
+                <p className="text-xs text-gray-400 mt-0.5">Saved to your account</p>
               </div>
-              {uploadedFiles.length === 0 ? (
-                <div className="p-6 text-center text-sm text-gray-400">No uploads yet.</div>
+              {loadingUploads ? (
+                <div className="p-6 flex items-center justify-center gap-2 text-gray-400">
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  <span className="text-sm">Loading...</span>
+                </div>
+              ) : uploadedFiles.length === 0 ? (
+                <div className="p-6 text-center">
+                  <FileText className="w-8 h-8 mx-auto text-gray-200 mb-2" />
+                  <p className="text-sm text-gray-400">No uploads yet.</p>
+                  <p className="text-xs text-gray-300 mt-1">Upload a PDF and it will appear here.</p>
+                </div>
               ) : (
                 <div className="divide-y divide-gray-100">
                   {uploadedFiles.map((file, i) => (
                     <div key={i} className="p-4 flex items-center gap-3">
-                      <FileText className="w-5 h-5 text-gray-400 shrink-0" />
+                      <div className="w-9 h-9 rounded-lg bg-red-50 flex items-center justify-center shrink-0">
+                        <FileText className="w-5 h-5 text-red-400" />
+                      </div>
                       <div className="flex-1 min-w-0">
                         <h4 className="font-medium text-gray-900 text-sm truncate">{file.name}</h4>
                         <p className="text-xs text-gray-500">{file.size} · {file.date}</p>
                       </div>
-                      <a href={file.url} target="_blank" rel="noopener noreferrer">
+                      <a href={file.url} target="_blank" rel="noopener noreferrer" title="View PDF">
                         <Button variant="ghost" size="sm">
-                          <ExternalLink className="w-4 h-4" />
+                          <Eye className="w-4 h-4" />
                         </Button>
                       </a>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        loading={deletingId === file.public_id}
+                        onClick={async () => {
+                          setDeletingId(file.public_id);
+                          setUploadedFiles(prev => prev.filter((_, idx) => idx !== i));
+                          await deleteUploadFromFirestore(file);
+                          setDeletingId(null);
+                          showToast('Resume deleted.');
+                        }}
+                        title="Delete"
+                      >
+                        <Trash2 className="w-4 h-4 text-red-400" />
+                      </Button>
                     </div>
                   ))}
                 </div>

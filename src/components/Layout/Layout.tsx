@@ -25,7 +25,7 @@ const navItems = [
   { path: '/resume', icon: FileText, label: 'Resume Builder' },
   { path: '/ats', icon: Target, label: 'ATS Analyzer' },
   { path: '/recommendations', icon: Sparkles, label: 'Recommendations' },
-  { path: '/career', icon: TrendingUp, label: 'Career Path' },
+  { path: '/career', icon: Bot, label: 'AI Advisor' },
   { path: '/skills', icon: Star, label: 'Skills' },
   { path: '/practice', icon: Brain, label: 'Practice' },
   { path: '/planner', icon: MenuSquare, label: 'Planner' },
