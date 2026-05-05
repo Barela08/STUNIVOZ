@@ -3,10 +3,11 @@ import { useNavigate } from 'react-router-dom';
 import { ShieldCheck, Mail, Lock, ArrowRight, Eye, EyeOff, Moon, Sun, AlertTriangle } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTheme } from '../../contexts/ThemeContext';
+import { loginUser } from '../../services/firebase';
 
 export const AdminLoginPage: React.FC = () => {
   const navigate = useNavigate();
-  const { signIn, fetchProfile, signOut } = useAuth();
+  const { fetchProfile, signOut } = useAuth();
   const { isDark, toggleTheme } = useTheme();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -23,14 +24,16 @@ export const AdminLoginPage: React.FC = () => {
     setLoading(true);
     setError('');
 
-    const { error: firebaseError } = await signIn(formData.email.trim().toLowerCase(), formData.password);
+    const result = await loginUser(formData.email.trim().toLowerCase(), formData.password);
 
-    if (firebaseError) {
-      const code = (firebaseError as any)?.code || '';
+    if (!result.success || !result.user) {
+      const code = (result.error as any)?.code || '';
       if (code === 'auth/too-many-requests') {
         setError('Too many failed attempts. Please wait a few minutes and try again.');
       } else if (code === 'auth/network-request-failed') {
         setError('Network error. Please check your internet connection.');
+      } else if (code === 'auth/user-not-found' || code === 'auth/wrong-password' || code === 'auth/invalid-credential') {
+        setError('Invalid administrator credentials.');
       } else {
         setError('Access denied. Invalid administrator credentials.');
       }
@@ -38,15 +41,7 @@ export const AdminLoginPage: React.FC = () => {
       return;
     }
 
-    const { auth } = await import('../../services/firebase');
-    const currentUser = auth.currentUser;
-    if (!currentUser) {
-      setError('Authentication failed. Please try again.');
-      setLoading(false);
-      return;
-    }
-
-    const userProfile = await fetchProfile(currentUser.uid);
+    const userProfile = await fetchProfile(result.user.uid);
     if (!userProfile || userProfile.role !== 'admin') {
       await signOut();
       setError('Access denied. This portal is for administrators only.');

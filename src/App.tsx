@@ -125,15 +125,15 @@ const RoleRoute: React.FC<{ children: React.ReactNode; role: UserRole; loginPath
   const { user, profile, loading } = useAuth();
   const { maintenanceMode, maintenanceMessage } = useAdminSettings();
 
-  // Still fetching auth state — wait
+  // Still fetching initial auth state — wait
   if (loading) return <Spinner />;
 
   // No Firebase user → go to login
   if (!user) return <Navigate to={loginPath} replace />;
 
-  // Firebase user exists but Firestore profile hasn't returned yet — show brief spinner
-  // (AuthContext already awaits fetchProfile before setting loading=false, so this is a very short window)
-  if (!profile) return <Navigate to={loginPath} replace />;
+  // Firebase user exists but profile hasn't loaded yet (brief race window after sign-in)
+  // Show spinner instead of wrongly redirecting to login
+  if (!profile) return <Spinner />;
 
   // Profile loaded but wrong role → redirect
   if (profile.role !== role) return <Navigate to={loginPath} replace />;

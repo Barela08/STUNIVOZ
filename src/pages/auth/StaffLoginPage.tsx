@@ -3,10 +3,11 @@ import { useNavigate } from 'react-router-dom';
 import { Shield, Mail, Lock, ArrowRight, Eye, EyeOff, Moon, Sun, Info } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTheme } from '../../contexts/ThemeContext';
+import { loginUser } from '../../services/firebase';
 
 export const StaffLoginPage: React.FC = () => {
   const navigate = useNavigate();
-  const { signIn, fetchProfile, signOut } = useAuth();
+  const { fetchProfile, signOut } = useAuth();
   const { isDark, toggleTheme } = useTheme();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -23,22 +24,24 @@ export const StaffLoginPage: React.FC = () => {
     setLoading(true);
     setError('');
 
-    const { error: loginError } = await signIn(formData.email, formData.password);
-    if (loginError) {
-      setError(loginError.message || 'Invalid credentials.');
+    const result = await loginUser(formData.email.trim().toLowerCase(), formData.password);
+
+    if (!result.success || !result.user) {
+      const code = (result.error as any)?.code || '';
+      if (code === 'auth/too-many-requests') {
+        setError('Too many failed attempts. Please wait a few minutes and try again.');
+      } else if (code === 'auth/network-request-failed') {
+        setError('Network error. Please check your internet connection.');
+      } else if (code === 'auth/user-not-found' || code === 'auth/wrong-password' || code === 'auth/invalid-credential') {
+        setError('Invalid staff credentials.');
+      } else {
+        setError('Invalid credentials. Please try again.');
+      }
       setLoading(false);
       return;
     }
 
-    const { auth } = await import('../../services/firebase');
-    const currentUser = auth.currentUser;
-    if (!currentUser) {
-      setError('Authentication failed.');
-      setLoading(false);
-      return;
-    }
-
-    const userProfile = await fetchProfile(currentUser.uid);
+    const userProfile = await fetchProfile(result.user.uid);
     if (!userProfile || userProfile.role !== 'staff') {
       await signOut();
       setError('Access denied. Staff credentials required. Please contact your administrator.');
