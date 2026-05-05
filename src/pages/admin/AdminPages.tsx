@@ -3499,21 +3499,21 @@ const AiHelpUrlCard: React.FC = () => {
     <Card>
       {toast && <div className="fixed bottom-6 right-6 z-50 flex items-center gap-2 px-4 py-3 bg-gray-900 dark:bg-gray-100 text-white dark:text-gray-900 text-sm font-medium rounded-xl shadow-xl"><CheckCircle className="w-4 h-4 text-green-400" /> {toast}</div>}
       <CardHeader
-        title="AI Help Chat — Student Assistant"
-        subtitle="Set the URL for the AI chat assistant embedded on the student-facing AI Help page. Supports any chatbot that allows iframe embedding (e.g. Tidio, Crisp, custom Gemini/GPT chatbot)."
+        title="AI Help — Browser URL"
+        subtitle="Set any website URL here. The AI Help page opens it in a built-in browser with an address bar, reload button, and 'open in new tab' option. Leave blank to use the built-in AI chat instead."
       />
       <CardContent>
         <div className="space-y-3">
           <div>
             <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-2">
-              Chat Embed URL
+              Website URL (any link)
             </label>
             <div className="flex gap-2">
               <input
                 type="url"
                 value={url}
                 onChange={e => { setUrl(e.target.value); setSaved(false); }}
-                placeholder="https://your-chatbot.com/embed/..."
+                placeholder="https://chatgpt.com  or  https://your-chatbot.com"
                 className="flex-1 px-3 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-sm focus:outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 transition-all"
               />
               <button
@@ -3525,12 +3525,38 @@ const AiHelpUrlCard: React.FC = () => {
                 {saving ? 'Saving...' : saved ? 'Saved!' : 'Save URL'}
               </button>
             </div>
+            {url && (
+              <div className="mt-1.5 flex items-center gap-1.5">
+                <span className="text-xs text-gray-400">Preview:</span>
+                <a href={url} target="_blank" rel="noopener noreferrer" className="text-xs text-primary-500 hover:underline truncate max-w-xs">{url}</a>
+              </div>
+            )}
           </div>
+
           <div className="p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-xl">
-            <p className="text-xs text-blue-700 dark:text-blue-300">
-              <span className="font-semibold">Tip:</span> The AI Help page shows an iframe embedding this URL. Students can access it via the sidebar navigation. The URL is stored in Firestore and updates instantly for all users.
+            <p className="text-xs font-semibold text-blue-700 dark:text-blue-400 mb-1">🌐 How it works</p>
+            <p className="text-xs text-blue-700 dark:text-blue-300 leading-relaxed">
+              The AI Help page opens like a mini browser — address bar, reload, and open-in-new-tab button.
+              Students can navigate to any page inside it. URL is saved to Firestore and updates instantly for all users.
             </p>
           </div>
+
+          <div className="p-3 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-xl">
+            <p className="text-xs font-semibold text-yellow-700 dark:text-yellow-400 mb-1">⚠️ Embedding notice</p>
+            <p className="text-xs text-yellow-700 dark:text-yellow-300 leading-relaxed">
+              Sites like <strong>ChatGPT, Claude, Gemini</strong> block embedding inside other pages (browser security rule — not our limitation).
+              If a site is blocked, the page shows a clear message with an "Open in new tab" button.
+              For full embedding support, use Tidio, Crisp, or your own hosted chatbot.
+            </p>
+          </div>
+
+          {!url.trim() && (
+            <div className="p-3 bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 rounded-xl">
+              <p className="text-xs text-gray-500 dark:text-gray-400">
+                <span className="font-semibold">No URL set</span> — students see the built-in AI career advisor chat.
+              </p>
+            </div>
+          )}
         </div>
       </CardContent>
     </Card>
