@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { getFirestore, collection, onSnapshot, query, where, orderBy } from 'firebase/firestore';
+import { getFirestore, collection, onSnapshot } from 'firebase/firestore';
 import {
-  Map, Search, FileText, Download, ExternalLink, ChevronDown, ChevronUp,
+  Map, Search, FileText, Download, ChevronDown, ChevronUp,
   BookOpen, Code2, Palette, TrendingUp, Database, Shield, Cpu, Globe,
   Megaphone, BarChart2, Layers, Lightbulb, X, Clock, Tag, Eye
 } from 'lucide-react';
@@ -193,22 +193,24 @@ export const RoadmapsPage: React.FC = () => {
 
   useEffect(() => {
     const db = getFirestore();
-    const q = query(
+    // Fetch ALL roadmaps, filter + sort client-side — no composite index needed
+    const unsub = onSnapshot(
       collection(db, 'roadmaps'),
-      where('published', '==', true),
-      orderBy('createdAt', 'desc')
-    );
-    const unsub = onSnapshot(q, snap => {
-      setRoadmaps(snap.docs.map(d => ({ id: d.id, ...d.data() } as Roadmap)));
-      setLoading(false);
-    }, () => {
-      // fallback without orderBy in case index not built
-      const q2 = query(collection(db, 'roadmaps'), where('published', '==', true));
-      onSnapshot(q2, snap2 => {
-        setRoadmaps(snap2.docs.map(d => ({ id: d.id, ...d.data() } as Roadmap)));
+      snap => {
+        const all = snap.docs.map(d => ({ id: d.id, ...d.data() } as Roadmap));
+        const published = all
+          .filter(r => r.published === true)
+          .sort((a, b) => {
+            if (!a.createdAt && !b.createdAt) return 0;
+            if (!a.createdAt) return 1;
+            if (!b.createdAt) return -1;
+            return b.createdAt.localeCompare(a.createdAt);
+          });
+        setRoadmaps(published);
         setLoading(false);
-      }, () => setLoading(false));
-    });
+      },
+      () => setLoading(false)
+    );
     return () => unsub();
   }, []);
 

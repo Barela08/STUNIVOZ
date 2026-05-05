@@ -2979,6 +2979,7 @@ export const AIControlPage: React.FC = () => {
   const [showNewKey, setShowNewKey] = useState(false);
   const [addStatus, setAddStatus] = useState<'idle' | 'detecting' | 'fetching' | 'done' | 'error'>('idle');
   const [addError, setAddError] = useState('');
+  const autoTriggerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [featureAssign, setFeatureAssign] = useState<Record<string, string>>(() => {
     try { return JSON.parse(localStorage.getItem(FEATURE_ASSIGN_KEY) || '{}'); } catch { return {}; }
   });
@@ -3009,8 +3010,22 @@ export const AIControlPage: React.FC = () => {
     } catch {}
   };
 
-  const handleAddKey = async () => {
-    const key = newKey.trim();
+  // Auto-trigger when key is pasted / typed and matches a known prefix
+  const handleKeyChange = (val: string) => {
+    setNewKey(val);
+    setAddError('');
+    if (autoTriggerRef.current) clearTimeout(autoTriggerRef.current);
+    const trimmed = val.trim();
+    // Only auto-trigger if key is long enough AND matches a known prefix
+    const knownPrefix = DETECT_MAP.some(({ prefix }) => trimmed.startsWith(prefix));
+    if (knownPrefix && trimmed.length >= 20 && addStatus === 'idle') {
+      autoTriggerRef.current = setTimeout(() => {
+        handleAddKeyWithValue(trimmed);
+      }, 600); // 600ms debounce after paste
+    }
+  };
+
+  const handleAddKeyWithValue = async (key: string) => {
     if (!key) { setAddError('Please enter an API key.'); return; }
     setAddError('');
     setAddStatus('detecting');
@@ -3051,6 +3066,13 @@ export const AIControlPage: React.FC = () => {
     setNewKey('');
     setAddStatus('done');
     setTimeout(() => setAddStatus('idle'), 2000);
+  };
+
+  const handleAddKey = () => {
+    const key = newKey.trim();
+    if (!key) { setAddError('Please enter an API key.'); return; }
+    if (autoTriggerRef.current) clearTimeout(autoTriggerRef.current);
+    handleAddKeyWithValue(key);
   };
 
   const removeEntry = (id: string) => {
@@ -3168,16 +3190,28 @@ export const AIControlPage: React.FC = () => {
 
             {/* Key input */}
             <div>
-              <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-2">
-                Paste API Key
-              </label>
+              <div className="flex items-center justify-between mb-2">
+                <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">
+                  Paste API Key
+                </label>
+                <span className="text-[10px] px-2 py-0.5 rounded-full bg-purple-100 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400 font-semibold flex items-center gap-1">
+                  <Sparkles className="w-3 h-3" /> Auto-detects on paste
+                </span>
+              </div>
               <div className="flex gap-2">
                 <div className="relative flex-1">
                   <Key className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                   <input
                     type={showNewKey ? 'text' : 'password'}
                     value={newKey}
-                    onChange={e => { setNewKey(e.target.value); setAddError(''); setAddStatus('idle'); }}
+                    onChange={e => handleKeyChange(e.target.value)}
+                    onPaste={e => {
+                      const pasted = e.clipboardData.getData('text').trim();
+                      if (pasted) {
+                        e.preventDefault();
+                        handleKeyChange(pasted);
+                      }
+                    }}
                     onKeyDown={e => e.key === 'Enter' && handleAddKey()}
                     placeholder="Paste your API key here (AIza..., sk-..., sk-ant-..., gsk_...)"
                     className="w-full pl-9 pr-16 py-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-sm focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20 transition-all font-mono"
