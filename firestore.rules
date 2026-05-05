@@ -1,0 +1,108 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isAuth() {
+      return request.auth != null;
+    }
+
+    function userRole() {
+      return get(/databases/$(database)/documents/profiles/$(request.auth.uid)).data.role;
+    }
+
+    function isAdmin() {
+      return isAuth() && userRole() == 'admin';
+    }
+
+    function isStaff() {
+      return isAuth() && (userRole() == 'staff' || userRole() == 'admin');
+    }
+
+    function isCompany() {
+      return isAuth() && (userRole() == 'company' || userRole() == 'admin');
+    }
+
+    // ── Profiles: users read/write own, admin reads all ──────────────────────
+    match /profiles/{uid} {
+      allow read: if isAuth() && (request.auth.uid == uid || isAdmin());
+      allow write: if isAuth() && (request.auth.uid == uid || isAdmin());
+    }
+
+    // ── Users collection (legacy mirror) ──────────────────────────────────────
+    match /users/{uid} {
+      allow read: if isAuth() && (request.auth.uid == uid || isAdmin());
+      allow write: if isAuth() && (request.auth.uid == uid || isAdmin());
+    }
+
+    // ── Community posts ───────────────────────────────────────────────────────
+    match /community_posts/{postId} {
+      allow read: if isAuth();
+      allow create: if isAuth();
+      allow update, delete: if isAuth() && (request.auth.uid == resource.data.authorId || isAdmin() || isStaff());
+    }
+
+    // ── Community groups ──────────────────────────────────────────────────────
+    match /community_groups/{groupId} {
+      allow read: if isAuth();
+      allow create: if isAdmin() || isStaff() || isCompany();
+      allow update, delete: if isAdmin();
+    }
+
+    // ── System config (admin write, any auth read) ────────────────────────────
+    match /system_config/{docId} {
+      allow read: if isAuth();
+      allow write: if isAdmin();
+    }
+
+    // ── App config (admin only) ───────────────────────────────────────────────
+    match /app_config/{docId} {
+      allow read, write: if isAdmin();
+    }
+
+    // ── Internships ───────────────────────────────────────────────────────────
+    match /internships/{id} {
+      allow read: if isAuth();
+      allow write: if isAdmin() || isCompany();
+    }
+
+    // ── Events ───────────────────────────────────────────────────────────────
+    match /events/{id} {
+      allow read: if isAuth();
+      allow write: if isAdmin() || isCompany() || isStaff();
+    }
+
+    // ── Courses ───────────────────────────────────────────────────────────────
+    match /courses/{id} {
+      allow read: if isAuth();
+      allow write: if isAdmin() || isStaff();
+    }
+
+    // ── Roadmaps ──────────────────────────────────────────────────────────────
+    match /roadmaps/{id} {
+      allow read: if isAuth();
+      allow write: if isAdmin() || isStaff();
+    }
+
+    // ── Mentors ───────────────────────────────────────────────────────────────
+    match /mentors/{id} {
+      allow read: if isAuth();
+      allow write: if isAdmin();
+    }
+
+    // ── ATS results (own only) ────────────────────────────────────────────────
+    match /ats_results/{uid} {
+      allow read, write: if isAuth() && (request.auth.uid == uid || isAdmin());
+    }
+
+    // ── Notifications ─────────────────────────────────────────────────────────
+    match /notifications/{id} {
+      allow read: if isAuth() && (request.auth.uid == resource.data.userId || isAdmin());
+      allow write: if isAdmin() || isStaff();
+    }
+
+    // ── Anything else: admin full access ─────────────────────────────────────
+    match /{document=**} {
+      allow read, write: if isAdmin();
+    }
+  }
+}

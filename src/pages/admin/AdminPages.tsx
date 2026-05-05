@@ -582,7 +582,7 @@ export const UserManagementPage: React.FC = () => {
           mergeAndSet();
         }, (err: any) => {
           const msg = err?.code === 'permission-denied'
-            ? 'Firestore rules are blocking admin reads. Add: allow read: if request.auth != null; to your profiles collection rules.'
+            ? 'FIRESTORE_RULES_BLOCKED'
             : 'Failed to load users. Check your Firebase connection.';
           setUsersError(msg);
           setLoadingUsers(false);
@@ -766,12 +766,49 @@ export const UserManagementPage: React.FC = () => {
                 </td></tr>
               )}
               {!loadingUsers && usersError && (
-                <tr><td colSpan={7} className="px-5 py-10 text-center">
-                  <div className="inline-flex flex-col items-center gap-2 max-w-md text-center">
-                    <AlertTriangle className="w-8 h-8 text-amber-500" />
-                    <p className="text-sm font-semibold text-gray-700 dark:text-gray-300">Cannot load users</p>
-                    <p className="text-xs text-gray-500 dark:text-gray-400">{usersError}</p>
-                  </div>
+                <tr><td colSpan={7} className="px-4 py-8">
+                  {usersError === 'FIRESTORE_RULES_BLOCKED' ? (
+                    <div className="max-w-2xl mx-auto bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700 rounded-2xl p-5">
+                      <div className="flex items-start gap-3 mb-3">
+                        <AlertTriangle className="w-5 h-5 text-amber-500 flex-shrink-0 mt-0.5" />
+                        <div>
+                          <p className="font-semibold text-amber-800 dark:text-amber-300 text-sm">Firestore Security Rules are blocking user reads</p>
+                          <p className="text-xs text-amber-700 dark:text-amber-400 mt-1">Go to <strong>Firebase Console → Firestore → Rules</strong> and paste these rules, then click Publish:</p>
+                        </div>
+                      </div>
+                      <pre className="bg-gray-900 text-green-400 text-xs rounded-xl p-4 overflow-x-auto leading-relaxed whitespace-pre-wrap">
+{`rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function isAdmin() {
+      return request.auth != null &&
+        get(/databases/$(database)/documents/profiles/$(request.auth.uid)).data.role == 'admin';
+    }
+    match /profiles/{uid} {
+      allow read, write: if request.auth != null && request.auth.uid == uid;
+      allow read, write: if isAdmin();
+    }
+    match /users/{uid} {
+      allow read, write: if request.auth != null && request.auth.uid == uid;
+      allow read, write: if isAdmin();
+    }
+    match /{document=**} {
+      allow read, write: if isAdmin();
+    }
+  }
+}`}
+                      </pre>
+                      <p className="text-xs text-amber-600 dark:text-amber-400 mt-3 flex items-center gap-1">
+                        <Info className="w-3.5 h-3.5" /> After publishing rules, refresh this page — users will appear automatically.
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="inline-flex flex-col items-center gap-2 max-w-md mx-auto text-center">
+                      <AlertTriangle className="w-8 h-8 text-amber-500" />
+                      <p className="text-sm font-semibold text-gray-700 dark:text-gray-300">Cannot load users</p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400">{usersError}</p>
+                    </div>
+                  )}
                 </td></tr>
               )}
               {!loadingUsers && !usersError && filtered.length === 0 && (

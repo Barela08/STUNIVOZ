@@ -342,7 +342,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       updated_at: new Date().toISOString(),
     };
     setProfile(mockProfile);
-    localStorage.setItem(ADMIN_SESSION_KEY, JSON.stringify(mockProfile));
+    // Save with _savedAt so the 8-hour expiry check in useEffect works correctly
+    localStorage.setItem(ADMIN_SESSION_KEY, JSON.stringify({ ...mockProfile, _savedAt: Date.now() }));
   };
 
   const updateProfile = async (data: Partial<Profile>) => {

@@ -118,12 +118,24 @@ const FeatureRoute: React.FC<{ children: React.ReactNode; featureKey: string; fe
 const RoleRoute: React.FC<{ children: React.ReactNode; role: UserRole; loginPath: string }> = ({ children, role, loginPath }) => {
   const { user, profile, loading } = useAuth();
   const { maintenanceMode, maintenanceMessage } = useAdminSettings();
+
   if (loading) return <div className="min-h-screen flex items-center justify-center dark:bg-gray-950"><Loading size="lg" text="Loading..." /></div>;
-  const isAdminBypass = role === 'admin' && profile?.role === 'admin';
-  if (!user && !isAdminBypass) return <Navigate to={loginPath} replace />;
+
+  // Admin portal allows localStorage session (8-hour expiry enforced in AuthContext)
+  const hasAdminSession = role === 'admin' && profile?.role === 'admin';
+
+  // No authentication at all → redirect to login
+  if (!user && !hasAdminSession) return <Navigate to={loginPath} replace />;
+
+  // Firebase user is authenticated but profile hasn't loaded from Firestore yet → wait (prevents race condition bypass)
+  if (user && !profile) return <div className="min-h-screen flex items-center justify-center dark:bg-gray-950"><Loading size="lg" text="Verifying access..." /></div>;
+
+  // User has a different role than required → redirect
   if (profile && profile.role !== role) return <Navigate to={loginPath} replace />;
-  // Admins bypass maintenance
+
+  // Maintenance mode — admins bypass, everyone else sees maintenance screen
   if (maintenanceMode && role !== 'admin') return <MaintenancePage message={maintenanceMessage} />;
+
   return <>{children}</>;
 };
 
