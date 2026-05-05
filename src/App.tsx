@@ -31,6 +31,7 @@ import { ReviewsPage } from './pages/reviews/ReviewsPage';
 import { NotificationsPage } from './pages/notifications/NotificationsPage';
 import { GamificationPage } from './pages/gamification/GamificationPage';
 import { ContentHubPage } from './pages/content/ContentHubPage';
+import { AiHelpPage } from './pages/ai-help/AiHelpPage';
 
 // Provider Pages
 import { ProviderLayout } from './components/Layout/ProviderLayout';
@@ -52,7 +53,8 @@ import {
   EventManagementPage, CourseManagementPage, APISystemPage,
   AIControlPage, StaffManagementPage, AdsSystemPage,
   UIControlPage, FeatureControlPage, AdminNotificationsPage,
-  AnalyticsPage, SecurityPage, BackupPage, RoadmapManagementPage
+  AnalyticsPage, SecurityPage, BackupPage, RoadmapManagementPage,
+  MentorsManagementPage
 } from './pages/admin/AdminPages';
 import { RoadmapsPage } from './pages/roadmaps/RoadmapsPage';
 import { RolesPage } from './pages/admin/RolesPage';
@@ -171,6 +173,7 @@ const AppRoutes: React.FC = () => {
       <Route path="/gamification" element={<ProtectedRoute><Layout><FeatureRoute featureKey="gamification" featureName="Gamification"><GamificationPage /></FeatureRoute></Layout></ProtectedRoute>} />
       <Route path="/content" element={<ProtectedRoute><Layout><FeatureRoute featureKey="content_hub" featureName="Content Hub"><ContentHubPage /></FeatureRoute></Layout></ProtectedRoute>} />
       <Route path="/roadmaps" element={<ProtectedRoute><Layout><RoadmapsPage /></Layout></ProtectedRoute>} />
+      <Route path="/ai-help" element={<ProtectedRoute><Layout><AiHelpPage /></Layout></ProtectedRoute>} />
 
       {/* Provider Routes — company role only */}
       <Route path="/provider" element={<RoleRoute role="company" loginPath="/provider/login"><ProviderLayout><ProviderDashboardPage /></ProviderLayout></RoleRoute>} />
@@ -204,6 +207,7 @@ const AppRoutes: React.FC = () => {
       <Route path="/admin/backup" element={<RoleRoute role="admin" loginPath="/admin/login"><AdminLayout><BackupPage /></AdminLayout></RoleRoute>} />
       <Route path="/admin/roles" element={<RoleRoute role="admin" loginPath="/admin/login"><AdminLayout><RolesPage /></AdminLayout></RoleRoute>} />
       <Route path="/admin/roadmaps" element={<RoleRoute role="admin" loginPath="/admin/login"><AdminLayout><RoadmapManagementPage /></AdminLayout></RoleRoute>} />
+      <Route path="/admin/mentors" element={<RoleRoute role="admin" loginPath="/admin/login"><AdminLayout><MentorsManagementPage /></AdminLayout></RoleRoute>} />
 
       {/* Default */}
       <Route path="/" element={<HomePage />} />

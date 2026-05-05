@@ -3,7 +3,7 @@ import { Link, useLocation } from 'react-router-dom';
 import {
   LayoutDashboard, Users, Building2, Briefcase, Calendar,
   BookOpen, Plug, Bot, UserCog, Megaphone, Palette,
-  Settings2, Bell, LineChart, Shield, Database, LogOut, Menu, X, Sun, Moon, KeyRound, Map
+  Settings2, Bell, LineChart, Shield, Database, LogOut, Menu, X, Sun, Moon, KeyRound, Map, GraduationCap, MessageSquare
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTheme } from '../../contexts/ThemeContext';
@@ -19,6 +19,7 @@ const navItems = [
   { path: '/admin/internships', icon: Briefcase, label: 'Internships' },
   { path: '/admin/events', icon: Calendar, label: 'Events' },
   { path: '/admin/courses', icon: BookOpen, label: 'Courses' },
+  { path: '/admin/mentors', icon: GraduationCap, label: 'Mentors' },
   { path: '/admin/api', icon: Plug, label: 'API System' },
   { path: '/admin/ai', icon: Bot, label: 'AI Control' },
   { path: '/admin/roadmaps', icon: Map, label: 'Roadmaps' },

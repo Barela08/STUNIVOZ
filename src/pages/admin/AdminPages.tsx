@@ -3426,7 +3426,81 @@ export const AIControlPage: React.FC = () => {
           </div>
         </CardContent>
       </Card>
+
+      {/* AI Help Chat URL */}
+      <AiHelpUrlCard />
     </div>
+  );
+};
+
+const AiHelpUrlCard: React.FC = () => {
+  const [url, setUrl] = useState('');
+  const [saved, setSaved] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [toast, setToastMsg] = useState('');
+
+  useEffect(() => {
+    import('../../services/firebase').then(({ getAiHelpConfig }) => {
+      getAiHelpConfig().then(res => {
+        if (res.success && res.data?.embedUrl) setUrl(res.data.embedUrl);
+      });
+    });
+  }, []);
+
+  const handleSave = async () => {
+    setSaving(true);
+    try {
+      const { saveAiHelpConfig } = await import('../../services/firebase');
+      await saveAiHelpConfig(url.trim());
+      setSaved(true);
+      setToastMsg('AI Help URL saved!');
+      setTimeout(() => { setSaved(false); setToastMsg(''); }, 3000);
+    } catch {
+      setToastMsg('Failed to save. Check permissions.');
+      setTimeout(() => setToastMsg(''), 3000);
+    }
+    setSaving(false);
+  };
+
+  return (
+    <Card>
+      {toast && <div className="fixed bottom-6 right-6 z-50 flex items-center gap-2 px-4 py-3 bg-gray-900 dark:bg-gray-100 text-white dark:text-gray-900 text-sm font-medium rounded-xl shadow-xl"><CheckCircle className="w-4 h-4 text-green-400" /> {toast}</div>}
+      <CardHeader
+        title="AI Help Chat — Student Assistant"
+        subtitle="Set the URL for the AI chat assistant embedded on the student-facing AI Help page. Supports any chatbot that allows iframe embedding (e.g. Tidio, Crisp, custom Gemini/GPT chatbot)."
+      />
+      <CardContent>
+        <div className="space-y-3">
+          <div>
+            <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-2">
+              Chat Embed URL
+            </label>
+            <div className="flex gap-2">
+              <input
+                type="url"
+                value={url}
+                onChange={e => { setUrl(e.target.value); setSaved(false); }}
+                placeholder="https://your-chatbot.com/embed/..."
+                className="flex-1 px-3 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-sm focus:outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 transition-all"
+              />
+              <button
+                onClick={handleSave}
+                disabled={saving || !url.trim()}
+                className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-primary-600 hover:bg-primary-700 disabled:opacity-50 text-white font-semibold text-sm transition-all whitespace-nowrap"
+              >
+                {saving ? <RefreshCw className="w-4 h-4 animate-spin" /> : saved ? <CheckCircle className="w-4 h-4" /> : null}
+                {saving ? 'Saving...' : saved ? 'Saved!' : 'Save URL'}
+              </button>
+            </div>
+          </div>
+          <div className="p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-xl">
+            <p className="text-xs text-blue-700 dark:text-blue-300">
+              <span className="font-semibold">Tip:</span> The AI Help page shows an iframe embedding this URL. Students can access it via the sidebar navigation. The URL is stored in Firestore and updates instantly for all users.
+            </p>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
   );
 };
 
@@ -4798,6 +4872,260 @@ export const BackupPage: React.FC = () => {
           </Card>
         </div>
       </div>
+    </div>
+  );
+};
+
+// ── Mentors Management Page ───────────────────────────────────────────────────
+interface MentorRecord {
+  id: string;
+  name: string;
+  email: string;
+  expertise: string;
+  company: string;
+  experience: string;
+  linkedin: string;
+  bio: string;
+  status: 'active' | 'inactive';
+  createdAt?: any;
+}
+
+const EMPTY_MENTOR: Omit<MentorRecord, 'id'> = {
+  name: '', email: '', expertise: '', company: '',
+  experience: '', linkedin: '', bio: '', status: 'active',
+};
+
+export const MentorsManagementPage: React.FC = () => {
+  const [mentors, setMentors] = useState<MentorRecord[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState('');
+  const [showModal, setShowModal] = useState(false);
+  const [editing, setEditing] = useState<MentorRecord | null>(null);
+  const [form, setForm] = useState(EMPTY_MENTOR);
+  const [saving, setSaving] = useState(false);
+  const [toast, setToast] = useState('');
+  const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
+
+  const showToast = (msg: string) => { setToast(msg); setTimeout(() => setToast(''), 3000); };
+
+  useEffect(() => {
+    const unsub = onSnapshot(collection(db, 'mentors'),
+      (snap) => {
+        setMentors(snap.docs.map(d => ({ id: d.id, ...d.data() } as MentorRecord)));
+        setLoading(false);
+      },
+      () => setLoading(false)
+    );
+    return () => unsub();
+  }, []);
+
+  const openAdd = () => { setEditing(null); setForm(EMPTY_MENTOR); setShowModal(true); };
+  const openEdit = (m: MentorRecord) => { setEditing(m); setForm({ name: m.name, email: m.email, expertise: m.expertise, company: m.company, experience: m.experience, linkedin: m.linkedin, bio: m.bio, status: m.status }); setShowModal(true); };
+  const closeModal = () => { setShowModal(false); setEditing(null); };
+
+  const handleSave = async () => {
+    if (!form.name.trim() || !form.email.trim()) return;
+    setSaving(true);
+    try {
+      if (editing) {
+        await updateDoc(doc(db, 'mentors', editing.id), { ...form });
+        showToast('Mentor updated!');
+      } else {
+        await addDoc(collection(db, 'mentors'), { ...form, createdAt: new Date().toISOString() });
+        showToast('Mentor added!');
+      }
+      closeModal();
+    } catch (e) {
+      showToast('Error saving mentor.');
+    }
+    setSaving(false);
+  };
+
+  const handleDelete = async (id: string) => {
+    try {
+      await deleteDoc(doc(db, 'mentors', id));
+      showToast('Mentor removed.');
+    } catch { showToast('Error deleting mentor.'); }
+    setDeleteConfirm(null);
+  };
+
+  const filtered = mentors.filter(m =>
+    !search || m.name.toLowerCase().includes(search.toLowerCase()) ||
+    m.expertise.toLowerCase().includes(search.toLowerCase()) ||
+    m.company.toLowerCase().includes(search.toLowerCase())
+  );
+
+  return (
+    <div className="space-y-6 animate-fade-in">
+      {toast && <div className="fixed bottom-6 right-6 z-50 flex items-center gap-2 px-4 py-3 bg-gray-900 dark:bg-gray-100 text-white dark:text-gray-900 text-sm font-medium rounded-xl shadow-xl"><CheckCircle className="w-4 h-4 text-green-400" /> {toast}</div>}
+
+      {deleteConfirm && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-2xl w-full max-w-sm border border-gray-200 dark:border-gray-700 p-6">
+            <h3 className="font-bold text-gray-900 dark:text-white mb-2">Remove Mentor?</h3>
+            <p className="text-sm text-gray-500 dark:text-gray-400 mb-5">This mentor will be permanently removed from the platform.</p>
+            <div className="flex gap-3">
+              <button onClick={() => setDeleteConfirm(null)} className="flex-1 py-2 rounded-xl border border-gray-200 dark:border-gray-700 text-sm font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-all">Cancel</button>
+              <button onClick={() => handleDelete(deleteConfirm)} className="flex-1 py-2 rounded-xl bg-red-600 hover:bg-red-700 text-sm font-medium text-white transition-all">Remove</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showModal && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-2xl w-full max-w-lg border border-gray-200 dark:border-gray-700 max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between p-6 border-b border-gray-100 dark:border-gray-800">
+              <h2 className="text-lg font-bold text-gray-900 dark:text-white">{editing ? 'Edit Mentor' : 'Add Mentor'}</h2>
+              <button onClick={closeModal} className="p-2 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800"><X className="w-5 h-5 text-gray-500" /></button>
+            </div>
+            <div className="p-6 space-y-4">
+              {[
+                { label: 'Full Name', key: 'name', placeholder: 'e.g. Priya Sharma', required: true },
+                { label: 'Email', key: 'email', placeholder: 'priya@example.com', required: true },
+                { label: 'Expertise', key: 'expertise', placeholder: 'e.g. Web Development, Machine Learning' },
+                { label: 'Company / Organization', key: 'company', placeholder: 'e.g. Google, Infosys' },
+                { label: 'Years of Experience', key: 'experience', placeholder: 'e.g. 5 years' },
+                { label: 'LinkedIn URL', key: 'linkedin', placeholder: 'https://linkedin.com/in/...' },
+              ].map(f => (
+                <div key={f.key}>
+                  <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">
+                    {f.label} {f.required && <span className="text-red-500">*</span>}
+                  </label>
+                  <input
+                    value={(form as any)[f.key]}
+                    onChange={e => setForm(prev => ({ ...prev, [f.key]: e.target.value }))}
+                    placeholder={f.placeholder}
+                    className="w-full px-3 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-sm focus:outline-none focus:border-red-500 transition-all"
+                  />
+                </div>
+              ))}
+              <div>
+                <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">Bio</label>
+                <textarea
+                  value={form.bio}
+                  onChange={e => setForm(prev => ({ ...prev, bio: e.target.value }))}
+                  rows={3}
+                  placeholder="Brief bio about the mentor..."
+                  className="w-full px-3 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-sm focus:outline-none focus:border-red-500 transition-all resize-none"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">Status</label>
+                <select
+                  value={form.status}
+                  onChange={e => setForm(prev => ({ ...prev, status: e.target.value as 'active' | 'inactive' }))}
+                  className="w-full px-3 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-sm focus:outline-none focus:border-red-500 transition-all"
+                >
+                  <option value="active">Active</option>
+                  <option value="inactive">Inactive</option>
+                </select>
+              </div>
+            </div>
+            <div className="flex gap-3 p-6 pt-0">
+              <button onClick={closeModal} className="flex-1 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 text-sm font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-all">Cancel</button>
+              <button
+                onClick={handleSave}
+                disabled={saving || !form.name.trim() || !form.email.trim()}
+                className="flex-1 py-2.5 rounded-xl bg-red-600 hover:bg-red-700 disabled:opacity-50 text-sm font-semibold text-white transition-all flex items-center justify-center gap-2"
+              >
+                {saving ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                {saving ? 'Saving...' : editing ? 'Update Mentor' : 'Add Mentor'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Mentors</h1>
+          <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">Manage mentors available to students on the platform</p>
+        </div>
+        <button onClick={openAdd} className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-red-600 hover:bg-red-700 text-white font-semibold text-sm transition-all shadow-lg shadow-red-900/20">
+          <Plus className="w-4 h-4" /> Add Mentor
+        </button>
+      </div>
+
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+        {[
+          { label: 'Total Mentors', value: mentors.length, color: 'text-blue-500', bg: 'bg-blue-50 dark:bg-blue-900/20' },
+          { label: 'Active', value: mentors.filter(m => m.status === 'active').length, color: 'text-green-500', bg: 'bg-green-50 dark:bg-green-900/20' },
+          { label: 'Inactive', value: mentors.filter(m => m.status === 'inactive').length, color: 'text-gray-500', bg: 'bg-gray-100 dark:bg-gray-800' },
+          { label: 'Companies', value: new Set(mentors.map(m => m.company).filter(Boolean)).size, color: 'text-purple-500', bg: 'bg-purple-50 dark:bg-purple-900/20' },
+        ].map((s, i) => (
+          <Card key={i} className="!p-4">
+            <div className={`w-9 h-9 rounded-xl ${s.bg} flex items-center justify-center mb-2`}>
+              <Star className={`w-4 h-4 ${s.color}`} />
+            </div>
+            <div className="text-2xl font-bold text-gray-900 dark:text-white">{s.value}</div>
+            <div className="text-xs text-gray-500 dark:text-gray-400">{s.label}</div>
+          </Card>
+        ))}
+      </div>
+
+      <Card>
+        <div className="p-4 border-b border-gray-100 dark:border-gray-800 flex flex-col sm:flex-row gap-3">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+            <input
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              placeholder="Search mentors by name, expertise, company..."
+              className="w-full pl-9 pr-4 py-2 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm text-gray-900 dark:text-white focus:outline-none focus:border-red-500 transition-all"
+            />
+          </div>
+        </div>
+
+        {loading ? (
+          <div className="py-10 flex items-center justify-center gap-2 text-gray-400">
+            <RefreshCw className="w-4 h-4 animate-spin" />
+            <span className="text-sm">Loading mentors...</span>
+          </div>
+        ) : filtered.length === 0 ? (
+          <div className="py-12 text-center">
+            <UserIcon className="w-10 h-10 mx-auto text-gray-300 dark:text-gray-600 mb-3" />
+            <p className="text-gray-500 dark:text-gray-400 text-sm">{search ? 'No mentors match your search.' : 'No mentors added yet. Click "Add Mentor" to get started.'}</p>
+          </div>
+        ) : (
+          <div className="divide-y divide-gray-100 dark:divide-gray-800">
+            {filtered.map(mentor => (
+              <div key={mentor.id} className="flex items-center gap-4 p-4 hover:bg-gray-50 dark:hover:bg-gray-800/40 transition-colors">
+                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-red-400 to-red-600 flex items-center justify-center text-white font-bold text-sm flex-shrink-0">
+                  {mentor.name.charAt(0).toUpperCase()}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <p className="font-semibold text-gray-900 dark:text-white text-sm">{mentor.name}</p>
+                    <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${mentor.status === 'active' ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400' : 'bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400'}`}>
+                      {mentor.status}
+                    </span>
+                  </div>
+                  <p className="text-xs text-gray-500 dark:text-gray-400 truncate">{mentor.email}</p>
+                  <div className="flex items-center gap-3 mt-1 flex-wrap">
+                    {mentor.expertise && <span className="text-xs text-primary-600 dark:text-primary-400 font-medium">{mentor.expertise}</span>}
+                    {mentor.company && <span className="text-xs text-gray-400 dark:text-gray-500 flex items-center gap-0.5"><MapPin className="w-3 h-3" />{mentor.company}</span>}
+                    {mentor.experience && <span className="text-xs text-gray-400 dark:text-gray-500">{mentor.experience}</span>}
+                  </div>
+                </div>
+                <div className="flex items-center gap-1 flex-shrink-0">
+                  {mentor.linkedin && (
+                    <a href={mentor.linkedin} target="_blank" rel="noopener noreferrer" className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-400 hover:text-blue-600 transition-colors">
+                      <ExternalLink className="w-4 h-4" />
+                    </a>
+                  )}
+                  <button onClick={() => openEdit(mentor)} className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-400 hover:text-blue-600 transition-colors">
+                    <Edit className="w-4 h-4" />
+                  </button>
+                  <button onClick={() => setDeleteConfirm(mentor.id)} className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-400 hover:text-red-600 transition-colors">
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </Card>
     </div>
   );
 };

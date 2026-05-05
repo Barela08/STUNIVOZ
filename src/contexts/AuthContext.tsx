@@ -109,12 +109,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   useEffect(() => {
+    const SESSION_MAX_AGE_MS = 8 * 60 * 60 * 1000; // 8 hours
     const savedSession = localStorage.getItem(ADMIN_SESSION_KEY);
     if (savedSession) {
       try {
-        const savedProfile = JSON.parse(savedSession) as Profile;
-        if (savedProfile.role === 'admin') {
-          setProfile(savedProfile);
+        const parsed = JSON.parse(savedSession) as Profile & { _savedAt?: number };
+        const savedAt = parsed._savedAt || 0;
+        const isExpired = Date.now() - savedAt > SESSION_MAX_AGE_MS;
+        if (isExpired) {
+          localStorage.removeItem(ADMIN_SESSION_KEY);
+        } else if (parsed.role === 'admin') {
+          setProfile(parsed);
           setLoading(false);
         }
       } catch {
@@ -130,7 +135,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         const p = await fetchProfile(firebaseUser.uid);
         if (p) {
           if (p.role === 'admin') {
-            localStorage.setItem(ADMIN_SESSION_KEY, JSON.stringify(p));
+            localStorage.setItem(ADMIN_SESSION_KEY, JSON.stringify({ ...p, _savedAt: Date.now() }));
           }
         }
       } else {

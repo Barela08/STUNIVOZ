@@ -211,3 +211,24 @@ export const getApiConfig = async () => {
     return { success: false, error };
   }
 };
+
+export const saveAiHelpConfig = async (embedUrl: string) => {
+  try {
+    const docRef = doc(db, 'system_config', 'ai_help');
+    await setDoc(docRef, { embedUrl, updatedAt: serverTimestamp() }, { merge: true });
+    return { success: true };
+  } catch (error) {
+    return { success: false, error };
+  }
+};
+
+export const getAiHelpConfig = async () => {
+  try {
+    const docRef = doc(db, 'system_config', 'ai_help');
+    const snap = await getDoc(docRef);
+    if (snap.exists()) return { success: true, data: snap.data() };
+    return { success: true, data: null };
+  } catch (error) {
+    return { success: false, error };
+  }
+};

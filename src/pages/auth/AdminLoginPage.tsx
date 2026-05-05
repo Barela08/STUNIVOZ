@@ -6,18 +6,10 @@ import { useTheme } from '../../contexts/ThemeContext';
 
 const ADMIN_EMAILS = ['hackifypro@gmail.com', 'hackifyoro@gmail.com'];
 const FIREBASE_ADMIN_EMAIL = 'hackifypro@gmail.com';
-const ADMIN_PASSWORD = 'Nilu@2006';
-
-const INFRA_ERRORS = [
-  'auth/unauthorized-domain',
-  'auth/operation-not-allowed',
-  'auth/network-request-failed',
-  'auth/internal-error',
-];
 
 export const AdminLoginPage: React.FC = () => {
   const navigate = useNavigate();
-  const { signIn, adminCredentialSignIn } = useAuth();
+  const { signIn } = useAuth();
   const { isDark, toggleTheme } = useTheme();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -68,30 +60,13 @@ export const AdminLoginPage: React.FC = () => {
     }
 
     const code = (firebaseError as any)?.code || '';
-    const isInfraError = INFRA_ERRORS.includes(code) || !code;
 
-    if (isInfraError) {
-      if (formData.password === ADMIN_PASSWORD) {
-        adminCredentialSignIn('admin', FIREBASE_ADMIN_EMAIL);
-        navigate('/admin');
-        return;
-      }
-      setError('Access denied. Invalid administrator credentials.');
-      setLoading(false);
-      return;
-    }
-
-    if (code === 'auth/user-not-found' || code === 'auth/wrong-password' || code === 'auth/invalid-credential') {
-      if (formData.password === ADMIN_PASSWORD) {
-        adminCredentialSignIn('admin', FIREBASE_ADMIN_EMAIL);
-        navigate('/admin');
-        return;
-      }
-      setError('Access denied. Invalid administrator credentials.');
-    } else if (code === 'auth/too-many-requests') {
+    if (code === 'auth/too-many-requests') {
       setError('Too many failed attempts. Please wait a few minutes and try again.');
+    } else if (code === 'auth/network-request-failed') {
+      setError('Network error. Please check your internet connection and try again.');
     } else {
-      setError((firebaseError as any)?.message || 'Access denied. Invalid administrator credentials.');
+      setError('Access denied. Invalid administrator credentials.');
     }
     setLoading(false);
   };
