@@ -34,6 +34,11 @@ service cloud.firestore {
       allow write: if isAuth() && (request.auth.uid == uid || isAdmin());
     }
 
+    // ── Uploaded resumes (own only) ───────────────────────────────────────────
+    match /uploaded_resumes/{uid} {
+      allow read, write: if isAuth() && request.auth.uid == uid;
+    }
+
     // ── Community posts ───────────────────────────────────────────────────────
     match /community_posts/{postId} {
       allow read: if isAuth();
@@ -59,34 +64,34 @@ service cloud.firestore {
       allow read, write: if isAdmin();
     }
 
-    // ── Internships — public read ─────────────────────────────────────────────
+    // ── Internships — public read, admin/company write ────────────────────────
     match /internships/{id} {
       allow read: if true;
-      allow write: if isAdmin() || isCompany();
+      allow create, update, delete: if isAdmin() || isCompany();
     }
 
-    // ── Events — public read ──────────────────────────────────────────────────
+    // ── Events — public read, admin/staff/company write ───────────────────────
     match /events/{id} {
       allow read: if true;
-      allow write: if isAdmin() || isCompany() || isStaff();
+      allow create, update, delete: if isAdmin() || isCompany() || isStaff();
     }
 
-    // ── Courses — public read ─────────────────────────────────────────────────
+    // ── Courses — public read, admin/staff write ──────────────────────────────
     match /courses/{id} {
       allow read: if true;
-      allow write: if isAdmin() || isStaff();
+      allow create, update, delete: if isAdmin() || isStaff();
     }
 
-    // ── Roadmaps — public read ────────────────────────────────────────────────
+    // ── Roadmaps — public read, admin/staff write ─────────────────────────────
     match /roadmaps/{id} {
       allow read: if true;
-      allow write: if isAdmin() || isStaff();
+      allow create, update, delete: if isAdmin() || isStaff();
     }
 
-    // ── Mentors — public read ─────────────────────────────────────────────────
+    // ── Mentors — public read, admin write ────────────────────────────────────
     match /mentors/{id} {
       allow read: if true;
-      allow write: if isAdmin();
+      allow create, update, delete: if isAdmin();
     }
 
     // ── ATS results (own only) ────────────────────────────────────────────────
@@ -97,10 +102,10 @@ service cloud.firestore {
     // ── Notifications ─────────────────────────────────────────────────────────
     match /notifications/{id} {
       allow read: if isAuth() && (request.auth.uid == resource.data.userId || isAdmin());
-      allow write: if isAdmin() || isStaff();
+      allow create, update, delete: if isAdmin() || isStaff();
     }
 
-    // ── Anything else: admin full access ─────────────────────────────────────
+    // ── Admin full access on everything else ─────────────────────────────────
     match /{document=**} {
       allow read, write: if isAdmin();
     }

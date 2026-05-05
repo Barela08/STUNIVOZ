@@ -36,12 +36,16 @@ router.post('/file', requireAuth, upload.single('file'), async (req, res) => {
     const base64 = buffer.toString('base64');
     const dataUri = `data:${mimetype};base64,${base64}`;
 
+    const publicId = isPdf
+      ? `${req.user.uid}_${Date.now()}.pdf`
+      : `${req.user.uid}_${Date.now()}`;
+
     const result = await cloudinary.uploader.upload(dataUri, {
       folder,
       resource_type: isPdf ? 'raw' : 'image',
-      public_id: `${req.user.uid}_${Date.now()}`,
+      public_id: publicId,
       use_filename: false,
-      unique_filename: true,
+      unique_filename: false,
       overwrite: false,
       ...(isPdf ? {} : {
         transformation: [{ quality: 'auto', fetch_format: 'auto' }],
