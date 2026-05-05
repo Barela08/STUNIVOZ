@@ -1,9 +1,10 @@
 import { initializeApp, getApps, getApp } from 'firebase/app';
 import {
   getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword,
-  signOut, onAuthStateChanged, signInWithPopup, GoogleAuthProvider, GithubAuthProvider
+  signOut, onAuthStateChanged, signInWithPopup, GoogleAuthProvider, GithubAuthProvider,
+  fetchSignInMethodsForEmail, linkWithCredential, OAuthCredential
 } from 'firebase/auth';
-import { getFirestore, collection, addDoc, getDocs, doc, updateDoc, deleteDoc, serverTimestamp, setDoc, getDoc } from 'firebase/firestore';
+import { getFirestore, collection, addDoc, getDocs, doc, updateDoc, deleteDoc, serverTimestamp, setDoc, getDoc, onSnapshot, query, orderBy, increment } from 'firebase/firestore';
 import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 
 const firebaseConfig = {
@@ -21,23 +22,38 @@ export const auth = getAuth(app);
 export const db = getFirestore(app);
 export const storage = getStorage(app);
 
-// Auth providers
 export const googleProvider = new GoogleAuthProvider();
 export const githubProvider = new GithubAuthProvider();
 
-// Sign in with Google popup
 export const signInWithGoogle = async () => {
   const result = await signInWithPopup(auth, googleProvider);
   return result;
 };
 
-// Sign in with GitHub popup
 export const signInWithGitHub = async () => {
   const result = await signInWithPopup(auth, githubProvider);
   return result;
 };
 
-// Auth functions
+export const getSignInMethodsForEmail = async (email: string) => {
+  return await fetchSignInMethodsForEmail(auth, email);
+};
+
+export const getCredentialFromError = (error: any, provider: 'google' | 'github'): OAuthCredential | null => {
+  try {
+    if (provider === 'google') return GoogleAuthProvider.credentialFromError(error);
+    return GithubAuthProvider.credentialFromError(error);
+  } catch {
+    return null;
+  }
+};
+
+export const linkPendingCredential = async (pendingCred: OAuthCredential) => {
+  const currentUser = auth.currentUser;
+  if (!currentUser) throw new Error('No authenticated user to link credential to');
+  return await linkWithCredential(currentUser, pendingCred);
+};
+
 export const loginUser = async (email: string, password: string) => {
   try {
     const userCredential = await signInWithEmailAndPassword(auth, email, password);
@@ -75,7 +91,6 @@ export const resetPassword = async (email: string) => {
   }
 };
 
-// Firestore functions
 export const addDocument = async (collectionName: string, data: any) => {
   try {
     const docRef = await addDoc(collection(db, collectionName), {
@@ -142,6 +157,14 @@ export const deleteDocument = async (collectionName: string, id: string) => {
   }
 };
 
+export const incrementLoginCount = async (uid: string) => {
+  try {
+    const docRef = doc(db, 'profiles', uid);
+    await updateDoc(docRef, { login_count: increment(1), last_login: new Date().toISOString() });
+  } catch {
+  }
+};
+
 export const uploadFile = async (file: File, path: string) => {
   try {
     const storageRef = ref(storage, path);
@@ -155,4 +178,36 @@ export const uploadFile = async (file: File, path: string) => {
 
 export const onAuthStateChangedListener = (callback: (user: any) => void) => {
   return onAuthStateChanged(auth, callback);
+};
+
+export const subscribeToCollection = (
+  collectionName: string,
+  callback: (docs: any[]) => void,
+  onError?: (err: any) => void
+) => {
+  const q = query(collection(db, collectionName));
+  return onSnapshot(q, (snap) => {
+    callback(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+  }, onError);
+};
+
+export const saveApiConfig = async (config: any) => {
+  try {
+    const docRef = doc(db, 'system_config', 'ai_settings');
+    await setDoc(docRef, { ...config, updatedAt: serverTimestamp() }, { merge: true });
+    return { success: true };
+  } catch (error) {
+    return { success: false, error };
+  }
+};
+
+export const getApiConfig = async () => {
+  try {
+    const docRef = doc(db, 'system_config', 'ai_settings');
+    const snap = await getDoc(docRef);
+    if (snap.exists()) return { success: true, data: snap.data() };
+    return { success: true, data: null };
+  } catch (error) {
+    return { success: false, error };
+  }
 };

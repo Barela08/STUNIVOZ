@@ -534,44 +534,71 @@ export const UserManagementPage: React.FC = () => {
   const [users, setUsers] = useState<UserRecord[]>([]);
 
   useEffect(() => {
-    let cancelled = false;
+    let unsub1: (() => void) | null = null;
+    let unsub2: (() => void) | null = null;
+    const profilesMap = new Map<string, UserRecord>();
+    const usersMap = new Map<string, UserRecord>();
+
+    const toRecord = (d: any, idx: number): UserRecord => {
+      const p = d;
+      return {
+        id: idx + 1,
+        name: p.full_name || p.name || p.email || 'Unknown',
+        email: p.email || '',
+        role: p.role ? (p.role.charAt(0).toUpperCase() + p.role.slice(1)) : 'Student',
+        college: p.college || p.university || p.college_name || '—',
+        joined: p.created_at ? new Date(p.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : '—',
+        status: p.status || 'Active',
+        ats: p.ats_score ?? null,
+        logins: p.login_count ?? 0,
+        phone: p.phone || '',
+        location: p.location || '',
+        photo: p.profile_photo || p.photo_url || p.photoURL || '',
+        provider: p.provider || 'email',
+        uid: p.id || p.uid || '',
+        lastLogin: p.last_login ? new Date(p.last_login).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : '—',
+      };
+    };
+
+    const mergeAndSet = () => {
+      const merged = new Map<string, UserRecord>();
+      usersMap.forEach((r, uid) => merged.set(uid, r));
+      profilesMap.forEach((r, uid) => merged.set(uid, r));
+      const arr = Array.from(merged.values()).map((r, idx) => ({ ...r, id: idx + 1 }));
+      setUsers(arr);
+      setLoadingUsers(false);
+    };
+
     (async () => {
       try {
-        const { getFirestore, collection, getDocs } = await import('firebase/firestore');
+        const { getFirestore, collection, onSnapshot } = await import('firebase/firestore');
         const db = getFirestore();
-        const snap = await getDocs(collection(db, 'profiles'));
-        if (cancelled) return;
-        const fetched: UserRecord[] = snap.docs.map((d, idx) => {
-          const p = d.data();
-          return {
-            id: idx + 1,
-            name: p.full_name || p.name || p.email || 'Unknown',
-            email: p.email || '',
-            role: p.role ? (p.role.charAt(0).toUpperCase() + p.role.slice(1)) : 'Student',
-            college: p.college || p.university || p.college_name || '—',
-            joined: p.created_at ? new Date(p.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : '—',
-            status: p.status || 'Active',
-            ats: p.ats_score ?? null,
-            logins: p.login_count ?? 0,
-            phone: p.phone || '',
-            location: p.location || '',
-            photo: p.profile_photo || p.photo_url || p.photoURL || '',
-            provider: p.provider || 'email',
-            uid: d.id,
-            lastLogin: p.last_login ? new Date(p.last_login).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : '—',
-          };
+
+        unsub1 = onSnapshot(collection(db, 'profiles'), (snap) => {
+          profilesMap.clear();
+          snap.docs.forEach(d => { profilesMap.set(d.id, toRecord({ id: d.id, ...d.data() }, 0)); });
+          mergeAndSet();
+        }, (err: any) => {
+          const msg = err?.code === 'permission-denied'
+            ? 'Firestore rules are blocking admin reads. Add: allow read: if request.auth != null; to your profiles collection rules.'
+            : 'Failed to load users. Check your Firebase connection.';
+          setUsersError(msg);
+          setLoadingUsers(false);
         });
-        setUsers(fetched);
+
+        unsub2 = onSnapshot(collection(db, 'users'), (snap) => {
+          usersMap.clear();
+          snap.docs.forEach(d => { usersMap.set(d.id, toRecord({ id: d.id, ...d.data() }, 0)); });
+          mergeAndSet();
+        }, () => {});
+
       } catch (err: any) {
-        const msg = err?.code === 'permission-denied' || err?.message?.includes('permissions')
-          ? 'Firestore rules are blocking admin reads. In Firebase Console → Firestore → Rules, add: allow read: if request.auth != null; under the profiles collection.'
-          : 'Failed to load users. Check your Firebase connection.';
-        if (!cancelled) setUsersError(msg);
-      } finally {
-        if (!cancelled) setLoadingUsers(false);
+        setUsersError('Failed to load users. Check your Firebase connection.');
+        setLoadingUsers(false);
       }
     })();
-    return () => { cancelled = true; };
+
+    return () => { unsub1?.(); unsub2?.(); };
   }, []);
 
   const toggleBlock = (id: number) => {
@@ -2393,76 +2420,244 @@ export const APISystemPage: React.FC = () => {
 };
 
 // ── AI Control ───────────────────────────────────────────────────────────────
+
+type DetectedPlatform = 'openai' | 'gemini' | 'claude' | 'groq' | 'unknown';
+
+interface DetectionResult {
+  platform: DetectedPlatform;
+  name: string;
+  badge: string;
+  color: string;
+  docsUrl: string;
+  defaultModels: string[];
+}
+
+const DETECT_MAP: { prefix: string; result: DetectionResult }[] = [
+  { prefix: 'AIza', result: { platform: 'gemini', name: 'Google Gemini', badge: '✨', color: 'blue', docsUrl: 'https://aistudio.google.com/app/apikey', defaultModels: ['gemini-2.0-flash', 'gemini-1.5-flash', 'gemini-1.5-pro', 'gemini-1.0-pro'] } },
+  { prefix: 'sk-ant-', result: { platform: 'claude', name: 'Anthropic Claude', badge: '🧠', color: 'orange', docsUrl: 'https://console.anthropic.com/settings/keys', defaultModels: ['claude-3-5-sonnet-20241022', 'claude-3-haiku-20240307', 'claude-3-opus-20240229'] } },
+  { prefix: 'gsk_', result: { platform: 'groq', name: 'Groq', badge: '⚡', color: 'yellow', docsUrl: 'https://console.groq.com/keys', defaultModels: ['llama-3.3-70b-versatile', 'llama-3.1-8b-instant', 'mixtral-8x7b-32768'] } },
+  { prefix: 'sk-', result: { platform: 'openai', name: 'OpenAI', badge: '🤖', color: 'green', docsUrl: 'https://platform.openai.com/api-keys', defaultModels: ['gpt-4o', 'gpt-4o-mini', 'gpt-4-turbo', 'gpt-3.5-turbo'] } },
+];
+
+const UNKNOWN_RESULT: DetectionResult = { platform: 'unknown', name: 'Unknown Platform', badge: '🔑', color: 'gray', docsUrl: '', defaultModels: [] };
+
+function detectPlatform(key: string): DetectionResult {
+  const trimmed = key.trim();
+  for (const { prefix, result } of DETECT_MAP) {
+    if (trimmed.startsWith(prefix)) return result;
+  }
+  return UNKNOWN_RESULT;
+}
+
+async function fetchAvailableModels(platform: DetectedPlatform, apiKey: string): Promise<string[]> {
+  try {
+    if (platform === 'openai') {
+      const res = await fetch('https://api.openai.com/v1/models', { headers: { 'Authorization': `Bearer ${apiKey}` } });
+      if (!res.ok) return [];
+      const data = await res.json();
+      const gpt = (data.data as any[]).filter(m => m.id.startsWith('gpt')).map(m => m.id).sort();
+      return gpt.length > 0 ? gpt : DETECT_MAP.find(x => x.result.platform === 'openai')!.result.defaultModels;
+    }
+    if (platform === 'gemini') {
+      const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`);
+      if (!res.ok) return [];
+      const data = await res.json();
+      const models = (data.models as any[])
+        .filter(m => m.supportedGenerationMethods?.includes('generateContent'))
+        .map(m => m.name.replace('models/', ''))
+        .filter(n => n.startsWith('gemini'));
+      return models.length > 0 ? models : DETECT_MAP.find(x => x.result.platform === 'gemini')!.result.defaultModels;
+    }
+    if (platform === 'groq') {
+      const res = await fetch('https://api.groq.com/openai/v1/models', { headers: { 'Authorization': `Bearer ${apiKey}` } });
+      if (!res.ok) return [];
+      const data = await res.json();
+      return (data.data as any[]).map(m => m.id).sort();
+    }
+    return DETECT_MAP.find(x => x.result.platform === platform)?.result.defaultModels ?? [];
+  } catch {
+    return DETECT_MAP.find(x => x.result.platform === platform)?.result.defaultModels ?? [];
+  }
+}
+
+interface SmartApiEntry {
+  id: string;
+  platform: DetectedPlatform;
+  name: string;
+  badge: string;
+  apiKey: string;
+  models: string[];
+  selectedModel: string;
+  status: 'idle' | 'detecting' | 'fetching' | 'ready' | 'error';
+  errorMsg?: string;
+  savedAt?: string;
+}
+
+const AI_FEATURES_LIST = [
+  { id: 'discover', label: 'AI Discover', subtitle: 'Internships, Events & Courses', icon: Sparkles, colorClass: 'bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800 text-blue-700 dark:text-blue-300' },
+  { id: 'career_chat', label: 'Career Chatbot', subtitle: 'Student guidance assistant', icon: Bot, colorClass: 'bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800 text-green-700 dark:text-green-300' },
+  { id: 'ats', label: 'ATS Analyzer', subtitle: 'Resume analysis & scoring', icon: FileText, colorClass: 'bg-purple-50 dark:bg-purple-900/20 border-purple-200 dark:border-purple-800 text-purple-700 dark:text-purple-300' },
+  { id: 'detection', label: 'Scam Detection', subtitle: 'Content verification AI', icon: ShieldCheck, colorClass: 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800 text-red-700 dark:text-red-300' },
+];
+
+const SMART_API_KEY = 'stunivoz_smart_apis_v2';
+const FEATURE_ASSIGN_KEY = 'stunivoz_feature_assign_v2';
+
 export const AIControlPage: React.FC = () => {
-  const { aiProvider, aiModel, aiApiKey, setAIConfig } = useAdminSettings();
-  const [provider, setProvider] = useState(aiProvider || 'gemini');
-  const [model, setModel] = useState(aiModel || 'gemini-1.5-flash');
-  const [apiKey, setApiKey] = useState(aiApiKey || '');
-  const [showKey, setShowKey] = useState(false);
-  const [saved, setSaved] = useState(false);
-  const [testing, setTesting] = useState(false);
-  const [testResult, setTestResult] = useState<{ ok: boolean; msg: string } | null>(null);
+  const { setAIConfig } = useAdminSettings();
+  const [entries, setEntries] = useState<SmartApiEntry[]>(() => {
+    try { return JSON.parse(localStorage.getItem(SMART_API_KEY) || '[]'); } catch { return []; }
+  });
+  const [newKey, setNewKey] = useState('');
+  const [showNewKey, setShowNewKey] = useState(false);
+  const [addStatus, setAddStatus] = useState<'idle' | 'detecting' | 'fetching' | 'done' | 'error'>('idle');
+  const [addError, setAddError] = useState('');
+  const [featureAssign, setFeatureAssign] = useState<Record<string, string>>(() => {
+    try { return JSON.parse(localStorage.getItem(FEATURE_ASSIGN_KEY) || '{}'); } catch { return {}; }
+  });
+  const [toast, setToast] = useState('');
+  const [testingId, setTestingId] = useState<string | null>(null);
+  const [testResults, setTestResults] = useState<Record<string, { ok: boolean; msg: string }>>({});
 
-  const GEMINI_MODELS = [
-    { value: 'gemini-2.0-flash-exp', label: 'Gemini 2.0 Flash (Experimental)' },
-    { value: 'gemini-1.5-flash', label: 'Gemini 1.5 Flash (Free · Recommended)' },
-    { value: 'gemini-1.5-pro', label: 'Gemini 1.5 Pro (Paid)' },
-    { value: 'gemini-1.0-pro', label: 'Gemini 1.0 Pro' },
-  ];
-  const OPENAI_MODELS = [
-    { value: 'gpt-4o-mini', label: 'GPT-4o Mini (Affordable)' },
-    { value: 'gpt-4o', label: 'GPT-4o (Recommended)' },
-    { value: 'gpt-4-turbo', label: 'GPT-4 Turbo' },
-    { value: 'gpt-3.5-turbo', label: 'GPT-3.5 Turbo (Budget)' },
-  ];
+  const showToast = (msg: string) => { setToast(msg); setTimeout(() => setToast(''), 3000); };
 
-  const handleProviderChange = (p: string) => {
-    setProvider(p);
-    setModel(p === 'gemini' ? 'gemini-1.5-flash' : 'gpt-4o-mini');
-    setTestResult(null);
+  const persistEntries = (updated: SmartApiEntry[]) => {
+    setEntries(updated);
+    localStorage.setItem(SMART_API_KEY, JSON.stringify(updated));
+    const activeAI = updated.find(e => e.status === 'ready' && ['openai', 'gemini', 'claude', 'groq'].includes(e.platform));
+    if (activeAI) setAIConfig(activeAI.platform, activeAI.selectedModel, activeAI.apiKey);
+    saveToFirestore(updated).catch(() => {});
   };
 
-  const handleSave = () => {
-    setAIConfig(provider, model, apiKey);
-    setSaved(true);
-    setTimeout(() => setSaved(false), 2500);
-    setTestResult(null);
-  };
-
-  const handleTest = async () => {
-    if (!apiKey) { setTestResult({ ok: false, msg: 'Please enter an API key first.' }); return; }
-    setTesting(true); setTestResult(null);
+  const saveToFirestore = async (updated: SmartApiEntry[]) => {
     try {
-      const url = provider === 'gemini'
-        ? `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`
-        : 'https://api.openai.com/v1/chat/completions';
-      const body = provider === 'gemini'
-        ? JSON.stringify({ contents: [{ role: 'user', parts: [{ text: 'Say "OK" in one word.' }] }] })
-        : JSON.stringify({ model, messages: [{ role: 'user', content: 'Say "OK" in one word.' }], max_tokens: 5 });
-      const headers: Record<string, string> = { 'Content-Type': 'application/json' };
-      if (provider === 'openai') headers['Authorization'] = `Bearer ${apiKey}`;
-      const res = await fetch(url, { method: 'POST', headers, body });
-      if (res.ok) setTestResult({ ok: true, msg: `Connection successful! ${provider === 'gemini' ? 'Gemini' : 'OpenAI'} API is working.` });
-      else { const err = await res.json().catch(() => ({})); setTestResult({ ok: false, msg: err?.error?.message || `API error: ${res.status}` }); }
-    } catch (e: any) {
-      setTestResult({ ok: false, msg: e?.message || 'Connection failed.' });
-    } finally { setTesting(false); }
+      const { saveApiConfig } = await import('../../services/firebase');
+      const activeAI = updated.find(e => e.status === 'ready');
+      await saveApiConfig({
+        entries: updated.map(e => ({ ...e, apiKey: e.apiKey ? '***stored***' : '' })),
+        activeProvider: activeAI?.platform || '',
+        activeModel: activeAI?.selectedModel || '',
+        updatedAt: new Date().toISOString(),
+      });
+    } catch {}
   };
 
-  const apiKeyLink = provider === 'gemini'
-    ? { url: 'https://aistudio.google.com/app/apikey', label: 'Get free Gemini API key at aistudio.google.com' }
-    : { url: 'https://platform.openai.com/api-keys', label: 'Get OpenAI API key at platform.openai.com' };
+  const handleAddKey = async () => {
+    const key = newKey.trim();
+    if (!key) { setAddError('Please enter an API key.'); return; }
+    setAddError('');
+    setAddStatus('detecting');
+
+    const detected = detectPlatform(key);
+    if (detected.platform === 'unknown') {
+      setAddStatus('error');
+      setAddError('Could not auto-detect platform. Make sure you are pasting the full API key (e.g. sk-..., AIza..., sk-ant-...).');
+      return;
+    }
+
+    setAddStatus('fetching');
+    const models = await fetchAvailableModels(detected.platform, key);
+
+    const entry: SmartApiEntry = {
+      id: Date.now().toString(),
+      platform: detected.platform,
+      name: detected.name,
+      badge: detected.badge,
+      apiKey: key,
+      models: models.length > 0 ? models : detected.defaultModels,
+      selectedModel: models[0] || detected.defaultModels[0] || '',
+      status: 'ready',
+      savedAt: new Date().toLocaleString(),
+    };
+
+    const existingIdx = entries.findIndex(e => e.platform === detected.platform);
+    let updated: SmartApiEntry[];
+    if (existingIdx >= 0) {
+      updated = entries.map((e, i) => i === existingIdx ? entry : e);
+      showToast(`${detected.name} API updated — ${entry.models.length} models loaded`);
+    } else {
+      updated = [...entries, entry];
+      showToast(`${detected.name} detected — ${entry.models.length} models auto-loaded`);
+    }
+
+    persistEntries(updated);
+    setNewKey('');
+    setAddStatus('done');
+    setTimeout(() => setAddStatus('idle'), 2000);
+  };
+
+  const removeEntry = (id: string) => {
+    persistEntries(entries.filter(e => e.id !== id));
+    showToast('API key removed');
+  };
+
+  const updateModel = (id: string, model: string) => {
+    const updated = entries.map(e => e.id === id ? { ...e, selectedModel: model } : e);
+    persistEntries(updated);
+  };
+
+  const testConnection = async (entry: SmartApiEntry) => {
+    setTestingId(entry.id);
+    setTestResults(prev => ({ ...prev, [entry.id]: { ok: false, msg: 'Testing...' } }));
+    try {
+      let ok = false;
+      let msg = '';
+      if (entry.platform === 'gemini') {
+        const url = `https://generativelanguage.googleapis.com/v1beta/models/${entry.selectedModel}:generateContent?key=${entry.apiKey}`;
+        const res = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ contents: [{ role: 'user', parts: [{ text: 'Reply with one word: OK' }] }] }) });
+        ok = res.ok;
+        msg = ok ? `Gemini API working! Model: ${entry.selectedModel}` : `API error: ${res.status}`;
+      } else if (entry.platform === 'openai' || entry.platform === 'groq') {
+        const url = entry.platform === 'groq' ? 'https://api.groq.com/openai/v1/chat/completions' : 'https://api.openai.com/v1/chat/completions';
+        const res = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${entry.apiKey}` }, body: JSON.stringify({ model: entry.selectedModel, messages: [{ role: 'user', content: 'Say OK' }], max_tokens: 5 }) });
+        ok = res.ok;
+        msg = ok ? `${entry.name} API working! Model: ${entry.selectedModel}` : `API error: ${res.status}`;
+      } else if (entry.platform === 'claude') {
+        const res = await fetch('https://api.anthropic.com/v1/messages', { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-api-key': entry.apiKey, 'anthropic-version': '2023-06-01' }, body: JSON.stringify({ model: entry.selectedModel, max_tokens: 5, messages: [{ role: 'user', content: 'Say OK' }] }) });
+        ok = res.ok;
+        msg = ok ? `Claude API working! Model: ${entry.selectedModel}` : `API error: ${res.status}`;
+      }
+      setTestResults(prev => ({ ...prev, [entry.id]: { ok, msg } }));
+    } catch (e: any) {
+      setTestResults(prev => ({ ...prev, [entry.id]: { ok: false, msg: e?.message || 'Connection failed' } }));
+    } finally {
+      setTestingId(null);
+    }
+  };
+
+  const updateFeatureAssign = (featureId: string, entryId: string) => {
+    const next = { ...featureAssign, [featureId]: entryId };
+    setFeatureAssign(next);
+    localStorage.setItem(FEATURE_ASSIGN_KEY, JSON.stringify(next));
+    showToast('Feature assignment saved');
+  };
+
+  const colorMap: Record<string, string> = {
+    blue: 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 border-blue-200 dark:border-blue-700',
+    green: 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 border-green-200 dark:border-green-700',
+    orange: 'bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300 border-orange-200 dark:border-orange-700',
+    yellow: 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-300 border-yellow-200 dark:border-yellow-700',
+    gray: 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 border-gray-200 dark:border-gray-700',
+  };
+
+  const readyEntries = entries.filter(e => e.status === 'ready');
 
   return (
     <div className="space-y-6 animate-fade-in">
-      <TableHeader title="AI Settings" subtitle="Configure the AI provider, model, and API key used for content discovery and the career chatbot." />
+      {toast && <div className="fixed bottom-6 right-6 z-50 flex items-center gap-2 px-4 py-3 bg-gray-900 dark:bg-gray-100 text-white dark:text-gray-900 text-sm font-medium rounded-xl shadow-xl"><CheckCircle className="w-4 h-4 text-green-400" /> {toast}</div>}
 
+      <TableHeader
+        title="Smart AI Settings"
+        subtitle="Paste any API key — the system automatically detects the platform, loads all available models, and configures everything for you."
+      />
+
+      {/* Stats */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {[
-          { label: 'AI Provider', value: provider === 'gemini' ? 'Google Gemini' : 'OpenAI', icon: Cpu, color: 'text-purple-500', bg: 'bg-purple-50 dark:bg-purple-900/20' },
-          { label: 'Active Model', value: model.split('-').slice(0, 3).join('-'), icon: Zap, color: 'text-blue-500', bg: 'bg-blue-50 dark:bg-blue-900/20' },
-          { label: 'API Key', value: apiKey ? '●●●●●●●●' : 'Not set', icon: Key, color: apiKey ? 'text-green-500' : 'text-red-500', bg: apiKey ? 'bg-green-50 dark:bg-green-900/20' : 'bg-red-50 dark:bg-red-900/20' },
-          { label: 'Status', value: apiKey ? 'Configured' : 'Needs Setup', icon: CheckCircle, color: apiKey ? 'text-green-500' : 'text-yellow-500', bg: apiKey ? 'bg-green-50 dark:bg-green-900/20' : 'bg-yellow-50 dark:bg-yellow-900/20' },
+          { label: 'API Keys Configured', value: readyEntries.length, icon: Key, color: 'text-purple-500', bg: 'bg-purple-50 dark:bg-purple-900/20' },
+          { label: 'Platforms Connected', value: new Set(readyEntries.map(e => e.platform)).size, icon: Cpu, color: 'text-blue-500', bg: 'bg-blue-50 dark:bg-blue-900/20' },
+          { label: 'Total Models Available', value: readyEntries.reduce((sum, e) => sum + e.models.length, 0), icon: Zap, color: 'text-green-500', bg: 'bg-green-50 dark:bg-green-900/20' },
+          { label: 'Features Assigned', value: Object.values(featureAssign).filter(Boolean).length, icon: Sparkles, color: 'text-orange-500', bg: 'bg-orange-50 dark:bg-orange-900/20' },
         ].map((s, i) => (
           <Card key={i} className="!p-4">
             <div className="flex items-center gap-3">
@@ -2470,7 +2665,7 @@ export const AIControlPage: React.FC = () => {
                 <s.icon className={`w-5 h-5 ${s.color}`} />
               </div>
               <div>
-                <div className="text-sm font-bold text-gray-900 dark:text-white truncate">{s.value}</div>
+                <div className="text-xl font-bold text-gray-900 dark:text-white">{s.value}</div>
                 <div className="text-xs text-gray-500 dark:text-gray-400">{s.label}</div>
               </div>
             </div>
@@ -2478,105 +2673,195 @@ export const AIControlPage: React.FC = () => {
         ))}
       </div>
 
+      {/* Smart Key Entry */}
       <Card>
-        <CardHeader title="AI Configuration" subtitle="Changes apply immediately to AI Discover and the Career Chatbot" />
-        <CardContent className="space-y-5">
-          {/* Provider selection */}
-          <div>
-            <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-2">AI Provider</label>
-            <div className="grid grid-cols-2 gap-3">
+        <CardHeader
+          title="Add API Key — Auto Setup"
+          subtitle='Just paste your API key. We detect the platform (OpenAI, Gemini, Claude, Groq) and load all models automatically — no manual setup needed.'
+        />
+        <CardContent>
+          <div className="space-y-4">
+            {/* Platform hints */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
               {[
-                { id: 'gemini', label: 'Google Gemini', desc: 'Free tier available', badge: 'Recommended' },
-                { id: 'openai', label: 'OpenAI', desc: 'GPT-3.5 to GPT-4o', badge: 'Paid' },
+                { badge: '✨', name: 'Google Gemini', prefix: 'AIza...', color: 'bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800 text-blue-700 dark:text-blue-300' },
+                { badge: '🤖', name: 'OpenAI', prefix: 'sk-...', color: 'bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800 text-green-700 dark:text-green-300' },
+                { badge: '🧠', name: 'Claude', prefix: 'sk-ant-...', color: 'bg-orange-50 dark:bg-orange-900/20 border-orange-200 dark:border-orange-800 text-orange-700 dark:text-orange-300' },
+                { badge: '⚡', name: 'Groq', prefix: 'gsk_...', color: 'bg-yellow-50 dark:bg-yellow-900/20 border-yellow-200 dark:border-yellow-800 text-yellow-700 dark:text-yellow-300' },
               ].map(p => (
-                <button
-                  key={p.id} onClick={() => handleProviderChange(p.id)}
-                  className={`p-4 rounded-xl border-2 text-left transition-all ${provider === p.id ? 'border-purple-500 bg-purple-50 dark:bg-purple-900/10' : 'border-gray-200 dark:border-gray-700 hover:border-purple-300 dark:hover:border-purple-700'}`}
-                >
-                  <div className="flex items-center justify-between mb-1">
-                    <span className="font-semibold text-gray-900 dark:text-white text-sm">{p.label}</span>
-                    <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${p.id === 'gemini' ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400' : 'bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-400'}`}>{p.badge}</span>
+                <div key={p.name} className={`flex items-center gap-2 p-2.5 rounded-xl border text-xs font-medium ${p.color}`}>
+                  <span className="text-base">{p.badge}</span>
+                  <div>
+                    <div className="font-semibold">{p.name}</div>
+                    <div className="opacity-70 font-mono text-[10px]">{p.prefix}</div>
                   </div>
-                  <p className="text-xs text-gray-500 dark:text-gray-400">{p.desc}</p>
+                </div>
+              ))}
+            </div>
+
+            {/* Key input */}
+            <div>
+              <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-2">
+                Paste API Key
+              </label>
+              <div className="flex gap-2">
+                <div className="relative flex-1">
+                  <Key className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                  <input
+                    type={showNewKey ? 'text' : 'password'}
+                    value={newKey}
+                    onChange={e => { setNewKey(e.target.value); setAddError(''); setAddStatus('idle'); }}
+                    onKeyDown={e => e.key === 'Enter' && handleAddKey()}
+                    placeholder="Paste your API key here (AIza..., sk-..., sk-ant-..., gsk_...)"
+                    className="w-full pl-9 pr-16 py-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-sm focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20 transition-all font-mono"
+                  />
+                  <button onClick={() => setShowNewKey(s => !s)} className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 font-medium">
+                    {showNewKey ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
+                </div>
+                <button
+                  onClick={handleAddKey}
+                  disabled={!newKey.trim() || addStatus === 'detecting' || addStatus === 'fetching'}
+                  className="flex items-center gap-2 px-5 py-3 rounded-xl bg-purple-600 hover:bg-purple-700 disabled:opacity-50 text-white font-semibold text-sm transition-all whitespace-nowrap"
+                >
+                  {addStatus === 'detecting' ? <><RefreshCw className="w-4 h-4 animate-spin" /> Detecting...</>
+                    : addStatus === 'fetching' ? <><RefreshCw className="w-4 h-4 animate-spin" /> Loading Models...</>
+                    : addStatus === 'done' ? <><CheckCircle className="w-4 h-4" /> Done!</>
+                    : <><Sparkles className="w-4 h-4" /> Auto Setup</>}
                 </button>
-              ))}
+              </div>
+              {addError && <p className="text-xs text-red-500 mt-2 flex items-center gap-1"><AlertTriangle className="w-3.5 h-3.5" /> {addError}</p>}
+              {addStatus === 'detecting' && <p className="text-xs text-purple-500 mt-2 flex items-center gap-1.5"><RefreshCw className="w-3 h-3 animate-spin" /> Detecting platform from key format...</p>}
+              {addStatus === 'fetching' && <p className="text-xs text-blue-500 mt-2 flex items-center gap-1.5"><RefreshCw className="w-3 h-3 animate-spin" /> Fetching available models from API...</p>}
             </div>
-          </div>
-
-          {/* Model selection */}
-          <div>
-            <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-2">Model</label>
-            <select
-              value={model} onChange={e => setModel(e.target.value)}
-              className="w-full px-3 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-sm focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20 transition-all"
-            >
-              {(provider === 'gemini' ? GEMINI_MODELS : OPENAI_MODELS).map(m => (
-                <option key={m.value} value={m.value}>{m.label}</option>
-              ))}
-            </select>
-          </div>
-
-          {/* API Key */}
-          <div>
-            <div className="flex items-center justify-between mb-2">
-              <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">API Key</label>
-              <a href={apiKeyLink.url} target="_blank" rel="noopener noreferrer"
-                className="text-xs text-purple-500 hover:text-purple-600 flex items-center gap-1">
-                <ExternalLink className="w-3 h-3" /> {apiKeyLink.label}
-              </a>
-            </div>
-            <div className="relative">
-              <Key className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-              <input
-                type={showKey ? 'text' : 'password'}
-                value={apiKey} onChange={e => setApiKey(e.target.value)}
-                placeholder={provider === 'gemini' ? 'AIza...' : 'sk-...'}
-                className="w-full pl-9 pr-16 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-sm focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20 transition-all font-mono"
-              />
-              <button onClick={() => setShowKey(!showKey)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 font-medium">
-                {showKey ? 'Hide' : 'Show'}
-              </button>
-            </div>
-            <p className="text-xs text-gray-400 dark:text-gray-500 mt-1.5">Your API key is stored locally in your browser and never sent to our servers.</p>
-          </div>
-
-          {testResult && (
-            <div className={`flex items-start gap-2 p-3 rounded-xl border ${testResult.ok ? 'bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800' : 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800'}`}>
-              {testResult.ok ? <CheckCircle className="w-4 h-4 text-green-500 flex-shrink-0 mt-0.5" /> : <AlertTriangle className="w-4 h-4 text-red-500 flex-shrink-0 mt-0.5" />}
-              <p className={`text-xs ${testResult.ok ? 'text-green-700 dark:text-green-300' : 'text-red-600 dark:text-red-400'}`}>{testResult.msg}</p>
-            </div>
-          )}
-
-          <div className="flex gap-3 pt-1">
-            <button onClick={handleTest} disabled={testing || !apiKey}
-              className="flex items-center gap-2 px-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 font-medium text-sm hover:bg-gray-50 dark:hover:bg-gray-800 disabled:opacity-50 transition-all">
-              {testing ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Activity className="w-4 h-4" />}
-              Test Connection
-            </button>
-            <button onClick={handleSave}
-              className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl bg-purple-600 hover:bg-purple-700 text-white font-semibold text-sm shadow-lg shadow-purple-500/20 transition-all">
-              {saved ? <><CheckCircle className="w-4 h-4" /> Saved!</> : <><Save className="w-4 h-4" /> Save Settings</>}
-            </button>
           </div>
         </CardContent>
       </Card>
 
+      {/* Configured APIs */}
+      {readyEntries.length > 0 && (
+        <Card>
+          <div className="p-4 border-b border-gray-100 dark:border-gray-800">
+            <h3 className="font-bold text-gray-900 dark:text-white text-sm">Configured AI Platforms</h3>
+            <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Select active model for each platform. Changes sync to all AI features.</p>
+          </div>
+          <div className="divide-y divide-gray-100 dark:divide-gray-800">
+            {readyEntries.map(entry => {
+              const detectedInfo = DETECT_MAP.find(x => x.result.platform === entry.platform)?.result;
+              const col = colorMap[detectedInfo?.color || 'gray'];
+              const testResult = testResults[entry.id];
+              return (
+                <div key={entry.id} className="p-4 space-y-3">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className={`w-10 h-10 rounded-xl border flex items-center justify-center text-lg flex-shrink-0 ${col}`}>
+                        {entry.badge}
+                      </div>
+                      <div className="min-w-0">
+                        <div className="font-semibold text-gray-900 dark:text-white text-sm">{entry.name}</div>
+                        <div className="text-[10px] text-gray-400 font-mono truncate">
+                          {entry.apiKey.slice(0, 8)}{'•'.repeat(12)}
+                        </div>
+                        {entry.savedAt && <div className="text-[10px] text-gray-400">Added {entry.savedAt}</div>}
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-1 flex-shrink-0">
+                      <button
+                        onClick={() => testConnection(entry)}
+                        disabled={testingId === entry.id}
+                        title="Test connection"
+                        className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-400 hover:text-green-600 transition-colors"
+                      >
+                        {testingId === entry.id ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Activity className="w-4 h-4" />}
+                      </button>
+                      <button onClick={() => removeEntry(entry.id)} title="Remove" className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-400 hover:text-red-600 transition-colors">
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">
+                      Active Model <span className="text-gray-400">({entry.models.length} available)</span>
+                    </label>
+                    <select
+                      value={entry.selectedModel}
+                      onChange={e => updateModel(entry.id, e.target.value)}
+                      className="w-full px-3 py-2 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm text-gray-900 dark:text-white focus:outline-none focus:border-purple-500 transition-all"
+                    >
+                      {entry.models.map(m => <option key={m} value={m}>{m}</option>)}
+                    </select>
+                  </div>
+
+                  {testResult && (
+                    <div className={`flex items-center gap-2 p-2.5 rounded-xl text-xs border ${testResult.ok ? 'bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800 text-green-700 dark:text-green-300' : 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800 text-red-600 dark:text-red-400'}`}>
+                      {testResult.ok ? <CheckCircle className="w-3.5 h-3.5 flex-shrink-0" /> : <AlertTriangle className="w-3.5 h-3.5 flex-shrink-0" />}
+                      {testResult.msg}
+                    </div>
+                  )}
+
+                  {detectedInfo?.docsUrl && (
+                    <a href={detectedInfo.docsUrl} target="_blank" rel="noopener noreferrer" className="text-xs text-purple-500 hover:text-purple-600 flex items-center gap-1 w-fit">
+                      <ExternalLink className="w-3 h-3" /> Get or manage {entry.name} keys
+                    </a>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </Card>
+      )}
+
+      {/* Feature Assignment */}
+      <Card>
+        <div className="p-4 border-b border-gray-100 dark:border-gray-800">
+          <h3 className="font-bold text-gray-900 dark:text-white text-sm">Feature API Assignment</h3>
+          <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Assign a specific AI platform + model to each platform feature independently.</p>
+        </div>
+        <div className="p-4 grid grid-cols-1 sm:grid-cols-2 gap-3">
+          {AI_FEATURES_LIST.map(f => (
+            <div key={f.id} className={`p-3 rounded-xl border ${f.colorClass}`}>
+              <div className="flex items-center gap-2 mb-2">
+                <f.icon className="w-4 h-4 flex-shrink-0" />
+                <div>
+                  <div className="font-semibold text-sm">{f.label}</div>
+                  <div className="text-xs opacity-70">{f.subtitle}</div>
+                </div>
+              </div>
+              <select
+                value={featureAssign[f.id] || ''}
+                onChange={e => updateFeatureAssign(f.id, e.target.value)}
+                className="w-full px-2.5 py-1.5 rounded-lg border border-current/20 bg-white/60 dark:bg-gray-900/40 text-xs font-medium focus:outline-none"
+              >
+                <option value="">— Use global AI config —</option>
+                {readyEntries.map(e => (
+                  <option key={e.id} value={e.id}>{e.name} · {e.selectedModel}</option>
+                ))}
+              </select>
+            </div>
+          ))}
+        </div>
+        {readyEntries.length === 0 && (
+          <p className="px-4 pb-4 text-xs text-gray-400 dark:text-gray-600">Add an AI API key above to assign it to specific features.</p>
+        )}
+      </Card>
+
+      {/* How it works */}
       <Card>
         <CardHeader title="How AI Features Work" />
         <CardContent>
           <div className="grid md:grid-cols-3 gap-4">
             {[
-              { icon: Sparkles, title: 'AI Discover', desc: 'Automatically finds and imports internships, events, and courses from across the web — up to 10 at a time.', color: 'text-purple-500', bg: 'bg-purple-50 dark:bg-purple-900/20' },
-              { icon: Bot, title: 'Career Chatbot', desc: 'AI-powered career advisor on the Career Guidance page, helping students with internships, resumes, and interviews.', color: 'text-blue-500', bg: 'bg-blue-50 dark:bg-blue-900/20' },
-              { icon: ShieldCheck, title: 'Scam Detection', desc: 'Every AI-discovered listing is verified for legitimacy. Suspicious entries are flagged before you add them.', color: 'text-green-500', bg: 'bg-green-50 dark:bg-green-900/20' },
-            ].map((f, i) => (
-              <div key={i} className={`p-4 rounded-xl ${f.bg} border border-gray-100 dark:border-gray-800`}>
-                <div className={`w-9 h-9 rounded-lg bg-white dark:bg-gray-800 flex items-center justify-center mb-3 shadow-sm`}>
-                  <f.icon className={`w-5 h-5 ${f.color}`} />
+              { icon: Sparkles, title: 'AI Discover', desc: 'Automatically finds and imports internships, events, and courses. Assign a fast model like Gemini Flash for high-volume discovery.', color: 'text-purple-500', bg: 'bg-purple-50 dark:bg-purple-900/20' },
+              { icon: Bot, title: 'Career Chatbot', desc: 'AI-powered career advisor helping students with internships, resumes, and interviews. Assign a capable model for better answers.', color: 'text-blue-500', bg: 'bg-blue-50 dark:bg-blue-900/20' },
+              { icon: ShieldCheck, title: 'Scam Detection', desc: 'Verifies every listing for legitimacy before publishing. Assign a reasoning model like GPT-4o or Claude for accuracy.', color: 'text-green-500', bg: 'bg-green-50 dark:bg-green-900/20' },
+            ].map((feat, i) => (
+              <div key={i} className={`p-4 rounded-xl ${feat.bg} border border-gray-100 dark:border-gray-800`}>
+                <div className="w-9 h-9 rounded-lg bg-white dark:bg-gray-800 flex items-center justify-center mb-3 shadow-sm">
+                  <feat.icon className={`w-5 h-5 ${feat.color}`} />
                 </div>
-                <p className="font-semibold text-gray-900 dark:text-white text-sm mb-1">{f.title}</p>
-                <p className="text-xs text-gray-500 dark:text-gray-400 leading-relaxed">{f.desc}</p>
+                <p className="font-semibold text-gray-900 dark:text-white text-sm mb-1">{feat.title}</p>
+                <p className="text-xs text-gray-500 dark:text-gray-400 leading-relaxed">{feat.desc}</p>
               </div>
             ))}
           </div>

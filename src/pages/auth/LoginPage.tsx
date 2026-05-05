@@ -1,12 +1,26 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Sparkles, Mail, Lock, ArrowRight, Eye, EyeOff, Moon, Sun } from 'lucide-react';
+import { Mail, Lock, ArrowRight, Eye, EyeOff, Moon, Sun, LinkIcon, AlertCircle } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTheme } from '../../contexts/ThemeContext';
 
+const PROVIDER_LABEL: Record<string, string> = {
+  'google.com': 'Google',
+  'github.com': 'GitHub',
+  'password': 'Email & Password',
+  'email': 'Email & Password',
+};
+
+const PROVIDER_HINT: Record<string, string> = {
+  'google.com': 'Sign in with Google below',
+  'github.com': 'Sign in with GitHub below',
+  'password': 'Sign in with your email and password below',
+  'email': 'Sign in with your email and password below',
+};
+
 export const LoginPage: React.FC = () => {
   const navigate = useNavigate();
-  const { signIn, signInWithGoogleOAuth, signInWithGitHubOAuth } = useAuth();
+  const { signIn, signInWithGoogleOAuth, signInWithGitHubOAuth, pendingLinkInfo, clearPendingLink } = useAuth();
   const { isDark, toggleTheme } = useTheme();
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
@@ -23,6 +37,7 @@ export const LoginPage: React.FC = () => {
   const formatAuthError = (err: any): string => {
     const code = err?.code || '';
     const msg = err?.message || '';
+    if (code === 'auth/account-link-required') return '';
     if (code === 'auth/unauthorized-domain') {
       const domain = window.location.hostname;
       return `Domain "${domain}" is not authorized in Firebase Console. Go to Firebase Console → Authentication → Settings → Authorized domains → Add "${domain}".`;
@@ -55,7 +70,8 @@ export const LoginPage: React.FC = () => {
     setError('');
     const { error: err } = await signInWithGoogleOAuth();
     if (err) {
-      setError(formatAuthError(err));
+      const msg = formatAuthError(err);
+      if (msg) setError(msg);
       setGoogleLoading(false);
     } else {
       navigate('/dashboard');
@@ -67,18 +83,21 @@ export const LoginPage: React.FC = () => {
     setError('');
     const { error: err } = await signInWithGitHubOAuth();
     if (err) {
-      setError(formatAuthError(err));
+      const msg = formatAuthError(err);
+      if (msg) setError(msg);
       setGithubLoading(false);
     } else {
       navigate('/dashboard');
     }
   };
 
+  const existingMethod = pendingLinkInfo?.methods?.[0] || '';
+  const existingLabel = PROVIDER_LABEL[existingMethod] || existingMethod;
+  const existingHint = PROVIDER_HINT[existingMethod] || `Sign in with ${existingLabel}`;
+
   return (
     <div className="min-h-screen flex dark:bg-gray-950 bg-gray-50 transition-colors duration-300">
-      {/* Left Panel */}
       <div className="flex-1 flex items-center justify-center p-8 relative">
-        {/* Theme Toggle */}
         <button
           onClick={toggleTheme}
           className="absolute top-6 right-6 p-2.5 rounded-xl bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 transition-all"
@@ -88,7 +107,6 @@ export const LoginPage: React.FC = () => {
         </button>
 
         <div className="w-full max-w-md animate-slide-up">
-          {/* Logo */}
           <div className="flex items-center mb-8">
             <img src="/stunivoz-new-logo.png" alt="STUNIVOZ" className="h-12 w-auto object-contain" />
           </div>
@@ -98,16 +116,43 @@ export const LoginPage: React.FC = () => {
             <p className="dark:text-gray-400 text-gray-500">Sign in to continue your career journey</p>
           </div>
 
+          {/* Account Linking Banner */}
+          {pendingLinkInfo && (
+            <div className="mb-6 p-4 rounded-xl border-2 border-amber-400 bg-amber-50 dark:bg-amber-900/20 dark:border-amber-600">
+              <div className="flex items-start gap-3">
+                <LinkIcon className="w-5 h-5 text-amber-600 dark:text-amber-400 flex-shrink-0 mt-0.5" />
+                <div className="flex-1">
+                  <p className="text-sm font-semibold text-amber-800 dark:text-amber-300 mb-1">
+                    Account already exists
+                  </p>
+                  <p className="text-xs text-amber-700 dark:text-amber-400 leading-relaxed">
+                    <span className="font-semibold">{pendingLinkInfo.email}</span> is already registered with <span className="font-semibold">{existingLabel}</span>.
+                    {' '}{existingHint} — your {pendingLinkInfo.provider === 'google' ? 'Google' : 'GitHub'} account will be linked automatically.
+                  </p>
+                  <button
+                    onClick={clearPendingLink}
+                    className="mt-2 text-xs text-amber-600 dark:text-amber-400 hover:underline font-medium"
+                  >
+                    Cancel linking
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
           {error && (
             <div className={`mb-6 p-4 rounded-xl border ${isUnauthorizedDomain ? 'bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-700' : 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800'}`}>
-              {isUnauthorizedDomain ? (
-                <>
-                  <p className="text-sm font-semibold text-amber-700 dark:text-amber-400 mb-1">Firebase Domain Not Authorized</p>
-                  <p className="text-xs text-amber-600 dark:text-amber-400 leading-relaxed">{error}</p>
-                </>
-              ) : (
-                <p className="text-sm text-red-600 dark:text-red-400">{error}</p>
-              )}
+              <div className="flex items-start gap-2">
+                <AlertCircle className="w-4 h-4 text-red-500 flex-shrink-0 mt-0.5" />
+                {isUnauthorizedDomain ? (
+                  <div>
+                    <p className="text-sm font-semibold text-amber-700 dark:text-amber-400 mb-1">Firebase Domain Not Authorized</p>
+                    <p className="text-xs text-amber-600 dark:text-amber-400 leading-relaxed">{error}</p>
+                  </div>
+                ) : (
+                  <p className="text-sm text-red-600 dark:text-red-400">{error}</p>
+                )}
+              </div>
             </div>
           )}
 
@@ -171,7 +216,7 @@ export const LoginPage: React.FC = () => {
               {loading ? (
                 <span className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
               ) : (
-                <>Sign In <ArrowRight className="w-5 h-5" /></>
+                <>{pendingLinkInfo ? 'Sign In & Link Account' : 'Sign In'} <ArrowRight className="w-5 h-5" /></>
               )}
             </button>
           </form>
@@ -186,7 +231,6 @@ export const LoginPage: React.FC = () => {
           </div>
 
           <div className="grid grid-cols-2 gap-3">
-            {/* Google Button */}
             <button
               type="button"
               onClick={handleGoogleSignIn}
@@ -206,7 +250,6 @@ export const LoginPage: React.FC = () => {
               Google
             </button>
 
-            {/* GitHub Button */}
             <button
               type="button"
               onClick={handleGitHubSignIn}
@@ -233,9 +276,7 @@ export const LoginPage: React.FC = () => {
         </div>
       </div>
 
-      {/* Right Panel - Glassmorphism */}
       <div className="hidden lg:flex flex-1 relative overflow-hidden bg-gradient-to-br from-primary-600 via-primary-700 to-indigo-800 items-center justify-center p-12">
-        {/* Background blobs */}
         <div className="absolute top-10 right-10 w-72 h-72 bg-white/10 rounded-full blur-3xl" />
         <div className="absolute bottom-10 left-10 w-64 h-64 bg-primary-400/20 rounded-full blur-3xl" />
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-indigo-500/10 rounded-full blur-3xl" />

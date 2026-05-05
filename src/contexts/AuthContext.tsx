@@ -1,10 +1,12 @@
 // @refresh reset
-import React, { createContext, useContext, useEffect, useState } from 'react';
-import { User } from 'firebase/auth';
+import React, { createContext, useContext, useEffect, useState, useRef } from 'react';
+import { User, OAuthCredential } from 'firebase/auth';
 import { auth } from '../services/firebase';
 import {
   loginUser, registerUser, logoutUser, onAuthStateChangedListener,
-  getDocument, setDocument, signInWithGoogle, signInWithGitHub
+  getDocument, setDocument, signInWithGoogle, signInWithGitHub,
+  getSignInMethodsForEmail, getCredentialFromError, linkPendingCredential,
+  incrementLoginCount
 } from '../services/firebase';
 
 export type UserRole = 'student' | 'company' | 'admin' | 'staff';
@@ -38,12 +40,20 @@ export interface Profile {
   updated_at?: string;
 }
 
+export interface PendingLinkInfo {
+  email: string;
+  methods: string[];
+  provider: 'google' | 'github';
+}
+
 const ADMIN_SESSION_KEY = 'stunivoz_admin_session';
 
 interface AuthContextType {
   user: User | null;
   profile: Profile | null;
   loading: boolean;
+  pendingLinkInfo: PendingLinkInfo | null;
+  clearPendingLink: () => void;
   signIn: (email: string, password: string) => Promise<{ error: any }>;
   signUp: (email: string, password: string, fullName: string) => Promise<{ error: any }>;
   signInWithGoogleOAuth: () => Promise<{ error: any }>;
@@ -68,8 +78,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [user, setUser] = useState<User | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
+  const [pendingLinkInfo, setPendingLinkInfo] = useState<PendingLinkInfo | null>(null);
+  const pendingCredRef = useRef<OAuthCredential | null>(null);
 
-  // Try both 'profiles' and 'users' collections — works regardless of which one the admin used
+  const clearPendingLink = () => {
+    setPendingLinkInfo(null);
+    pendingCredRef.current = null;
+  };
+
   const fetchProfile = async (uid: string): Promise<Profile | null> => {
     try {
       const [profilesResult, usersResult] = await Promise.all([
@@ -93,7 +109,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   useEffect(() => {
-    // Restore admin session from localStorage first (survives page refresh on Vercel)
     const savedSession = localStorage.getItem(ADMIN_SESSION_KEY);
     if (savedSession) {
       try {
@@ -101,7 +116,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         if (savedProfile.role === 'admin') {
           setProfile(savedProfile);
           setLoading(false);
-          // Still listen for Firebase auth changes in background
         }
       } catch {
         localStorage.removeItem(ADMIN_SESSION_KEY);
@@ -115,13 +129,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (firebaseUser) {
         const p = await fetchProfile(firebaseUser.uid);
         if (p) {
-          // If Firebase user has admin role, also save to localStorage for persistence
           if (p.role === 'admin') {
             localStorage.setItem(ADMIN_SESSION_KEY, JSON.stringify(p));
           }
         }
       } else {
-        // Only clear profile if there's no saved admin session
         const savedSession = localStorage.getItem(ADMIN_SESSION_KEY);
         if (!savedSession) {
           setProfile(null);
@@ -143,11 +155,29 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           email,
           full_name: existing?.full_name || email.split('@')[0],
           role: existing?.role || 'student',
-          provider: 'email',
+          provider: existing?.provider || 'email',
           last_login: now,
           updated_at: now,
           ...(existing ? {} : { created_at: now }),
         });
+
+        await incrementLoginCount(result.user.uid);
+
+        if (pendingCredRef.current) {
+          try {
+            await linkPendingCredential(pendingCredRef.current);
+            const linkedProvider = pendingLinkInfo?.provider || 'google';
+            await setDocument('profiles', result.user.uid, {
+              provider: `${existing?.provider || 'email'},${linkedProvider}`,
+              updated_at: new Date().toISOString(),
+            });
+          } catch (linkErr) {
+            console.warn('Auto-link failed:', linkErr);
+          } finally {
+            clearPendingLink();
+          }
+        }
+
         return { error: null };
       }
       if (result.success) return { error: null };
@@ -166,6 +196,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           email,
           full_name: fullName,
           role: 'student',
+          provider: 'email',
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString(),
         };
@@ -179,7 +210,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  // Google OAuth — students only
   const signInWithGoogleOAuth = async () => {
     try {
       const userCredential = await signInWithGoogle();
@@ -205,14 +235,35 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         ...(!existing ? { created_at: now } : {}),
       };
       await setDocument('profiles', firebaseUser.uid, profileData);
+      await incrementLoginCount(firebaseUser.uid);
       setProfile(profileData);
+      clearPendingLink();
       return { error: null };
     } catch (err: any) {
+      if (err?.code === 'auth/account-exists-with-different-credential') {
+        const email = err?.customData?.email || '';
+        const pendingCred = getCredentialFromError(err, 'google');
+        let methods: string[] = [];
+        try {
+          if (email) methods = await getSignInMethodsForEmail(email);
+        } catch {}
+        if (pendingCred) pendingCredRef.current = pendingCred;
+        const linkInfo: PendingLinkInfo = { email, methods, provider: 'google' };
+        setPendingLinkInfo(linkInfo);
+        return {
+          error: {
+            code: 'auth/account-link-required',
+            email,
+            methods,
+            provider: 'google',
+            message: 'account-link-required',
+          }
+        };
+      }
       return { error: err };
     }
   };
 
-  // GitHub OAuth — students only
   const signInWithGitHubOAuth = async () => {
     try {
       const userCredential = await signInWithGitHub();
@@ -238,9 +289,31 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         ...(!existing ? { created_at: now } : {}),
       };
       await setDocument('profiles', firebaseUser.uid, profileData);
+      await incrementLoginCount(firebaseUser.uid);
       setProfile(profileData);
+      clearPendingLink();
       return { error: null };
     } catch (err: any) {
+      if (err?.code === 'auth/account-exists-with-different-credential') {
+        const email = err?.customData?.email || '';
+        const pendingCred = getCredentialFromError(err, 'github');
+        let methods: string[] = [];
+        try {
+          if (email) methods = await getSignInMethodsForEmail(email);
+        } catch {}
+        if (pendingCred) pendingCredRef.current = pendingCred;
+        const linkInfo: PendingLinkInfo = { email, methods, provider: 'github' };
+        setPendingLinkInfo(linkInfo);
+        return {
+          error: {
+            code: 'auth/account-link-required',
+            email,
+            methods,
+            provider: 'github',
+            message: 'account-link-required',
+          }
+        };
+      }
       return { error: err };
     }
   };
@@ -248,6 +321,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const signOut = async () => {
     await logoutUser();
     localStorage.removeItem(ADMIN_SESSION_KEY);
+    clearPendingLink();
     setUser(null);
     setProfile(null);
   };
@@ -287,6 +361,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   return (
     <AuthContext.Provider value={{
       user, profile, loading,
+      pendingLinkInfo, clearPendingLink,
       signIn, signUp,
       signInWithGoogleOAuth,
       signInWithGitHubOAuth,

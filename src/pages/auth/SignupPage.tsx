@@ -1,12 +1,26 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Sparkles, Mail, Lock, User, ArrowRight, Eye, EyeOff, Check, Moon, Sun } from 'lucide-react';
+import { Sparkles, Mail, Lock, User, ArrowRight, Eye, EyeOff, Check, Moon, Sun, LinkIcon } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTheme } from '../../contexts/ThemeContext';
 
+const PROVIDER_LABEL: Record<string, string> = {
+  'google.com': 'Google',
+  'github.com': 'GitHub',
+  'password': 'Email & Password',
+  'email': 'Email & Password',
+};
+
+const PROVIDER_HINT: Record<string, string> = {
+  'google.com': 'Sign in with Google below',
+  'github.com': 'Sign in with GitHub below',
+  'password': 'Sign in with your email and password below',
+  'email': 'Sign in with your email and password below',
+};
+
 export const SignupPage: React.FC = () => {
   const navigate = useNavigate();
-  const { signUp, signInWithGoogleOAuth, signInWithGitHubOAuth } = useAuth();
+  const { signUp, signInWithGoogleOAuth, signInWithGitHubOAuth, pendingLinkInfo, clearPendingLink } = useAuth();
   const { isDark, toggleTheme } = useTheme();
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
@@ -27,6 +41,7 @@ export const SignupPage: React.FC = () => {
 
   const formatAuthError = (err: any): string => {
     const code = err?.code || '';
+    if (code === 'auth/account-link-required') return '';
     if (code === 'auth/unauthorized-domain') return `Domain "${window.location.hostname}" is not authorized in Firebase Console.`;
     if (code === 'auth/email-already-in-use') return 'This email is already registered. Try logging in instead.';
     if (code === 'auth/weak-password') return 'Password is too weak. Please use at least 6 characters.';
@@ -50,16 +65,26 @@ export const SignupPage: React.FC = () => {
     setGoogleLoading(true);
     setError('');
     const { error: err } = await signInWithGoogleOAuth();
-    if (err) { setError(formatAuthError(err)); setGoogleLoading(false); }
-    else navigate('/dashboard');
+    if (err) {
+      const msg = formatAuthError(err);
+      if (msg) setError(msg);
+      setGoogleLoading(false);
+    } else {
+      navigate('/dashboard');
+    }
   };
 
   const handleGitHubSignUp = async () => {
     setGithubLoading(true);
     setError('');
     const { error: err } = await signInWithGitHubOAuth();
-    if (err) { setError(formatAuthError(err)); setGithubLoading(false); }
-    else navigate('/dashboard');
+    if (err) {
+      const msg = formatAuthError(err);
+      if (msg) setError(msg);
+      setGithubLoading(false);
+    } else {
+      navigate('/dashboard');
+    }
   };
 
   const passwordRequirements = [
@@ -68,9 +93,12 @@ export const SignupPage: React.FC = () => {
     { met: /[0-9]/.test(formData.password), text: 'One number' },
   ];
 
+  const existingMethod = pendingLinkInfo?.methods?.[0] || '';
+  const existingLabel = PROVIDER_LABEL[existingMethod] || existingMethod;
+  const existingHint = PROVIDER_HINT[existingMethod] || `Sign in with ${existingLabel}`;
+
   return (
     <div className="min-h-screen flex dark:bg-gray-950 bg-gray-50 transition-colors duration-300">
-      {/* Left Panel - Form */}
       <div className="flex-1 flex items-center justify-center p-8 relative">
         <button
           onClick={toggleTheme}
@@ -80,7 +108,6 @@ export const SignupPage: React.FC = () => {
         </button>
 
         <div className="w-full max-w-md animate-slide-up">
-          {/* Logo */}
           <div className="flex items-center mb-8">
             <img src="/stunivoz-new-logo.png" alt="STUNIVOZ" className="h-12 w-auto object-contain" />
           </div>
@@ -90,7 +117,30 @@ export const SignupPage: React.FC = () => {
             <p className="dark:text-gray-400 text-gray-500">Start your career journey with STUNIVOZ</p>
           </div>
 
-          {/* Social Sign Up */}
+          {/* Account Linking Banner */}
+          {pendingLinkInfo && (
+            <div className="mb-5 p-4 rounded-xl border-2 border-amber-400 bg-amber-50 dark:bg-amber-900/20 dark:border-amber-600">
+              <div className="flex items-start gap-3">
+                <LinkIcon className="w-5 h-5 text-amber-600 dark:text-amber-400 flex-shrink-0 mt-0.5" />
+                <div className="flex-1">
+                  <p className="text-sm font-semibold text-amber-800 dark:text-amber-300 mb-1">
+                    Account already exists
+                  </p>
+                  <p className="text-xs text-amber-700 dark:text-amber-400 leading-relaxed">
+                    <span className="font-semibold">{pendingLinkInfo.email}</span> is registered with <span className="font-semibold">{existingLabel}</span>.
+                    {' '}{existingHint} — your {pendingLinkInfo.provider === 'google' ? 'Google' : 'GitHub'} account will be linked automatically.
+                  </p>
+                  <Link to="/login" className="mt-2 inline-block text-xs text-amber-600 dark:text-amber-400 hover:underline font-medium">
+                    Go to login page →
+                  </Link>
+                  <button onClick={clearPendingLink} className="ml-4 mt-2 text-xs text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 underline">
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
           <div className="grid grid-cols-2 gap-3 mb-6">
             <button
               type="button"
@@ -235,7 +285,6 @@ export const SignupPage: React.FC = () => {
         </div>
       </div>
 
-      {/* Right Panel - Branding */}
       <div className="hidden lg:flex flex-1 bg-gradient-to-br from-accent-500 to-accent-700 items-center justify-center p-12">
         <div className="max-w-lg text-center text-white">
           <div className="mb-8">
