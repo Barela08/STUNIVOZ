@@ -525,10 +525,49 @@ export const UserManagementPage: React.FC = () => {
   const [editingUser, setEditingUser] = useState<UserRecord | null>(null);
   const [showInvite, setShowInvite] = useState(false);
   const [toast, setToast] = useState('');
+  const [loadingUsers, setLoadingUsers] = useState(true);
+  const [usersError, setUsersError] = useState('');
 
   const showToast = (msg: string) => { setToast(msg); setTimeout(() => setToast(''), 3000); };
 
   const [users, setUsers] = useState<UserRecord[]>([]);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const { getFirestore, collection, getDocs } = await import('firebase/firestore');
+        const db = getFirestore();
+        const snap = await getDocs(collection(db, 'profiles'));
+        if (cancelled) return;
+        const fetched: UserRecord[] = snap.docs.map((d, idx) => {
+          const p = d.data();
+          return {
+            id: idx + 1,
+            name: p.full_name || p.name || p.email || 'Unknown',
+            email: p.email || '',
+            role: p.role ? (p.role.charAt(0).toUpperCase() + p.role.slice(1)) : 'Student',
+            college: p.college || p.university || '—',
+            joined: p.created_at ? new Date(p.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : '—',
+            status: p.status || 'Active',
+            ats: p.ats_score ?? null,
+            logins: p.login_count ?? 0,
+            phone: p.phone || '',
+            location: p.location || '',
+          };
+        });
+        setUsers(fetched);
+      } catch (err: any) {
+        const msg = err?.code === 'permission-denied' || err?.message?.includes('permissions')
+          ? 'Firestore rules are blocking admin reads. In Firebase Console → Firestore → Rules, add: allow read: if request.auth != null; under the profiles collection.'
+          : 'Failed to load users. Check your Firebase connection.';
+        if (!cancelled) setUsersError(msg);
+      } finally {
+        if (!cancelled) setLoadingUsers(false);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, []);
 
   const toggleBlock = (id: number) => {
     setUsers(prev => prev.map(u => u.id === id ? { ...u, status: u.status === 'Blocked' ? 'Active' : 'Blocked' } : u));
@@ -669,8 +708,25 @@ export const UserManagementPage: React.FC = () => {
                   </td>
                 </tr>
               ))}
-              {filtered.length === 0 && (
-                <tr><td colSpan={7} className="px-5 py-10 text-center text-gray-400 text-sm">No users match your search or filters.</td></tr>
+              {loadingUsers && (
+                <tr><td colSpan={7} className="px-5 py-12 text-center">
+                  <div className="flex flex-col items-center gap-3">
+                    <span className="w-7 h-7 border-2 border-red-500/30 border-t-red-500 rounded-full animate-spin" />
+                    <span className="text-sm text-gray-400">Loading users from database…</span>
+                  </div>
+                </td></tr>
+              )}
+              {!loadingUsers && usersError && (
+                <tr><td colSpan={7} className="px-5 py-10 text-center">
+                  <div className="inline-flex flex-col items-center gap-2 max-w-md text-center">
+                    <AlertTriangle className="w-8 h-8 text-amber-500" />
+                    <p className="text-sm font-semibold text-gray-700 dark:text-gray-300">Cannot load users</p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">{usersError}</p>
+                  </div>
+                </td></tr>
+              )}
+              {!loadingUsers && !usersError && filtered.length === 0 && (
+                <tr><td colSpan={7} className="px-5 py-10 text-center text-gray-400 text-sm">No users found in the database.</td></tr>
               )}
             </tbody>
           </table>

@@ -7,12 +7,12 @@ function getAIConfig(): { provider: string; model: string; apiKey: string } {
       const parsed = JSON.parse(raw);
       return {
         provider: parsed.aiProvider || 'gemini',
-        model: parsed.aiModel || 'gemini-1.5-flash',
+        model: parsed.aiModel || 'gemini-2.0-flash',
         apiKey: parsed.aiApiKey || '',
       };
     }
   } catch {}
-  return { provider: 'gemini', model: 'gemini-1.5-flash', apiKey: '' };
+  return { provider: 'gemini', model: 'gemini-2.0-flash', apiKey: '' };
 }
 
 async function callGemini(prompt: string, model: string, apiKey: string): Promise<string> {

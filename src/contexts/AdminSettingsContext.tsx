@@ -52,7 +52,7 @@ const DEFAULT_SETTINGS: AdminSettings = {
   features: DEFAULT_FEATURES,
   activeTheme: 'default',
   aiProvider: 'gemini',
-  aiModel: 'gemini-1.5-flash',
+  aiModel: 'gemini-2.0-flash',
   aiApiKey: '',
 };
 
