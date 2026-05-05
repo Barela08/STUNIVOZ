@@ -1,5 +1,5 @@
 import React, { useRef, useState, useCallback } from 'react';
-import { Upload, X, CheckCircle, AlertCircle, FileText, Image, Loader2 } from 'lucide-react';
+import { Upload, X, CheckCircle, AlertCircle, FileText, Image, Video, Loader2 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { uploadFile, UploadResult } from '../../services/uploadService';
 import { useNavigate } from 'react-router-dom';
@@ -17,7 +17,7 @@ type UploadState = 'idle' | 'uploading' | 'success' | 'error';
 
 export const FileUpload: React.FC<FileUploadProps> = ({
   folder = 'stunivoz/uploads',
-  accept = 'image/jpeg,image/png,image/webp,image/gif,application/pdf',
+  accept = 'image/jpeg,image/png,image/webp,image/gif,application/pdf,video/mp4,video/webm,video/quicktime,video/x-msvideo',
   label = 'Upload File',
   onSuccess,
   onError,
@@ -33,15 +33,14 @@ export const FileUpload: React.FC<FileUploadProps> = ({
   const [errorMsg, setErrorMsg] = useState('');
   const [preview, setPreview] = useState<string | null>(null);
   const [fileName, setFileName] = useState('');
+  const [fileType, setFileType] = useState('');
   const [dragging, setDragging] = useState(false);
 
   const handleFile = useCallback(async (file: File) => {
-    if (!user) {
-      navigate('/login');
-      return;
-    }
+    if (!user) { navigate('/login'); return; }
 
     setFileName(file.name);
+    setFileType(file.type);
     setResult(null);
     setErrorMsg('');
     setState('uploading');
@@ -91,9 +90,12 @@ export const FileUpload: React.FC<FileUploadProps> = ({
     setErrorMsg('');
     setPreview(null);
     setFileName('');
+    setFileType('');
   };
 
-  const isPdf = result?.resource_type === 'raw' || result?.format === 'pdf';
+  const isPdf = result?.resource_type === 'raw' || result?.format === 'pdf' || fileType === 'application/pdf';
+  const isVideo = result?.resource_type === 'video' || fileType.startsWith('video/');
+  const isImage = !isPdf && !isVideo;
 
   return (
     <div className={`space-y-4 ${className}`}>
@@ -103,10 +105,7 @@ export const FileUpload: React.FC<FileUploadProps> = ({
           onDrop={handleDrop}
           onDragOver={handleDragOver}
           onDragLeave={handleDragLeave}
-          onClick={() => {
-            if (!user) { navigate('/login'); return; }
-            inputRef.current?.click();
-          }}
+          onClick={() => { if (!user) { navigate('/login'); return; } inputRef.current?.click(); }}
           className={`relative border-2 border-dashed rounded-2xl p-8 text-center cursor-pointer transition-all duration-200
             ${dragging
               ? 'border-primary-500 bg-primary-50 dark:bg-primary-900/20 scale-[1.01]'
@@ -130,14 +129,14 @@ export const FileUpload: React.FC<FileUploadProps> = ({
                 {user ? 'Drag & drop or click to browse' : 'Please log in to upload files'}
               </p>
               <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
-                JPEG, PNG, WebP, GIF, PDF · Max 10 MB
+                Images · PDF · Video (MP4, MOV, WebM) · Max 100 MB
               </p>
             </div>
           </div>
         </div>
       )}
 
-      {/* Uploading state */}
+      {/* Uploading */}
       {state === 'uploading' && (
         <div className="border border-gray-200 dark:border-gray-700 rounded-2xl p-6 space-y-4">
           <div className="flex items-center gap-3">
@@ -159,7 +158,7 @@ export const FileUpload: React.FC<FileUploadProps> = ({
         </div>
       )}
 
-      {/* Success state */}
+      {/* Success */}
       {state === 'success' && result && (
         <div className="border border-green-200 dark:border-green-800 bg-green-50 dark:bg-green-900/20 rounded-2xl p-5 space-y-4">
           <div className="flex items-start gap-3">
@@ -174,18 +173,19 @@ export const FileUpload: React.FC<FileUploadProps> = ({
           </div>
 
           {/* Preview */}
-          {preview && !isPdf && (
+          {isImage && preview && (
             <div className="rounded-xl overflow-hidden border border-green-200 dark:border-green-700">
               <img src={preview} alt="Preview" className="w-full max-h-64 object-contain bg-gray-900" />
             </div>
           )}
           {isPdf && (
             <div className="rounded-xl overflow-hidden border border-green-200 dark:border-green-700">
-              <iframe
-                src={result.secure_url}
-                title="PDF Preview"
-                className="w-full h-64"
-              />
+              <iframe src={result.secure_url} title="PDF Preview" className="w-full h-64" />
+            </div>
+          )}
+          {isVideo && (
+            <div className="rounded-xl overflow-hidden border border-green-200 dark:border-green-700">
+              <video src={result.secure_url} controls className="w-full max-h-64 bg-black" />
             </div>
           )}
 
@@ -196,7 +196,9 @@ export const FileUpload: React.FC<FileUploadProps> = ({
               rel="noopener noreferrer"
               className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-green-600 text-white text-sm font-medium hover:bg-green-700 transition-colors"
             >
-              {isPdf ? <FileText className="w-4 h-4" /> : <Image className="w-4 h-4" />}
+              {isPdf && <FileText className="w-4 h-4" />}
+              {isVideo && <Video className="w-4 h-4" />}
+              {isImage && <Image className="w-4 h-4" />}
               View File
             </a>
             <button
@@ -210,7 +212,7 @@ export const FileUpload: React.FC<FileUploadProps> = ({
         </div>
       )}
 
-      {/* Error state */}
+      {/* Error */}
       {state === 'error' && (
         <div className="border border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-900/20 rounded-2xl p-5">
           <div className="flex items-start gap-3">

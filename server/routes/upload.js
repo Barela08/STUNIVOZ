@@ -7,8 +7,12 @@ import { sendUploadConfirmationEmail } from '../lib/mailer.js';
 
 const router = express.Router();
 
-const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'application/pdf'];
-const MAX_SIZE_BYTES = 10 * 1024 * 1024; // 10 MB
+const ALLOWED_TYPES = [
+  'image/jpeg', 'image/png', 'image/webp', 'image/gif',
+  'application/pdf',
+  'video/mp4', 'video/webm', 'video/quicktime', 'video/x-msvideo', 'video/x-matroska',
+];
+const MAX_SIZE_BYTES = 100 * 1024 * 1024; // 100 MB (covers videos)
 
 const storage = multer.memoryStorage();
 const upload = multer({
@@ -32,24 +36,25 @@ router.post('/file', requireAuth, upload.single('file'), async (req, res) => {
     const { mimetype, buffer, originalname } = req.file;
     const folder = req.body.folder || 'stunivoz/uploads';
     const isPdf = mimetype === 'application/pdf';
+    const isVideo = mimetype.startsWith('video/');
+    const isImage = mimetype.startsWith('image/');
 
     const base64 = buffer.toString('base64');
     const dataUri = `data:${mimetype};base64,${base64}`;
 
-    const publicId = isPdf
-      ? `${req.user.uid}_${Date.now()}.pdf`
-      : `${req.user.uid}_${Date.now()}`;
+    const ext = isPdf ? '.pdf' : '';
+    const publicId = `${req.user.uid}_${Date.now()}${ext}`;
+
+    const resourceType = isPdf ? 'raw' : isVideo ? 'video' : 'image';
 
     const result = await cloudinary.uploader.upload(dataUri, {
       folder,
-      resource_type: isPdf ? 'raw' : 'image',
+      resource_type: resourceType,
       public_id: publicId,
       use_filename: false,
       unique_filename: false,
       overwrite: false,
-      ...(isPdf ? {} : {
-        transformation: [{ quality: 'auto', fetch_format: 'auto' }],
-      }),
+      ...(isImage ? { transformation: [{ quality: 'auto', fetch_format: 'auto' }] } : {}),
     });
 
     // Send confirmation email (non-blocking)

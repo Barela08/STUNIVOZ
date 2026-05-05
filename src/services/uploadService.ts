@@ -23,12 +23,18 @@ export async function uploadFile(
 ): Promise<UploadResult> {
   const token = await getAuthToken();
 
-  const allowed = ['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'application/pdf'];
+  const allowed = [
+    'image/jpeg', 'image/png', 'image/webp', 'image/gif',
+    'application/pdf',
+    'video/mp4', 'video/webm', 'video/quicktime', 'video/x-msvideo', 'video/x-matroska',
+  ];
   if (!allowed.includes(file.type)) {
-    throw new Error('Only images (JPEG, PNG, WebP, GIF) and PDFs are allowed.');
+    throw new Error('Allowed types: Images (JPEG, PNG, WebP, GIF), PDF, or Video (MP4, WebM, MOV, AVI, MKV).');
   }
-  if (file.size > 10 * 1024 * 1024) {
-    throw new Error('File size must be under 10 MB.');
+  const isVideo = file.type.startsWith('video/');
+  const maxSize = isVideo ? 100 * 1024 * 1024 : 10 * 1024 * 1024;
+  if (file.size > maxSize) {
+    throw new Error(isVideo ? 'Video must be under 100 MB.' : 'File size must be under 10 MB.');
   }
 
   const formData = new FormData();
