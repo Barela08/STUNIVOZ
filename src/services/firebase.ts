@@ -8,13 +8,13 @@ import { getFirestore, collection, addDoc, getDocs, doc, updateDoc, deleteDoc, s
 import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 
 const firebaseConfig = {
-  apiKey: import.meta.env.VITE_FIREBASE_API_KEY || 'AIzaSyAgN7evtASc7zyyD8FUVwXbsgwUBYejZmE',
-  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN || 'stunivoz.firebaseapp.com',
-  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID || 'stunivoz',
-  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET || 'stunivoz.firebasestorage.app',
-  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID || '758018830397',
-  appId: import.meta.env.VITE_FIREBASE_APP_ID || '1:758018830397:web:2a0d13fa90ed60e0bdfa54',
-  measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID || 'G-W4X81X98JJ',
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
+  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
+  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
+  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
+  appId: import.meta.env.VITE_FIREBASE_APP_ID,
+  measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID,
 };
 
 const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();

@@ -5365,8 +5365,8 @@ export const EnvConfigPage: React.FC = () => {
           <h2 className="font-semibold text-gray-900 dark:text-white">Firebase Build-time Variables</h2>
         </div>
         <p className="text-xs text-gray-400 dark:text-gray-500 mb-4">
-          These are baked at build time from your <code className="bg-gray-100 dark:bg-gray-800 px-1 rounded">.env</code> file or Vercel project settings.
-          To change them, update them in <strong>Vercel → Project → Settings → Environment Variables</strong> then redeploy.
+          These are baked at build time from <strong>Replit → Secrets / Environment Variables</strong> panel (VITE_ prefixed keys).
+          To change them, update them in the Replit Secrets tab then restart the app — no code changes needed.
         </p>
         <div className="space-y-2">
           {firebaseEnvVars.map(ev => (
@@ -5379,7 +5379,7 @@ export const EnvConfigPage: React.FC = () => {
           ))}
         </div>
         <div className="mt-4 p-3 rounded-xl bg-yellow-50 dark:bg-yellow-900/10 border border-yellow-200 dark:border-yellow-800/40 text-xs text-yellow-700 dark:text-yellow-400">
-          <strong>Note:</strong> Build-time variables cannot be changed at runtime. After updating them in Vercel, trigger a new deployment for changes to take effect.
+          <strong>Note:</strong> After updating VITE_ vars in Replit Secrets, restart the app workflow for changes to take effect in development. For Vercel deployment, set them in <strong>Vercel → Project → Settings → Environment Variables</strong> and redeploy.
         </div>
       </Card>
     </div>

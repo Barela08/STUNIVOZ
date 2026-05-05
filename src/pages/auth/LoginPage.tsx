@@ -1,8 +1,12 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Mail, Lock, ArrowRight, Eye, EyeOff, Moon, Sun, LinkIcon, AlertCircle } from 'lucide-react';
+import { Mail, Lock, ArrowRight, Eye, EyeOff, Moon, Sun, LinkIcon, AlertCircle, Info } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTheme } from '../../contexts/ThemeContext';
+
+const FIREBASE_AUTH_DOMAIN = import.meta.env.VITE_FIREBASE_AUTH_DOMAIN || '';
+const CURRENT_DOMAIN = window.location.hostname;
+const NEEDS_DOMAIN_AUTH = CURRENT_DOMAIN !== 'localhost' && !CURRENT_DOMAIN.endsWith('.firebaseapp.com');
 
 const PROVIDER_LABEL: Record<string, string> = {
   'google.com': 'Google',
@@ -115,6 +119,33 @@ export const LoginPage: React.FC = () => {
             <h1 className="font-display text-3xl font-bold dark:text-white text-gray-900 mb-2">Welcome back!</h1>
             <p className="dark:text-gray-400 text-gray-500">Sign in to continue your career journey</p>
           </div>
+
+          {/* Firebase Domain Setup Banner for OAuth */}
+          {NEEDS_DOMAIN_AUTH && (
+            <div className="mb-5 p-4 rounded-xl border border-amber-200 dark:border-amber-700 bg-amber-50 dark:bg-amber-900/20">
+              <div className="flex items-start gap-2">
+                <Info className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
+                <div>
+                  <p className="text-xs font-semibold text-amber-800 dark:text-amber-300 mb-1">Google / GitHub login setup required</p>
+                  <p className="text-xs text-amber-700 dark:text-amber-400 leading-relaxed mb-2">
+                    To enable Google &amp; GitHub login, add this domain to Firebase Console:
+                  </p>
+                  <code className="block text-xs bg-amber-100 dark:bg-amber-900/40 text-amber-900 dark:text-amber-200 px-2 py-1 rounded-lg font-mono break-all mb-2">
+                    {CURRENT_DOMAIN}
+                  </code>
+                  <a
+                    href={`https://console.firebase.google.com/project/${import.meta.env.VITE_FIREBASE_PROJECT_ID || '_'}/authentication/settings`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-xs text-amber-700 dark:text-amber-300 underline font-medium"
+                  >
+                    Open Firebase Console → Authentication → Settings → Authorized domains →
+                  </a>
+                  <p className="text-xs text-amber-600 dark:text-amber-400 mt-1.5">Email/password login works without this step.</p>
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* Account Linking Banner */}
           {pendingLinkInfo && (
