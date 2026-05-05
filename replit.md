@@ -1,194 +1,74 @@
-# STUNIVOZ — Student Career Development Platform
+# STUNIVOZ
 
-## Overview
-STUNIVOZ is a full-stack student career development platform that helps students build profiles, create resumes, find internships, track career progress, and connect with a community.
+An all-in-one student career platform — helps students find internships, courses, events, build resumes, and connect with a community, with portals for students, companies, staff, and admins.
 
-## Tech Stack
-- **Frontend**: React 18 + TypeScript
-- **Build Tool**: Vite (port 5000, host 0.0.0.0, allowedHosts: true)
-- **Styling**: Tailwind CSS (darkMode: 'class') + PostCSS
-- **Backend/Auth/DB**: Firebase (Auth, Firestore, Storage)
-- **Routing**: React Router v6
-- **Icons**: Lucide React
-- **Charts**: Recharts
+## Run & Operate
 
-## Firebase Config
-All credentials are environment variables:
-- `VITE_FIREBASE_API_KEY` — Replit Secret
-- `VITE_FIREBASE_AUTH_DOMAIN=stunivoz.firebaseapp.com`
-- `VITE_FIREBASE_PROJECT_ID=stunivoz`
-- `VITE_FIREBASE_STORAGE_BUCKET=stunivoz.firebasestorage.app`
-- `VITE_FIREBASE_MESSAGING_SENDER_ID=758018830397`
-- `VITE_FIREBASE_APP_ID=1:758018830397:web:2a0d13fa90ed60e0bdfa54`
+| Command | Purpose |
+|---|---|
+| `npm run dev` | Start Vite frontend (port 5000) |
+| `npm run server` | Start Express API server (port 3001) |
+| `npm run build` | Build frontend for production |
 
-Firebase Console requirements:
-- Enable **Email/Password**, **Google**, and **GitHub** auth providers
-- For GitHub: create OAuth App at github.com/settings/developers, add Client ID + Secret in Firebase Console
-- Add dev domain to **Authorized Domains** (Firebase Auth → Settings)
-- Firestore Database must be initialized (default region)
+**Required env vars / secrets:**
+- `VITE_FIREBASE_API_KEY`, `VITE_FIREBASE_AUTH_DOMAIN`, `VITE_FIREBASE_PROJECT_ID`, `VITE_FIREBASE_STORAGE_BUCKET`, `VITE_FIREBASE_MESSAGING_SENDER_ID`, `VITE_FIREBASE_APP_ID`, `VITE_FIREBASE_MEASUREMENT_ID` — Firebase client config (set as shared env vars)
+- `FIREBASE_SERVICE_ACCOUNT_JSON` — Firebase Admin SDK service account JSON (secret)
+- `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, `CLOUDINARY_API_SECRET` — Cloudinary file/media uploads (secrets)
+- `EMAIL_USER`, `EMAIL_PASS` — Gmail SMTP for password reset emails (secrets)
+- `ADMIN_SETUP_KEY` — One-time key for provisioning admin accounts (shared env var)
 
-## Role System
-Roles are stored in the Firestore `profiles` collection as `role` field:
-| Role | Value | Login URL | OAuth Allowed |
-|------|-------|-----------|---------------|
-| Student | `student` | `/login` | Google ✅ GitHub ✅ |
-| Company | `company` | `/provider/login` | Email only ❌ |
-| Admin | `admin` | `/admin/login` | Email only ❌ |
-| Staff | `staff` | `/staff/login` | Email only ❌ |
+## Stack
 
-**Security rules:**
-- Google/GitHub OAuth → after login, if profile.role is NOT 'student' → auto sign-out + error
-- Portal login pages check role after auth → if mismatch → auto sign-out + error
-- Route guards: `/provider/*` requires `role=company`, `/admin/*` requires `role=admin`, `/staff/*` requires `role=staff`
+- **Frontend**: React 18 + TypeScript + Vite (port 5000)
+- **Backend**: Node.js + Express 5 (port 3001, ESM)
+- **Styling**: Tailwind CSS + PostCSS
+- **Auth**: Firebase Auth (email/password, Google, GitHub)
+- **Database**: Firestore (via Firebase)
+- **Storage**: Firebase Storage (client) + Cloudinary (server-side uploads via API)
+- **Email**: Nodemailer + Gmail SMTP
 
-## Project Structure
-```
-src/
-  App.tsx              — Root with all routes + ThemeProvider + AuthProvider
-                         ProtectedRoute (student), RoleRoute (portal), PublicRoute (auth pages)
-  main.tsx             — Entry point
-  contexts/
-    AuthContext.tsx    — Firebase auth: signIn, signUp, signOut, signInWithGoogleOAuth,
-                         signInWithGitHubOAuth, updateProfile, fetchProfile
-                         Profile interface includes role?: UserRole
-    ThemeContext.tsx   — Dark/Light mode (localStorage + OS preference, sets .dark on <html>)
-    AdminSettingsContext.tsx — Feature flags, maintenance mode, AI config (provider/model/apiKey)
-                               Stored in localStorage key 'stunivoz_admin_settings'
-  services/
-    firebase.ts        — Firebase config + helpers: addDocument, getDocument, setDocument,
-                         getCollection, updateDocument, deleteDocument, uploadFile,
-                         signInWithGoogle, signInWithGitHub (GithubAuthProvider)
-    contentService.ts  — Firestore CRUD for internships/events/courses + real-time subscriptions
-    aiService.ts       — Gemini/OpenAI API integration; discoverInternships/Events/Courses();
-                         careerChatReply(); reads config from localStorage 'stunivoz_admin_settings'
-  components/
-    common/            — Button, Input, Card (dark: variants), Loading
-    Layout/            — Layout (student), AdminLayout, ProviderLayout, StaffLayout
-                         All layouts have dark mode + theme toggle button
-  pages/
-    admin/             — AdminDashboardPage + AdminPages (UserMgmt, CompanyMgmt,
-                         InternshipMgmt [AI Discover], EventMgmt [AI Discover],
-                         CourseMgmt [AI Discover], AIControlPage [real settings], etc.)
-    auth/              — LoginPage (Email+Google+GitHub), SignupPage (Email+Google+GitHub),
-                         ForgotPasswordPage, ProviderLoginPage, ProviderRegisterPage,
-                         AdminLoginPage, StaffLoginPage
-    provider/          — ProviderDashboardPage, PostInternshipPage, PostEventPage, ApplicantsPage
-    staff/             — StaffDashboardPage, StaffPages
-    career/            — CareerPage with AI-powered career chatbot (real Gemini/OpenAI)
-    (other student pages) — dashboard, profile, internships, events, courses, resume,
-                            skills, practice, community, planner, settings, ats, gamification, etc.
-  types/index.ts       — Shared TypeScript interfaces
-public/
-  logo.png             — STUNIVOZ logo
-```
+## Where things live
 
-## Key Features Implemented
-1. **GitHub Login** — GithubAuthProvider from firebase/auth; students only; role check enforced
-2. **Google Login** — Students only; same role check
-3. **GitHub + Google on Signup** — SignupPage now has Google and GitHub OAuth buttons
-4. **Dark/Light Mode** — ThemeContext with localStorage persistence + OS preference detection
-5. **Separate Portal Logins** — /provider/login (blue), /admin/login (red), /staff/login (emerald)
-6. **Company Registration** — /provider/register: full form (company name, contact, industry, size, email, phone, website, password); creates Firestore profile with role='company'; success redirect
-7. **AI Discovery (Admin)** — "AI Discover" button in Internship/Event/Course admin pages opens a modal where admin enters a search topic. AI generates up to 10 realistic listings, scam-verifies them, and admin selects which to bulk-import to Firestore.
-8. **AI Settings (Admin → AI)** — AIControlPage fully rebuilt: provider selection (Gemini/OpenAI), model dropdown, API key input with show/hide, test connection button, save button. Stored in localStorage.
-9. **AI Career Chatbot** — CareerPage chatbot uses real Gemini/OpenAI via aiService.careerChatReply(). Falls back to built-in responses if no API key configured, shows a gentle notice.
-10. **Role-Based Routing** — RoleRoute component checks Firebase profile.role
-11. **Content Management** — Firestore CRUD for internships/events/courses with real-time subscriptions
-12. **Admin Feature Flags** — FeatureControlPage with toggles for 12 platform features
-13. **AdminPages** — 5 expanded tables + AI discovery + AI control + feature flags + notifications
+- `src/` — React frontend
+  - `src/pages/` — Route-based pages (auth, student, provider, staff, admin)
+  - `src/components/` — Shared UI components and layout wrappers
+  - `src/contexts/` — Auth, Theme, Permissions, AdminSettings context providers
+  - `src/services/` — Firebase client, upload, AI, password reset services
+- `server/` — Express API backend
+  - `server/routes/` — `/api/auth` and `/api/upload` routes
+  - `server/lib/` — Firebase Admin, Cloudinary, Nodemailer helpers
+  - `server/middleware/requireAuth.js` — Firebase token verification middleware
+- `src/App.tsx` — All client-side routes and route guards
+- `vite.config.ts` — Vite config (proxies `/api` → port 3001)
 
-## AI Service Configuration
-The AI service reads from localStorage key `stunivoz_admin_settings`:
-- `aiProvider`: 'gemini' | 'openai' (default: 'gemini')
-- `aiModel`: model name (default: 'gemini-1.5-flash')
-- `aiApiKey`: API key string
+## Architecture decisions
 
-### Getting a free Gemini API key:
-1. Go to https://aistudio.google.com/app/apikey
-2. Create a free API key
-3. In Admin Panel → AI Settings → paste the key → Save
+- **Two-server setup**: Vite dev server (5000) proxies `/api/*` to Express (3001) — keep both workflows running in dev.
+- **Firebase for auth + Firestore**: The entire user identity, profiles, and content live in the user's own Firebase project (`stunivoz`). Firebase config values are inlined as fallbacks in `src/services/firebase.ts` so the app works without env vars set.
+- **Cloudinary for server-side uploads**: Files are uploaded through the Express server (not directly from browser) so the Cloudinary secret stays server-side only.
+- **Role-based routing**: Four roles — `student`, `company`, `staff`, `admin` — each with dedicated layouts and protected routes in `src/App.tsx`.
+- **AI keys stored by admin**: AI API keys (Gemini, OpenAI, Claude) are stored by the admin in Firestore/localStorage via the Admin UI, not hardcoded.
 
-### AI Discover prompts:
-- Internships: generates realistic Indian job market listings (company, role, stipend, skills, apply URL)
-- Events: generates hackathons, webinars, workshops with dates in 2025-2026
-- Courses: generates real course recommendations from Udemy, Coursera, NPTEL, etc.
-- Each item includes `isScam: boolean` field — flagged items are shown with a warning and cannot be selected
+## Product
 
-## Development
-```bash
-npm install
-npm run dev       # Vite frontend on http://0.0.0.0:5000
-npm run server    # Express API server on http://0.0.0.0:3001
-```
+- Student portal: internships, courses, events, resume builder, AI career advisor, ATS analyzer, skills, community, gamification
+- Company (provider) portal: post internships/events, manage applicants
+- Staff portal: moderate content, verify users, handle reports
+- Admin portal: full platform control — users, content, AI settings, feature flags, UI control, analytics, security
 
-Both are configured as separate Replit workflows ("Start application" + "API Server").
+## User preferences
 
-## Deployment
-- Build: `npm run build`
-- Public dir: `dist`
-- Vercel: uses `vercel.json` (rewrites /api/* to serverless functions, /* to index.html)
+_Populate as you build_
 
-## Backend API Server (`server/`)
-Express.js API server running on port 3001. All secrets are server-only (never exposed to frontend).
+## Gotchas
 
-### Routes
-- `GET  /api/health` — health check
-- `POST /api/upload/file` — authenticated file upload to Cloudinary (images + PDFs)
-- `POST /api/upload/sign` — generate signed upload params for client-side Cloudinary upload
-- `DELETE /api/upload/:publicId` — delete a Cloudinary file
-- `POST /api/auth/forgot-password` — send password reset email via Nodemailer/Gmail
-- `POST /api/auth/reset-password` — verify token + update Firebase password
-- `GET  /api/auth/verify-reset-token` — validate reset token
+- Both `Start application` (Vite) and `API Server` (Express) workflows must be running for the full app to work.
+- Firebase config is hardcoded as fallbacks in `src/services/firebase.ts` — env vars override them but are not strictly required for the frontend to boot.
+- The `FIREBASE_SERVICE_ACCOUNT_JSON` secret must be valid JSON (the entire service account key file content on one line); server will throw on startup if missing or malformed.
+- Password reset tokens are stored in-memory in the Express process — they reset on server restart.
 
-### Authentication
-All `/api/upload/*` routes require `Authorization: Bearer <firebase-id-token>` header.
-The server uses Firebase Admin SDK to verify tokens server-side.
+## Pointers
 
-### Files
-```
-server/
-  index.js                 — Express app entry (port 3001)
-  routes/
-    upload.js              — Cloudinary upload/sign/delete routes
-    auth.js                — forgot-password / reset-password routes
-  middleware/
-    requireAuth.js         — Firebase ID token verification middleware
-  lib/
-    cloudinary.js          — Cloudinary SDK config
-    firebaseAdmin.js       — Firebase Admin SDK init
-    mailer.js              — Nodemailer (Gmail SMTP) email sender
-```
-
-### Required Secrets
-| Secret | Purpose |
-|--------|---------|
-| `CLOUDINARY_CLOUD_NAME` | Cloudinary cloud identifier |
-| `CLOUDINARY_API_KEY` | Cloudinary API key (public) |
-| `CLOUDINARY_API_SECRET` | Cloudinary API secret (server-only) |
-| `EMAIL_USER` | Gmail address for sending emails |
-| `EMAIL_PASS` | Gmail App Password (16-char) |
-| `FIREBASE_SERVICE_ACCOUNT_JSON` | Firebase Admin SDK service account JSON |
-
-## Frontend Services
-- `src/services/uploadService.ts` — uploadFile(), deleteFile() — posts to /api/upload with Firebase ID token
-- `src/services/passwordResetService.ts` — requestPasswordReset(), verifyResetToken(), submitNewPassword()
-- `src/components/common/FileUpload.tsx` — reusable drag-and-drop upload UI with preview + progress
-
-## New Routes
-- `/reset-password?token=xxx` — password reset form (validates token, sets new password)
-
-## Security Fixes (May 2026)
-- Removed all "Dev Mode" bypass buttons from Admin, Staff, and Company login pages
-- Admin login now uses pure Firebase Authentication (no hardcoded password fallback, no devSignIn)
-- Removed `devSignIn` function entirely from AuthContext — all auth goes through Firebase
-- Firebase API key moved to environment variable (`VITE_FIREBASE_API_KEY`)
-
-## Admin API System
-- "Add API" modal now only requires pasting an API key
-- Service name, category, endpoint, and description are auto-detected from the key prefix (OpenAI `sk-`, Google `AIzaSy`, SendGrid `SG.`, Slack `xoxb-`, GitHub `ghp_`, etc.)
-- Editing an existing API also triggers auto-detection when the key is changed
-
-## Known Non-Breaking Warnings
-- Vite HMR: "useAuth export is incompatible" — full-tree reload on AuthContext HMR, harmless in production
-- React Router v6 future flag warnings — non-breaking
-- Firestore WebChannelConnection transport — auto-retries in dev
+- Firebase project: https://console.firebase.google.com/project/stunivoz
+- Cloudinary: https://cloudinary.com/console
+- Firestore rules: `firestore.rules`
