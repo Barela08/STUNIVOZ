@@ -24,6 +24,8 @@ import {
   FirestoreInternship, FirestoreEvent, FirestoreCourse,
 } from '../../services/contentService';
 import { discoverInternships, discoverEvents, discoverCourses } from '../../services/aiService';
+import { db, uploadFile } from '../../services/firebase';
+import { collection, onSnapshot, doc, addDoc, updateDoc, deleteDoc } from 'firebase/firestore';
 
 // ── CSV Export Utility ────────────────────────────────────────────────────────
 function exportToCSV(rows: Record<string, unknown>[], filename: string) {
@@ -2453,12 +2455,15 @@ const emptyRoadmap = (): Omit<RoadmapDoc, 'id'> => ({
 export const RoadmapManagementPage: React.FC = () => {
   const [roadmaps, setRoadmaps] = useState<RoadmapDoc[]>([]);
   const [loading, setLoading] = useState(true);
+  const [fsError, setFsError] = useState('');
   const [showForm, setShowForm] = useState(false);
   const [editing, setEditing] = useState<RoadmapDoc | null>(null);
   const [form, setForm] = useState(emptyRoadmap());
   const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState('');
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState('');
+  const [uploadError, setUploadError] = useState('');
   const [search, setSearch] = useState('');
   const [catFilter, setCatFilter] = useState('All');
   const [toast, setToast] = useState('');
@@ -2466,73 +2471,89 @@ export const RoadmapManagementPage: React.FC = () => {
   const [tagInput, setTagInput] = useState('');
   const fileRef = useRef<HTMLInputElement>(null);
 
-  const showToast = (msg: string) => { setToast(msg); setTimeout(() => setToast(''), 3000); };
+  const showToast = (msg: string) => { setToast(msg); setTimeout(() => setToast(''), 3500); };
 
   useEffect(() => {
-    let unsub: (() => void) | null = null;
-    (async () => {
-      const { getFirestore, collection, onSnapshot, query, orderBy } = await import('firebase/firestore');
-      const db = getFirestore();
-      const q = query(collection(db, 'roadmaps'), orderBy('createdAt', 'desc'));
-      unsub = onSnapshot(q, snap => {
-        setRoadmaps(snap.docs.map(d => ({ id: d.id, ...d.data() } as RoadmapDoc)));
+    setFsError('');
+    const unsub = onSnapshot(
+      collection(db, 'roadmaps'),
+      snap => {
+        const docs = snap.docs
+          .map(d => ({ id: d.id, ...d.data() } as RoadmapDoc))
+          .sort((a, b) => {
+            if (!a.createdAt && !b.createdAt) return 0;
+            if (!a.createdAt) return 1;
+            if (!b.createdAt) return -1;
+            return b.createdAt.localeCompare(a.createdAt);
+          });
+        setRoadmaps(docs);
         setLoading(false);
-      }, async () => {
-        const { getFirestore: gfs, collection: col, onSnapshot: ons } = await import('firebase/firestore');
-        ons(col(gfs(), 'roadmaps'), (snap: any) => {
-          setRoadmaps(snap.docs.map((d: any) => ({ id: d.id, ...d.data() } as RoadmapDoc)));
-          setLoading(false);
-        }, () => setLoading(false));
-      });
-    })();
-    return () => unsub?.();
+        setFsError('');
+      },
+      err => {
+        setLoading(false);
+        setFsError(
+          err.code === 'permission-denied'
+            ? 'Firebase rules are blocking access. Go to Firebase Console → Firestore → Rules and set:\n\nmatch /roadmaps/{id} { allow read, write: if request.auth != null; }'
+            : `Firestore error: ${err.message}`
+        );
+      }
+    );
+    return () => unsub();
   }, []);
 
-  const openAdd = () => { setEditing(null); setForm(emptyRoadmap()); setTagInput(''); setShowForm(true); };
-  const openEdit = (r: RoadmapDoc) => { setEditing(r); setForm({ ...r }); setTagInput(r.tags?.join(', ') || ''); setShowForm(true); };
+  const openAdd = () => { setEditing(null); setForm(emptyRoadmap()); setTagInput(''); setSaveError(''); setUploadError(''); setShowForm(true); };
+  const openEdit = (r: RoadmapDoc) => { setEditing(r); setForm({ ...r }); setTagInput(r.tags?.join(', ') || ''); setSaveError(''); setUploadError(''); setShowForm(true); };
 
   const handleFileUpload = async (file: File) => {
-    if (!file || file.type !== 'application/pdf') { showToast('Please select a PDF file'); return; }
-    if (file.size > 20 * 1024 * 1024) { showToast('PDF must be under 20MB'); return; }
+    if (!file || file.type !== 'application/pdf') { setUploadError('Please select a PDF file (.pdf only)'); return; }
+    if (file.size > 20 * 1024 * 1024) { setUploadError('PDF must be under 20MB'); return; }
     setUploading(true);
-    setUploadProgress('Uploading PDF...');
-    try {
-      const { getStorage, ref, uploadBytes, getDownloadURL } = await import('firebase/storage');
-      const storage = getStorage();
-      const path = `roadmaps/${Date.now()}_${file.name.replace(/\s+/g, '_')}`;
-      const storageRef = ref(storage, path);
-      await uploadBytes(storageRef, file);
-      const url = await getDownloadURL(storageRef);
-      setForm(f => ({ ...f, pdfUrl: url, pdfName: file.name }));
+    setUploadProgress('Uploading PDF to Firebase Storage...');
+    setUploadError('');
+    const path = `roadmaps/${Date.now()}_${file.name.replace(/\s+/g, '_')}`;
+    const result = await uploadFile(file, path);
+    if (result.success && result.url) {
+      setForm(f => ({ ...f, pdfUrl: result.url!, pdfName: file.name }));
       setUploadProgress('');
       showToast('PDF uploaded successfully!');
-    } catch (e: any) {
-      showToast('PDF upload failed: ' + (e?.message || 'Unknown error'));
+    } else {
+      const err = result.error as any;
+      const isRules = err?.code === 'storage/unauthorized';
+      setUploadError(
+        isRules
+          ? 'Firebase Storage rules are blocking PDF uploads. Go to Firebase Console → Storage → Rules and set:\n\nmatch /{allPaths=**} { allow read, write: if request.auth != null; }'
+          : `Upload failed: ${err?.message || 'Unknown error — check Firebase Storage rules'}`
+      );
       setUploadProgress('');
-    } finally {
-      setUploading(false);
     }
+    setUploading(false);
   };
 
   const handleSave = async () => {
-    if (!form.title.trim()) { showToast('Title is required'); return; }
-    if (!form.category) { showToast('Category is required'); return; }
+    if (!form.title.trim()) { setSaveError('Title is required'); return; }
+    if (!form.category) { setSaveError('Category is required'); return; }
     setSaving(true);
+    setSaveError('');
     try {
-      const { getFirestore, collection, addDoc, doc, updateDoc, serverTimestamp } = await import('firebase/firestore');
-      const db = getFirestore();
       const tags = tagInput.split(',').map(t => t.trim()).filter(Boolean);
-      const data = { ...form, tags, updatedAt: new Date().toISOString() };
+      const now = new Date().toISOString();
+      const data = { ...form, tags, updatedAt: now };
       if (editing) {
         await updateDoc(doc(db, 'roadmaps', editing.id), data);
-        showToast('Roadmap updated!');
+        showToast('Roadmap updated — students will see it instantly!');
       } else {
-        await addDoc(collection(db, 'roadmaps'), { ...data, createdAt: new Date().toISOString() });
-        showToast('Roadmap created!');
+        await addDoc(collection(db, 'roadmaps'), { ...data, createdAt: now });
+        showToast('Roadmap created! Toggle "Published" to make it visible to students.');
       }
       setShowForm(false);
     } catch (e: any) {
-      showToast('Save failed: ' + (e?.message || 'Unknown error'));
+      const isRules = e?.code === 'permission-denied';
+      setSaveError(
+        isRules
+          ? 'Firebase rules denied write. Go to Firebase Console → Firestore → Rules and set:\n\nmatch /roadmaps/{id} { allow read, write: if request.auth != null; }'
+          : `Save failed: ${e?.message || 'Unknown error'}`
+      );
     } finally {
       setSaving(false);
     }
@@ -2540,19 +2561,21 @@ export const RoadmapManagementPage: React.FC = () => {
 
   const handleDelete = async (id: string) => {
     try {
-      const { getFirestore, doc, deleteDoc } = await import('firebase/firestore');
-      await deleteDoc(doc(getFirestore(), 'roadmaps', id));
+      await deleteDoc(doc(db, 'roadmaps', id));
       showToast('Roadmap deleted');
-    } catch { showToast('Delete failed'); }
+    } catch (e: any) {
+      showToast('Delete failed: ' + (e?.message || 'Check Firebase rules'));
+    }
     setDeleteConfirm(null);
   };
 
   const togglePublish = async (r: RoadmapDoc) => {
     try {
-      const { getFirestore, doc, updateDoc } = await import('firebase/firestore');
-      await updateDoc(doc(getFirestore(), 'roadmaps', r.id), { published: !r.published });
-      showToast(r.published ? 'Roadmap unpublished' : 'Roadmap published!');
-    } catch { showToast('Update failed'); }
+      await updateDoc(doc(db, 'roadmaps', r.id), { published: !r.published });
+      showToast(r.published ? 'Roadmap unpublished' : 'Roadmap published — visible to students now!');
+    } catch (e: any) {
+      showToast('Update failed: ' + (e?.message || 'Check Firebase rules'));
+    }
   };
 
   const filtered = roadmaps.filter(r => {
@@ -2566,8 +2589,19 @@ export const RoadmapManagementPage: React.FC = () => {
   return (
     <div className="space-y-6 animate-fade-in">
       {toast && (
-        <div className="fixed bottom-6 right-6 z-50 flex items-center gap-2 px-4 py-3 bg-gray-900 dark:bg-gray-100 text-white dark:text-gray-900 text-sm font-medium rounded-xl shadow-xl">
-          <CheckCircle className="w-4 h-4 text-green-400" /> {toast}
+        <div className="fixed bottom-6 right-6 z-50 flex items-center gap-2 px-4 py-3 bg-gray-900 dark:bg-gray-100 text-white dark:text-gray-900 text-sm font-medium rounded-xl shadow-xl animate-fade-in">
+          <CheckCircle className="w-4 h-4 text-green-400 flex-shrink-0" /> {toast}
+        </div>
+      )}
+
+      {/* Persistent Firestore error banner */}
+      {fsError && (
+        <div className="flex gap-3 p-4 rounded-xl bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800">
+          <AlertTriangle className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" />
+          <div>
+            <p className="text-sm font-semibold text-red-700 dark:text-red-300 mb-1">Firebase Access Error</p>
+            <pre className="text-xs text-red-600 dark:text-red-400 whitespace-pre-wrap font-mono bg-red-100 dark:bg-red-900/30 rounded-lg p-2">{fsError}</pre>
+          </div>
         </div>
       )}
 
@@ -2819,20 +2853,20 @@ export const RoadmapManagementPage: React.FC = () => {
               <div>
                 <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1.5">Roadmap PDF</label>
                 <input ref={fileRef} type="file" accept="application/pdf" className="hidden"
-                  onChange={e => { if (e.target.files?.[0]) handleFileUpload(e.target.files[0]); }} />
+                  onChange={e => { if (e.target.files?.[0]) handleFileUpload(e.target.files[0]); e.target.value = ''; }} />
                 {form.pdfUrl ? (
                   <div className="flex items-center gap-3 p-3 rounded-xl border border-green-200 dark:border-green-800 bg-green-50 dark:bg-green-900/20">
                     <FileText className="w-5 h-5 text-green-600 dark:text-green-400 flex-shrink-0" />
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-semibold text-green-700 dark:text-green-300 truncate">{form.pdfName || 'PDF uploaded'}</p>
-                      <a href={form.pdfUrl} target="_blank" rel="noopener noreferrer" className="text-xs text-green-600 hover:underline">Preview PDF</a>
+                      <a href={form.pdfUrl} target="_blank" rel="noopener noreferrer" className="text-xs text-green-600 hover:underline">Preview PDF ↗</a>
                     </div>
                     <div className="flex gap-2">
                       <button onClick={() => fileRef.current?.click()} disabled={uploading}
                         className="text-xs px-2 py-1 rounded-lg bg-white dark:bg-gray-800 border border-green-300 dark:border-green-700 text-green-700 dark:text-green-300 hover:bg-green-50 transition-all">
                         Replace
                       </button>
-                      <button onClick={() => setForm(f => ({ ...f, pdfUrl: '', pdfName: '' }))}
+                      <button onClick={() => { setForm(f => ({ ...f, pdfUrl: '', pdfName: '' })); setUploadError(''); }}
                         className="text-xs px-2 py-1 rounded-lg bg-white dark:bg-gray-800 border border-red-200 dark:border-red-800 text-red-500 hover:bg-red-50 transition-all">
                         Remove
                       </button>
@@ -2849,6 +2883,12 @@ export const RoadmapManagementPage: React.FC = () => {
                       <><Upload className="w-7 h-7" /><span className="text-sm font-medium">Click to upload PDF</span><span className="text-xs">Max 20MB · PDF files only</span></>
                     )}
                   </button>
+                )}
+                {uploadError && (
+                  <div className="mt-2 flex gap-2 p-2.5 rounded-lg bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800">
+                    <AlertTriangle className="w-4 h-4 text-red-500 flex-shrink-0 mt-0.5" />
+                    <pre className="text-xs text-red-600 dark:text-red-400 whitespace-pre-wrap font-mono">{uploadError}</pre>
+                  </div>
                 )}
               </div>
 
@@ -2868,16 +2908,24 @@ export const RoadmapManagementPage: React.FC = () => {
             </div>
 
             {/* Modal Footer */}
-            <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-gray-200 dark:border-gray-800 flex-shrink-0">
-              <button onClick={() => !saving && setShowForm(false)} disabled={saving}
-                className="px-4 py-2 rounded-xl border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 font-medium text-sm hover:bg-gray-50 dark:hover:bg-gray-800 transition-all">
-                Cancel
-              </button>
-              <button onClick={handleSave} disabled={saving || uploading}
-                className="flex items-center gap-2 px-5 py-2 rounded-xl bg-primary-600 hover:bg-primary-700 disabled:opacity-60 text-white font-semibold text-sm transition-all">
-                {saving ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-                {saving ? 'Saving...' : editing ? 'Save Changes' : 'Create Roadmap'}
-              </button>
+            <div className="px-6 py-4 border-t border-gray-200 dark:border-gray-800 flex-shrink-0">
+              {saveError && (
+                <div className="flex gap-2 p-2.5 rounded-lg bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 mb-3">
+                  <AlertTriangle className="w-4 h-4 text-red-500 flex-shrink-0 mt-0.5" />
+                  <pre className="text-xs text-red-600 dark:text-red-400 whitespace-pre-wrap font-mono">{saveError}</pre>
+                </div>
+              )}
+              <div className="flex items-center justify-end gap-3">
+                <button onClick={() => !saving && setShowForm(false)} disabled={saving}
+                  className="px-4 py-2 rounded-xl border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 font-medium text-sm hover:bg-gray-50 dark:hover:bg-gray-800 transition-all">
+                  Cancel
+                </button>
+                <button onClick={handleSave} disabled={saving || uploading}
+                  className="flex items-center gap-2 px-5 py-2 rounded-xl bg-primary-600 hover:bg-primary-700 disabled:opacity-60 text-white font-semibold text-sm transition-all">
+                  {saving ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                  {saving ? 'Saving...' : editing ? 'Save Changes' : 'Create Roadmap'}
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -2978,6 +3026,11 @@ export const AIControlPage: React.FC = () => {
   const [newKey, setNewKey] = useState('');
   const [showNewKey, setShowNewKey] = useState(false);
   const [addStatus, setAddStatus] = useState<'idle' | 'detecting' | 'fetching' | 'done' | 'error'>('idle');
+  const addStatusRef = useRef<'idle' | 'detecting' | 'fetching' | 'done' | 'error'>('idle');
+  const setAddStatusSafe = (s: 'idle' | 'detecting' | 'fetching' | 'done' | 'error') => {
+    addStatusRef.current = s;
+    setAddStatus(s);
+  };
   const [addError, setAddError] = useState('');
   const autoTriggerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [featureAssign, setFeatureAssign] = useState<Record<string, string>>(() => {
@@ -3011,33 +3064,19 @@ export const AIControlPage: React.FC = () => {
   };
 
   // Auto-trigger when key is pasted / typed and matches a known prefix
-  const handleKeyChange = (val: string) => {
-    setNewKey(val);
-    setAddError('');
-    if (autoTriggerRef.current) clearTimeout(autoTriggerRef.current);
-    const trimmed = val.trim();
-    // Only auto-trigger if key is long enough AND matches a known prefix
-    const knownPrefix = DETECT_MAP.some(({ prefix }) => trimmed.startsWith(prefix));
-    if (knownPrefix && trimmed.length >= 20 && addStatus === 'idle') {
-      autoTriggerRef.current = setTimeout(() => {
-        handleAddKeyWithValue(trimmed);
-      }, 600); // 600ms debounce after paste
-    }
-  };
-
   const handleAddKeyWithValue = async (key: string) => {
     if (!key) { setAddError('Please enter an API key.'); return; }
     setAddError('');
-    setAddStatus('detecting');
+    setAddStatusSafe('detecting');
 
     const detected = detectPlatform(key);
     if (detected.platform === 'unknown') {
-      setAddStatus('error');
-      setAddError('Could not auto-detect platform. Make sure you are pasting the full API key (e.g. sk-..., AIza..., sk-ant-...).');
+      setAddStatusSafe('error');
+      setAddError('Could not auto-detect platform. Paste a full key: AIza... (Gemini), sk-... (OpenAI), sk-ant-... (Claude), gsk_... (Groq)');
       return;
     }
 
-    setAddStatus('fetching');
+    setAddStatusSafe('fetching');
     const models = await fetchAvailableModels(detected.platform, key);
 
     const entry: SmartApiEntry = {
@@ -3052,20 +3091,39 @@ export const AIControlPage: React.FC = () => {
       savedAt: new Date().toLocaleString(),
     };
 
-    const existingIdx = entries.findIndex(e => e.platform === detected.platform);
-    let updated: SmartApiEntry[];
-    if (existingIdx >= 0) {
-      updated = entries.map((e, i) => i === existingIdx ? entry : e);
-      showToast(`${detected.name} API updated — ${entry.models.length} models loaded`);
-    } else {
-      updated = [...entries, entry];
-      showToast(`${detected.name} detected — ${entry.models.length} models auto-loaded`);
-    }
+    setEntries(prev => {
+      const existingIdx = prev.findIndex(e => e.platform === detected.platform);
+      const updated = existingIdx >= 0
+        ? prev.map((e, i) => i === existingIdx ? entry : e)
+        : [...prev, entry];
+      localStorage.setItem(SMART_API_KEY, JSON.stringify(updated));
+      const active = updated.find(e => e.status === 'ready' && ['openai', 'gemini', 'claude', 'groq'].includes(e.platform));
+      if (active) setAIConfig(active.platform, active.selectedModel, active.apiKey);
+      saveToFirestore(updated).catch(() => {});
+      return updated;
+    });
 
-    persistEntries(updated);
+    if (models.length > 0) {
+      showToast(`${detected.name} detected — ${models.length} models loaded ✓`);
+    } else {
+      showToast(`${detected.name} added with default models`);
+    }
     setNewKey('');
-    setAddStatus('done');
-    setTimeout(() => setAddStatus('idle'), 2000);
+    setAddStatusSafe('done');
+    setTimeout(() => setAddStatusSafe('idle'), 2500);
+  };
+
+  const handleKeyChange = (val: string) => {
+    setNewKey(val);
+    setAddError('');
+    if (autoTriggerRef.current) clearTimeout(autoTriggerRef.current);
+    const trimmed = val.trim();
+    const knownPrefix = DETECT_MAP.some(({ prefix }) => trimmed.startsWith(prefix));
+    if (knownPrefix && trimmed.length >= 20 && addStatusRef.current === 'idle') {
+      autoTriggerRef.current = setTimeout(() => {
+        handleAddKeyWithValue(trimmed);
+      }, 600);
+    }
   };
 
   const handleAddKey = () => {

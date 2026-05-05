@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { getFirestore, collection, onSnapshot } from 'firebase/firestore';
+import { collection, onSnapshot } from 'firebase/firestore';
+import { db } from '../../services/firebase';
 import {
   Map, Search, FileText, Download, ChevronDown, ChevronUp,
   BookOpen, Code2, Palette, TrendingUp, Database, Shield, Cpu, Globe,
@@ -187,13 +188,12 @@ const RoadmapCard: React.FC<{ roadmap: Roadmap }> = ({ roadmap }) => {
 export const RoadmapsPage: React.FC = () => {
   const [roadmaps, setRoadmaps] = useState<Roadmap[]>([]);
   const [loading, setLoading] = useState(true);
+  const [fsError, setFsError] = useState('');
   const [search, setSearch] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('All');
   const [selectedLevel, setSelectedLevel] = useState('All');
 
   useEffect(() => {
-    const db = getFirestore();
-    // Fetch ALL roadmaps, filter + sort client-side — no composite index needed
     const unsub = onSnapshot(
       collection(db, 'roadmaps'),
       snap => {
@@ -208,8 +208,16 @@ export const RoadmapsPage: React.FC = () => {
           });
         setRoadmaps(published);
         setLoading(false);
+        setFsError('');
       },
-      () => setLoading(false)
+      err => {
+        setLoading(false);
+        setFsError(
+          err.code === 'permission-denied'
+            ? 'You do not have permission to view roadmaps. Please contact the admin.'
+            : `Could not load roadmaps: ${err.message}`
+        );
+      }
     );
     return () => unsub();
   }, []);
@@ -297,6 +305,14 @@ export const RoadmapsPage: React.FC = () => {
           {levels.map(l => <option key={l} value={l}>{l === 'All' ? 'All Levels' : l}</option>)}
         </select>
       </div>
+
+      {/* Firebase error */}
+      {fsError && (
+        <div className="flex gap-3 p-4 rounded-xl bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800">
+          <X className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" />
+          <p className="text-sm text-red-700 dark:text-red-300">{fsError}</p>
+        </div>
+      )}
 
       {/* Loading */}
       {loading && (
