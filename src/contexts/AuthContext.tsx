@@ -49,6 +49,7 @@ interface AuthContextType {
   signOut: () => Promise<void>;
   updateProfile: (data: Partial<Profile>) => Promise<{ error: any }>;
   fetchProfile: (uid: string) => Promise<Profile | null>;
+  adminCredentialSignIn: (role: UserRole, email: string) => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -232,6 +233,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setProfile(null);
   };
 
+  const adminCredentialSignIn = (role: UserRole, email: string) => {
+    const mockProfile: Profile = {
+      id: `admin-${role}-001`,
+      email,
+      full_name: role === 'admin' ? 'STUNIVOZ Admin' : role === 'staff' ? 'STUNIVOZ Staff' : 'Company User',
+      role,
+      headline: role === 'admin' ? 'Platform Administrator' : undefined,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    };
+    setProfile(mockProfile);
+    localStorage.setItem(ADMIN_SESSION_KEY, JSON.stringify(mockProfile));
+  };
+
   const updateProfile = async (data: Partial<Profile>) => {
     if (!user) return { error: new Error('No user logged in') };
     try {
@@ -256,7 +271,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       signIn, signUp,
       signInWithGoogleOAuth,
       signInWithGitHubOAuth,
-      signOut, updateProfile, fetchProfile
+      signOut, updateProfile, fetchProfile, adminCredentialSignIn
     }}>
       {children}
     </AuthContext.Provider>
