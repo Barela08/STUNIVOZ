@@ -12,7 +12,7 @@ import {
   Globe, Link, Image, Video, Bell, Palette, Type, LayoutTemplate, Briefcase,
   Bot, Sparkles, FileText, ExternalLink, Copy, Calendar, Tag, Filter, SlidersHorizontal,
   BarChart2, PieChart as PieChartIcon, Info, ChevronDown, ChevronRight, Wrench,
-  ShieldCheck, User as UserIcon
+  ShieldCheck, User as UserIcon, Map, Upload, EyeOff, Layers
 } from 'lucide-react';
 import { AssignRoleModal } from './RolesPage';
 import {
@@ -2415,6 +2415,473 @@ export const APISystemPage: React.FC = () => {
         </div>
       </Card>
       <FeatureAssignmentSection apis={apis} />
+    </div>
+  );
+};
+
+// ── Roadmap Management ────────────────────────────────────────────────────────
+
+const ROADMAP_CATEGORIES = [
+  'Software Engineering', 'Data Science', 'UI/UX Design', 'Marketing',
+  'Finance', 'Cybersecurity', 'AI / ML', 'Analytics', 'Product Management',
+  'Web Development', 'General',
+];
+const ROADMAP_LEVELS = ['Beginner', 'Intermediate', 'Advanced'];
+
+interface RoadmapDoc {
+  id: string;
+  title: string;
+  description: string;
+  category: string;
+  content: string;
+  pdfUrl?: string;
+  pdfName?: string;
+  duration?: string;
+  level?: string;
+  tags?: string[];
+  published: boolean;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+const emptyRoadmap = (): Omit<RoadmapDoc, 'id'> => ({
+  title: '', description: '', category: 'General', content: '',
+  pdfUrl: '', pdfName: '', duration: '', level: 'Beginner',
+  tags: [], published: false,
+});
+
+export const RoadmapManagementPage: React.FC = () => {
+  const [roadmaps, setRoadmaps] = useState<RoadmapDoc[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [showForm, setShowForm] = useState(false);
+  const [editing, setEditing] = useState<RoadmapDoc | null>(null);
+  const [form, setForm] = useState(emptyRoadmap());
+  const [saving, setSaving] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState('');
+  const [search, setSearch] = useState('');
+  const [catFilter, setCatFilter] = useState('All');
+  const [toast, setToast] = useState('');
+  const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
+  const [tagInput, setTagInput] = useState('');
+  const fileRef = useRef<HTMLInputElement>(null);
+
+  const showToast = (msg: string) => { setToast(msg); setTimeout(() => setToast(''), 3000); };
+
+  useEffect(() => {
+    let unsub: (() => void) | null = null;
+    (async () => {
+      const { getFirestore, collection, onSnapshot, query, orderBy } = await import('firebase/firestore');
+      const db = getFirestore();
+      const q = query(collection(db, 'roadmaps'), orderBy('createdAt', 'desc'));
+      unsub = onSnapshot(q, snap => {
+        setRoadmaps(snap.docs.map(d => ({ id: d.id, ...d.data() } as RoadmapDoc)));
+        setLoading(false);
+      }, async () => {
+        const { getFirestore: gfs, collection: col, onSnapshot: ons } = await import('firebase/firestore');
+        ons(col(gfs(), 'roadmaps'), (snap: any) => {
+          setRoadmaps(snap.docs.map((d: any) => ({ id: d.id, ...d.data() } as RoadmapDoc)));
+          setLoading(false);
+        }, () => setLoading(false));
+      });
+    })();
+    return () => unsub?.();
+  }, []);
+
+  const openAdd = () => { setEditing(null); setForm(emptyRoadmap()); setTagInput(''); setShowForm(true); };
+  const openEdit = (r: RoadmapDoc) => { setEditing(r); setForm({ ...r }); setTagInput(r.tags?.join(', ') || ''); setShowForm(true); };
+
+  const handleFileUpload = async (file: File) => {
+    if (!file || file.type !== 'application/pdf') { showToast('Please select a PDF file'); return; }
+    if (file.size > 20 * 1024 * 1024) { showToast('PDF must be under 20MB'); return; }
+    setUploading(true);
+    setUploadProgress('Uploading PDF...');
+    try {
+      const { getStorage, ref, uploadBytes, getDownloadURL } = await import('firebase/storage');
+      const storage = getStorage();
+      const path = `roadmaps/${Date.now()}_${file.name.replace(/\s+/g, '_')}`;
+      const storageRef = ref(storage, path);
+      await uploadBytes(storageRef, file);
+      const url = await getDownloadURL(storageRef);
+      setForm(f => ({ ...f, pdfUrl: url, pdfName: file.name }));
+      setUploadProgress('');
+      showToast('PDF uploaded successfully!');
+    } catch (e: any) {
+      showToast('PDF upload failed: ' + (e?.message || 'Unknown error'));
+      setUploadProgress('');
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const handleSave = async () => {
+    if (!form.title.trim()) { showToast('Title is required'); return; }
+    if (!form.category) { showToast('Category is required'); return; }
+    setSaving(true);
+    try {
+      const { getFirestore, collection, addDoc, doc, updateDoc, serverTimestamp } = await import('firebase/firestore');
+      const db = getFirestore();
+      const tags = tagInput.split(',').map(t => t.trim()).filter(Boolean);
+      const data = { ...form, tags, updatedAt: new Date().toISOString() };
+      if (editing) {
+        await updateDoc(doc(db, 'roadmaps', editing.id), data);
+        showToast('Roadmap updated!');
+      } else {
+        await addDoc(collection(db, 'roadmaps'), { ...data, createdAt: new Date().toISOString() });
+        showToast('Roadmap created!');
+      }
+      setShowForm(false);
+    } catch (e: any) {
+      showToast('Save failed: ' + (e?.message || 'Unknown error'));
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleDelete = async (id: string) => {
+    try {
+      const { getFirestore, doc, deleteDoc } = await import('firebase/firestore');
+      await deleteDoc(doc(getFirestore(), 'roadmaps', id));
+      showToast('Roadmap deleted');
+    } catch { showToast('Delete failed'); }
+    setDeleteConfirm(null);
+  };
+
+  const togglePublish = async (r: RoadmapDoc) => {
+    try {
+      const { getFirestore, doc, updateDoc } = await import('firebase/firestore');
+      await updateDoc(doc(getFirestore(), 'roadmaps', r.id), { published: !r.published });
+      showToast(r.published ? 'Roadmap unpublished' : 'Roadmap published!');
+    } catch { showToast('Update failed'); }
+  };
+
+  const filtered = roadmaps.filter(r => {
+    const matchSearch = !search || r.title.toLowerCase().includes(search.toLowerCase()) || r.category.toLowerCase().includes(search.toLowerCase());
+    const matchCat = catFilter === 'All' || r.category === catFilter;
+    return matchSearch && matchCat;
+  });
+
+  const published = roadmaps.filter(r => r.published).length;
+
+  return (
+    <div className="space-y-6 animate-fade-in">
+      {toast && (
+        <div className="fixed bottom-6 right-6 z-50 flex items-center gap-2 px-4 py-3 bg-gray-900 dark:bg-gray-100 text-white dark:text-gray-900 text-sm font-medium rounded-xl shadow-xl">
+          <CheckCircle className="w-4 h-4 text-green-400" /> {toast}
+        </div>
+      )}
+
+      {/* Header */}
+      <div className="flex items-center justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
+            <Map className="w-6 h-6 text-primary-500" /> Career Roadmaps
+          </h1>
+          <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">Upload and manage career roadmaps for students by category</p>
+        </div>
+        <button
+          onClick={openAdd}
+          className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-primary-600 hover:bg-primary-700 text-white font-semibold text-sm shadow-lg shadow-primary-500/20 transition-all"
+        >
+          <Plus className="w-4 h-4" /> Add Roadmap
+        </button>
+      </div>
+
+      {/* Stats */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+        {[
+          { label: 'Total Roadmaps', value: roadmaps.length, icon: Map, color: 'text-primary-500', bg: 'bg-primary-50 dark:bg-primary-900/20' },
+          { label: 'Published', value: published, icon: Eye, color: 'text-green-500', bg: 'bg-green-50 dark:bg-green-900/20' },
+          { label: 'Draft', value: roadmaps.length - published, icon: EyeOff, color: 'text-gray-500', bg: 'bg-gray-100 dark:bg-gray-800' },
+          { label: 'Categories', value: new Set(roadmaps.map(r => r.category)).size, icon: Layers, color: 'text-violet-500', bg: 'bg-violet-50 dark:bg-violet-900/20' },
+        ].map((s, i) => (
+          <Card key={i} className="!p-4">
+            <div className="flex items-center gap-3">
+              <div className={`w-10 h-10 rounded-xl ${s.bg} flex items-center justify-center`}>
+                <s.icon className={`w-5 h-5 ${s.color}`} />
+              </div>
+              <div>
+                <div className="text-xl font-bold text-gray-900 dark:text-white">{s.value}</div>
+                <div className="text-xs text-gray-500 dark:text-gray-400">{s.label}</div>
+              </div>
+            </div>
+          </Card>
+        ))}
+      </div>
+
+      {/* Filters */}
+      <Card className="!p-4">
+        <div className="flex flex-col sm:flex-row gap-3">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+            <input
+              type="text" placeholder="Search roadmaps..."
+              value={search} onChange={e => setSearch(e.target.value)}
+              className="w-full pl-9 pr-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm text-gray-900 dark:text-white focus:outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 transition-all"
+            />
+          </div>
+          <select
+            value={catFilter} onChange={e => setCatFilter(e.target.value)}
+            className="px-3 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm text-gray-700 dark:text-gray-300 focus:outline-none focus:border-primary-500 transition-all"
+          >
+            <option value="All">All Categories</option>
+            {ROADMAP_CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
+          </select>
+        </div>
+      </Card>
+
+      {/* Table */}
+      <Card>
+        {loading ? (
+          <div className="p-8 text-center">
+            <RefreshCw className="w-8 h-8 text-gray-300 animate-spin mx-auto mb-2" />
+            <p className="text-sm text-gray-400">Loading roadmaps...</p>
+          </div>
+        ) : filtered.length === 0 ? (
+          <div className="p-12 text-center">
+            <div className="w-14 h-14 rounded-2xl bg-gray-100 dark:bg-gray-800 flex items-center justify-center mx-auto mb-4">
+              <Map className="w-7 h-7 text-gray-400" />
+            </div>
+            <p className="font-semibold text-gray-900 dark:text-white mb-1">No roadmaps found</p>
+            <p className="text-sm text-gray-500 dark:text-gray-400">Click "Add Roadmap" to create your first career roadmap</p>
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[700px]">
+              <thead>
+                <tr className="border-b border-gray-100 dark:border-gray-800">
+                  {['Title', 'Category', 'Level', 'PDF', 'Status', 'Actions'].map(h => (
+                    <th key={h} className="px-5 py-3.5 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
+                {filtered.map(r => (
+                  <tr key={r.id} className="hover:bg-gray-50 dark:hover:bg-gray-800/40 transition-colors">
+                    <td className="px-5 py-3.5">
+                      <div className="font-semibold text-gray-900 dark:text-white text-sm">{r.title}</div>
+                      {r.duration && <div className="text-xs text-gray-400 flex items-center gap-1 mt-0.5"><Clock className="w-3 h-3" />{r.duration}</div>}
+                    </td>
+                    <td className="px-5 py-3.5">
+                      <span className="text-xs px-2.5 py-1 rounded-full bg-primary-50 dark:bg-primary-900/20 text-primary-700 dark:text-primary-300 font-medium border border-primary-200 dark:border-primary-800">
+                        {r.category}
+                      </span>
+                    </td>
+                    <td className="px-5 py-3.5">
+                      <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
+                        r.level === 'Beginner' ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300'
+                        : r.level === 'Intermediate' ? 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-300'
+                        : 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300'
+                      }`}>{r.level || '—'}</span>
+                    </td>
+                    <td className="px-5 py-3.5">
+                      {r.pdfUrl ? (
+                        <a href={r.pdfUrl} target="_blank" rel="noopener noreferrer"
+                          className="flex items-center gap-1.5 text-xs text-primary-600 dark:text-primary-400 hover:underline font-medium">
+                          <FileText className="w-3.5 h-3.5" /> {r.pdfName ? r.pdfName.slice(0, 20) + (r.pdfName.length > 20 ? '…' : '') : 'View PDF'}
+                        </a>
+                      ) : <span className="text-xs text-gray-400">No PDF</span>}
+                    </td>
+                    <td className="px-5 py-3.5">
+                      <button onClick={() => togglePublish(r)}
+                        className={`flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full font-semibold border transition-all ${
+                          r.published
+                            ? 'bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-300 border-green-200 dark:border-green-800 hover:bg-green-100 dark:hover:bg-green-900/30'
+                            : 'bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 border-gray-200 dark:border-gray-700 hover:bg-gray-200 dark:hover:bg-gray-700'
+                        }`}>
+                        {r.published ? <><Eye className="w-3 h-3" /> Published</> : <><EyeOff className="w-3 h-3" /> Draft</>}
+                      </button>
+                    </td>
+                    <td className="px-5 py-3.5">
+                      <div className="flex items-center gap-1">
+                        <button onClick={() => openEdit(r)}
+                          className="p-1.5 rounded-lg hover:bg-blue-50 dark:hover:bg-blue-900/20 text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 transition-all">
+                          <Edit className="w-4 h-4" />
+                        </button>
+                        {deleteConfirm === r.id ? (
+                          <div className="flex items-center gap-1">
+                            <button onClick={() => handleDelete(r.id)}
+                              className="px-2 py-1 rounded-lg bg-red-500 text-white text-xs font-medium hover:bg-red-600 transition-all">Delete</button>
+                            <button onClick={() => setDeleteConfirm(null)}
+                              className="px-2 py-1 rounded-lg bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 text-xs font-medium hover:bg-gray-300 dark:hover:bg-gray-600 transition-all">Cancel</button>
+                          </div>
+                        ) : (
+                          <button onClick={() => setDeleteConfirm(r.id)}
+                            className="p-1.5 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 text-gray-400 hover:text-red-600 dark:hover:text-red-400 transition-all">
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </Card>
+
+      {/* Add/Edit Form Modal */}
+      {showForm && (
+        <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4" onClick={() => !saving && setShowForm(false)}>
+          <div
+            className="w-full max-w-2xl bg-white dark:bg-gray-900 rounded-2xl shadow-2xl flex flex-col max-h-[90vh] overflow-hidden"
+            onClick={e => e.stopPropagation()}
+          >
+            {/* Modal Header */}
+            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 dark:border-gray-800 flex-shrink-0">
+              <div className="flex items-center gap-2">
+                <Map className="w-5 h-5 text-primary-500" />
+                <h3 className="font-bold text-gray-900 dark:text-white">{editing ? 'Edit Roadmap' : 'Add New Roadmap'}</h3>
+              </div>
+              <button onClick={() => !saving && setShowForm(false)} className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-all">
+                <X className="w-5 h-5 text-gray-500" />
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <div className="overflow-y-auto flex-1 p-6 space-y-5">
+              {/* Title */}
+              <div>
+                <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1.5">Title *</label>
+                <input
+                  type="text" placeholder="e.g. Full Stack Developer Roadmap"
+                  value={form.title} onChange={e => setForm(f => ({ ...f, title: e.target.value }))}
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-sm focus:outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 transition-all"
+                />
+              </div>
+
+              {/* Description */}
+              <div>
+                <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1.5">Description *</label>
+                <textarea
+                  rows={2} placeholder="Brief description of what students will learn..."
+                  value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))}
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-sm focus:outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 transition-all resize-none"
+                />
+              </div>
+
+              {/* Category + Level + Duration */}
+              <div className="grid grid-cols-3 gap-3">
+                <div>
+                  <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1.5">Category *</label>
+                  <select
+                    value={form.category} onChange={e => setForm(f => ({ ...f, category: e.target.value }))}
+                    className="w-full px-3 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-sm focus:outline-none focus:border-primary-500 transition-all"
+                  >
+                    {ROADMAP_CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1.5">Level</label>
+                  <select
+                    value={form.level || 'Beginner'} onChange={e => setForm(f => ({ ...f, level: e.target.value }))}
+                    className="w-full px-3 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-sm focus:outline-none focus:border-primary-500 transition-all"
+                  >
+                    {ROADMAP_LEVELS.map(l => <option key={l} value={l}>{l}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1.5">Duration</label>
+                  <input
+                    type="text" placeholder="e.g. 3-6 months"
+                    value={form.duration || ''} onChange={e => setForm(f => ({ ...f, duration: e.target.value }))}
+                    className="w-full px-3 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-sm focus:outline-none focus:border-primary-500 transition-all"
+                  />
+                </div>
+              </div>
+
+              {/* Tags */}
+              <div>
+                <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1.5">Tags <span className="font-normal text-gray-400">(comma separated)</span></label>
+                <input
+                  type="text" placeholder="e.g. React, Node.js, MongoDB"
+                  value={tagInput} onChange={e => setTagInput(e.target.value)}
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-sm focus:outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 transition-all"
+                />
+              </div>
+
+              {/* Detailed Content */}
+              <div>
+                <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1.5">
+                  Detailed Content / Steps
+                  <span className="ml-1 font-normal text-gray-400">(students will see this as roadmap details)</span>
+                </label>
+                <textarea
+                  rows={7}
+                  placeholder={"Step 1: Learn HTML & CSS basics\nStep 2: JavaScript fundamentals\nStep 3: React.js framework\n..."}
+                  value={form.content} onChange={e => setForm(f => ({ ...f, content: e.target.value }))}
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-sm focus:outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 transition-all resize-y font-mono"
+                />
+              </div>
+
+              {/* PDF Upload */}
+              <div>
+                <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1.5">Roadmap PDF</label>
+                <input ref={fileRef} type="file" accept="application/pdf" className="hidden"
+                  onChange={e => { if (e.target.files?.[0]) handleFileUpload(e.target.files[0]); }} />
+                {form.pdfUrl ? (
+                  <div className="flex items-center gap-3 p-3 rounded-xl border border-green-200 dark:border-green-800 bg-green-50 dark:bg-green-900/20">
+                    <FileText className="w-5 h-5 text-green-600 dark:text-green-400 flex-shrink-0" />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-semibold text-green-700 dark:text-green-300 truncate">{form.pdfName || 'PDF uploaded'}</p>
+                      <a href={form.pdfUrl} target="_blank" rel="noopener noreferrer" className="text-xs text-green-600 hover:underline">Preview PDF</a>
+                    </div>
+                    <div className="flex gap-2">
+                      <button onClick={() => fileRef.current?.click()} disabled={uploading}
+                        className="text-xs px-2 py-1 rounded-lg bg-white dark:bg-gray-800 border border-green-300 dark:border-green-700 text-green-700 dark:text-green-300 hover:bg-green-50 transition-all">
+                        Replace
+                      </button>
+                      <button onClick={() => setForm(f => ({ ...f, pdfUrl: '', pdfName: '' }))}
+                        className="text-xs px-2 py-1 rounded-lg bg-white dark:bg-gray-800 border border-red-200 dark:border-red-800 text-red-500 hover:bg-red-50 transition-all">
+                        Remove
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <button
+                    onClick={() => fileRef.current?.click()} disabled={uploading}
+                    className="w-full flex flex-col items-center gap-2 py-6 rounded-xl border-2 border-dashed border-gray-300 dark:border-gray-700 hover:border-primary-400 dark:hover:border-primary-600 hover:bg-primary-50 dark:hover:bg-primary-900/10 transition-all text-gray-500 dark:text-gray-400 disabled:opacity-60"
+                  >
+                    {uploading ? (
+                      <><RefreshCw className="w-7 h-7 animate-spin text-primary-500" /><span className="text-sm font-medium text-primary-500">{uploadProgress}</span></>
+                    ) : (
+                      <><Upload className="w-7 h-7" /><span className="text-sm font-medium">Click to upload PDF</span><span className="text-xs">Max 20MB · PDF files only</span></>
+                    )}
+                  </button>
+                )}
+              </div>
+
+              {/* Publish toggle */}
+              <div className="flex items-center justify-between p-3.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800">
+                <div>
+                  <p className="text-sm font-semibold text-gray-900 dark:text-white">Published</p>
+                  <p className="text-xs text-gray-500 dark:text-gray-400">Visible to students on the Roadmaps page</p>
+                </div>
+                <button
+                  onClick={() => setForm(f => ({ ...f, published: !f.published }))}
+                  className={`relative w-12 h-6 rounded-full transition-all ${form.published ? 'bg-primary-500' : 'bg-gray-300 dark:bg-gray-600'}`}
+                >
+                  <span className={`absolute top-1 w-4 h-4 bg-white rounded-full shadow transition-all ${form.published ? 'left-7' : 'left-1'}`} />
+                </button>
+              </div>
+            </div>
+
+            {/* Modal Footer */}
+            <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-gray-200 dark:border-gray-800 flex-shrink-0">
+              <button onClick={() => !saving && setShowForm(false)} disabled={saving}
+                className="px-4 py-2 rounded-xl border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 font-medium text-sm hover:bg-gray-50 dark:hover:bg-gray-800 transition-all">
+                Cancel
+              </button>
+              <button onClick={handleSave} disabled={saving || uploading}
+                className="flex items-center gap-2 px-5 py-2 rounded-xl bg-primary-600 hover:bg-primary-700 disabled:opacity-60 text-white font-semibold text-sm transition-all">
+                {saving ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                {saving ? 'Saving...' : editing ? 'Save Changes' : 'Create Roadmap'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

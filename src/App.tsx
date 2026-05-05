@@ -52,8 +52,9 @@ import {
   EventManagementPage, CourseManagementPage, APISystemPage,
   AIControlPage, StaffManagementPage, AdsSystemPage,
   UIControlPage, FeatureControlPage, AdminNotificationsPage,
-  AnalyticsPage, SecurityPage, BackupPage
+  AnalyticsPage, SecurityPage, BackupPage, RoadmapManagementPage
 } from './pages/admin/AdminPages';
+import { RoadmapsPage } from './pages/roadmaps/RoadmapsPage';
 import { RolesPage } from './pages/admin/RolesPage';
 
 import { Loading } from './components/common';
@@ -169,6 +170,7 @@ const AppRoutes: React.FC = () => {
       <Route path="/notifications" element={<ProtectedRoute><Layout><NotificationsPage /></Layout></ProtectedRoute>} />
       <Route path="/gamification" element={<ProtectedRoute><Layout><FeatureRoute featureKey="gamification" featureName="Gamification"><GamificationPage /></FeatureRoute></Layout></ProtectedRoute>} />
       <Route path="/content" element={<ProtectedRoute><Layout><FeatureRoute featureKey="content_hub" featureName="Content Hub"><ContentHubPage /></FeatureRoute></Layout></ProtectedRoute>} />
+      <Route path="/roadmaps" element={<ProtectedRoute><Layout><RoadmapsPage /></Layout></ProtectedRoute>} />
 
       {/* Provider Routes — company role only */}
       <Route path="/provider" element={<RoleRoute role="company" loginPath="/provider/login"><ProviderLayout><ProviderDashboardPage /></ProviderLayout></RoleRoute>} />
@@ -201,6 +203,7 @@ const AppRoutes: React.FC = () => {
       <Route path="/admin/security" element={<RoleRoute role="admin" loginPath="/admin/login"><AdminLayout><SecurityPage /></AdminLayout></RoleRoute>} />
       <Route path="/admin/backup" element={<RoleRoute role="admin" loginPath="/admin/login"><AdminLayout><BackupPage /></AdminLayout></RoleRoute>} />
       <Route path="/admin/roles" element={<RoleRoute role="admin" loginPath="/admin/login"><AdminLayout><RolesPage /></AdminLayout></RoleRoute>} />
+      <Route path="/admin/roadmaps" element={<RoleRoute role="admin" loginPath="/admin/login"><AdminLayout><RoadmapManagementPage /></AdminLayout></RoleRoute>} />
 
       {/* Default */}
       <Route path="/" element={<HomePage />} />

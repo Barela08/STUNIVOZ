@@ -4,7 +4,7 @@ import {
   GraduationCap, LayoutDashboard, FileText, Briefcase, Calendar,
   BookOpen, Users, Settings, LogOut, Menu, X, Bell, Search,
   ChevronDown, Sparkles, Target, TrendingUp, MessageSquare,
-  Brain, MenuSquare, Star, Globe, Moon, Sun, Award, BellRing
+  Brain, MenuSquare, Star, Globe, Moon, Sun, Award, BellRing, Map
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTheme } from '../../contexts/ThemeContext';
@@ -22,6 +22,7 @@ const navItems = [
   { path: '/internships', icon: Briefcase, label: 'Internships' },
   { path: '/events', icon: Calendar, label: 'Events' },
   { path: '/courses', icon: BookOpen, label: 'Courses' },
+  { path: '/roadmaps', icon: Map, label: 'Roadmaps' },
   { path: '/career', icon: TrendingUp, label: 'Career Path' },
   { path: '/skills', icon: Star, label: 'Skills' },
   { path: '/practice', icon: Brain, label: 'Practice' },
