@@ -94,6 +94,27 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setProfile(found);
         return found;
       }
+      // Firestore client rules may be blocking — try server-side fallback
+      try {
+        const currentUser = auth.currentUser;
+        if (currentUser) {
+          const idToken = await currentUser.getIdToken();
+          const res = await fetch('/api/auth/get-profile', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ idToken }),
+          });
+          if (res.ok) {
+            const data = await res.json();
+            if (data.profile) {
+              setProfile(data.profile as Profile);
+              return data.profile as Profile;
+            }
+          }
+        }
+      } catch (serverErr) {
+        console.warn('Server profile fallback failed:', serverErr);
+      }
       return null;
     } catch (err) {
       console.error('Error fetching profile:', err);

@@ -9,6 +9,56 @@ const router = express.Router();
 const resetTokens = new Map(); // token -> { email, expiresAt }
 const TOKEN_TTL_MS = 60 * 60 * 1000; // 1 hour
 
+// POST /api/auth/get-profile
+// Returns full profile via Admin SDK (bypasses Firestore client rules)
+router.post('/get-profile', async (req, res) => {
+  const { idToken } = req.body;
+  if (!idToken) return res.status(400).json({ error: 'idToken is required.' });
+  try {
+    const admin = getFirebaseAdmin();
+    const decoded = await admin.auth().verifyIdToken(idToken);
+    const uid = decoded.uid;
+    const profileDoc = await admin.firestore().collection('profiles').doc(uid).get();
+    if (!profileDoc.exists) {
+      const usersDoc = await admin.firestore().collection('users').doc(uid).get();
+      if (!usersDoc.exists) return res.status(404).json({ error: 'Profile not found.' });
+      return res.json({ success: true, profile: { ...usersDoc.data(), id: uid } });
+    }
+    return res.json({ success: true, profile: { ...profileDoc.data(), id: uid } });
+  } catch (err) {
+    console.error('get-profile error:', err);
+    return res.status(401).json({ error: 'Invalid or expired token.' });
+  }
+});
+
+// POST /api/auth/verify-admin
+// Accepts Firebase ID token, verifies admin role via Admin SDK (bypasses Firestore rules)
+router.post('/verify-admin', async (req, res) => {
+  const { idToken } = req.body;
+  if (!idToken) return res.status(400).json({ error: 'idToken is required.' });
+
+  try {
+    const admin = getFirebaseAdmin();
+    const decoded = await admin.auth().verifyIdToken(idToken);
+    const uid = decoded.uid;
+
+    const profileDoc = await admin.firestore().collection('profiles').doc(uid).get();
+    if (!profileDoc.exists) {
+      return res.status(403).json({ error: 'No profile found for this account.' });
+    }
+
+    const profile = profileDoc.data();
+    if (profile.role !== 'admin') {
+      return res.status(403).json({ error: 'Access denied. This account does not have admin role.' });
+    }
+
+    return res.json({ success: true, profile: { ...profile, id: uid } });
+  } catch (err) {
+    console.error('verify-admin error:', err);
+    return res.status(401).json({ error: 'Invalid or expired token.' });
+  }
+});
+
 // POST /api/auth/forgot-password
 router.post('/forgot-password', async (req, res) => {
   const { email } = req.body;
