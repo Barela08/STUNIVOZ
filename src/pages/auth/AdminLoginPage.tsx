@@ -24,18 +24,27 @@ export const AdminLoginPage: React.FC = () => {
     setLoading(true);
     setError('');
 
-    const result = await loginUser(formData.email.trim().toLowerCase(), formData.password);
+    const email = formData.email.trim().toLowerCase();
+    const password = formData.password.trim();
+
+    const result = await loginUser(email, password);
 
     if (!result.success || !result.user) {
       const code = (result.error as any)?.code || '';
+      const message = (result.error as any)?.message || '';
+      console.error('Admin login error:', code, message, result.error);
       if (code === 'auth/too-many-requests') {
         setError('Too many failed attempts. Please wait a few minutes and try again.');
       } else if (code === 'auth/network-request-failed') {
         setError('Network error. Please check your internet connection.');
       } else if (code === 'auth/user-not-found' || code === 'auth/wrong-password' || code === 'auth/invalid-credential') {
-        setError('Invalid administrator credentials.');
+        setError(`Invalid email or password. Please check your credentials and try again. (code: ${code})`);
+      } else if (code === 'auth/user-disabled') {
+        setError('This account has been disabled. Contact support.');
+      } else if (code === 'auth/operation-not-allowed') {
+        setError('Email/password sign-in is not enabled. Contact the system administrator.');
       } else {
-        setError('Access denied. Invalid administrator credentials.');
+        setError(`Login failed. (code: ${code || 'unknown'})`);
       }
       setLoading(false);
       return;
@@ -167,12 +176,17 @@ export const AdminLoginPage: React.FC = () => {
             </button>
           </form>
 
-          <p className="mt-6 text-center text-sm dark:text-gray-500 text-gray-400">
-            Not an admin?{' '}
-            <a href="/login" className="text-primary-500 hover:text-primary-600 font-medium">
-              Student login
+          <div className="mt-6 flex flex-col items-center gap-2">
+            <a href="/forgot-password" className="text-sm text-red-500 hover:text-red-600 font-medium transition-colors">
+              Forgot your password?
             </a>
-          </p>
+            <p className="text-sm dark:text-gray-500 text-gray-400">
+              Not an admin?{' '}
+              <a href="/login" className="text-primary-500 hover:text-primary-600 font-medium">
+                Student login
+              </a>
+            </p>
+          </div>
         </div>
       </div>
     </div>
