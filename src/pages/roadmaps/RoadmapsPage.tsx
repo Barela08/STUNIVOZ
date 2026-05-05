@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { collection, onSnapshot } from 'firebase/firestore';
+import { Link } from 'react-router-dom';
 import { db } from '../../services/firebase';
 import {
   Map, Search, FileText, Download, ChevronDown, ChevronUp,
@@ -214,7 +215,7 @@ export const RoadmapsPage: React.FC = () => {
         setLoading(false);
         setFsError(
           err.code === 'permission-denied'
-            ? 'You do not have permission to view roadmaps. Please contact the admin.'
+            ? 'login-required'
             : `Could not load roadmaps: ${err.message}`
         );
       }
@@ -307,12 +308,30 @@ export const RoadmapsPage: React.FC = () => {
       </div>
 
       {/* Firebase error */}
-      {fsError && (
+      {fsError === 'login-required' ? (
+        <div className="flex flex-col items-center justify-center py-16 text-center gap-4">
+          <div className="w-16 h-16 rounded-2xl bg-primary-50 dark:bg-primary-900/20 flex items-center justify-center">
+            <Map className="w-8 h-8 text-primary-500" />
+          </div>
+          <div>
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-1">Login to View Roadmaps</h3>
+            <p className="text-sm text-gray-500 dark:text-gray-400 max-w-xs">Career roadmaps are available for registered students. Please login or create a free account to access them.</p>
+          </div>
+          <div className="flex gap-3">
+            <Link to="/login" className="px-5 py-2.5 rounded-xl bg-primary-600 hover:bg-primary-700 text-white text-sm font-semibold transition-all">
+              Login
+            </Link>
+            <Link to="/signup" className="px-5 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 text-sm font-semibold hover:bg-gray-50 dark:hover:bg-gray-800 transition-all">
+              Sign Up Free
+            </Link>
+          </div>
+        </div>
+      ) : fsError ? (
         <div className="flex gap-3 p-4 rounded-xl bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800">
           <X className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" />
           <p className="text-sm text-red-700 dark:text-red-300">{fsError}</p>
         </div>
-      )}
+      ) : null}
 
       {/* Loading */}
       {loading && (

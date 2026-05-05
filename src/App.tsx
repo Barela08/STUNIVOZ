@@ -176,9 +176,9 @@ const AppRoutes: React.FC = () => {
       {/* Student Protected Routes */}
       <Route path="/dashboard" element={<ProtectedRoute><Layout><DashboardPage /></Layout></ProtectedRoute>} />
       <Route path="/profile" element={<ProtectedRoute><Layout><ProfilePage /></Layout></ProtectedRoute>} />
-      <Route path="/internships" element={<ProtectedRoute><Layout><InternshipsPage /></Layout></ProtectedRoute>} />
-      <Route path="/events" element={<ProtectedRoute><Layout><EventsPage /></Layout></ProtectedRoute>} />
-      <Route path="/courses" element={<ProtectedRoute><Layout><CoursesPage /></Layout></ProtectedRoute>} />
+      <Route path="/internships" element={<Layout><InternshipsPage /></Layout>} />
+      <Route path="/events" element={<Layout><EventsPage /></Layout>} />
+      <Route path="/courses" element={<Layout><CoursesPage /></Layout>} />
       <Route path="/resume" element={<ProtectedRoute><Layout><ResumePage /></Layout></ProtectedRoute>} />
       <Route path="/career" element={<ProtectedRoute><Layout><CareerPage /></Layout></ProtectedRoute>} />
       <Route path="/skills" element={<ProtectedRoute><Layout><SkillsPage /></Layout></ProtectedRoute>} />
@@ -192,7 +192,7 @@ const AppRoutes: React.FC = () => {
       <Route path="/notifications" element={<ProtectedRoute><Layout><NotificationsPage /></Layout></ProtectedRoute>} />
       <Route path="/gamification" element={<ProtectedRoute><Layout><FeatureRoute featureKey="gamification" featureName="Gamification"><GamificationPage /></FeatureRoute></Layout></ProtectedRoute>} />
       <Route path="/content" element={<ProtectedRoute><Layout><FeatureRoute featureKey="content_hub" featureName="Content Hub"><ContentHubPage /></FeatureRoute></Layout></ProtectedRoute>} />
-      <Route path="/roadmaps" element={<ProtectedRoute><Layout><RoadmapsPage /></Layout></ProtectedRoute>} />
+      <Route path="/roadmaps" element={<Layout><RoadmapsPage /></Layout>} />
       <Route path="/ai-help" element={<ProtectedRoute><Layout><AiHelpPage /></Layout></ProtectedRoute>} />
 
       {/* Provider Routes — company role only */}

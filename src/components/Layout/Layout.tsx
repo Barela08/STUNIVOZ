@@ -4,7 +4,7 @@ import {
   GraduationCap, LayoutDashboard, FileText, Briefcase, Calendar,
   BookOpen, Users, Settings, LogOut, Menu, X, Bell, Search,
   ChevronDown, Sparkles, Target, TrendingUp, MessageSquare,
-  Brain, MenuSquare, Star, Globe, Moon, Sun, Award, BellRing, Map, Bot
+  Brain, MenuSquare, Star, Globe, Moon, Sun, Award, BellRing, Map, Bot, LogIn
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTheme } from '../../contexts/ThemeContext';
@@ -39,7 +39,7 @@ const navItems = [
 export const Layout: React.FC<LayoutProps> = ({ children }) => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const location = useLocation();
-  const { profile, signOut } = useAuth();
+  const { user, profile, signOut } = useAuth();
   const { isDark, toggleTheme } = useTheme();
 
   return (
@@ -106,37 +106,58 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
 
           {/* User Section */}
           <div className="p-4 border-t border-gray-100 dark:border-gray-800">
-            <div className="flex items-center gap-3 mb-3 p-2 rounded-xl bg-gray-50 dark:bg-gray-800/50">
-              <div className="w-9 h-9 rounded-full bg-gradient-to-br from-primary-400 to-primary-600 flex items-center justify-center flex-shrink-0">
-                <span className="text-white font-semibold text-sm">
-                  {profile?.full_name?.charAt(0)?.toUpperCase() || 'U'}
-                </span>
+            {user ? (
+              <>
+                <div className="flex items-center gap-3 mb-3 p-2 rounded-xl bg-gray-50 dark:bg-gray-800/50">
+                  <div className="w-9 h-9 rounded-full bg-gradient-to-br from-primary-400 to-primary-600 flex items-center justify-center flex-shrink-0">
+                    <span className="text-white font-semibold text-sm">
+                      {profile?.full_name?.charAt(0)?.toUpperCase() || 'U'}
+                    </span>
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="font-semibold text-gray-900 dark:text-white text-sm truncate">
+                      {profile?.full_name || 'Student'}
+                    </p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400 truncate">
+                      {profile?.email || ''}
+                    </p>
+                  </div>
+                </div>
+                <div className="flex gap-2">
+                  <button
+                    onClick={toggleTheme}
+                    className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl text-sm text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 transition-all font-medium"
+                  >
+                    {isDark ? <Sun className="w-4 h-4 text-yellow-400" /> : <Moon className="w-4 h-4" />}
+                    {isDark ? 'Light' : 'Dark'}
+                  </button>
+                  <button
+                    onClick={signOut}
+                    className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl text-sm text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-all font-medium"
+                  >
+                    <LogOut className="w-4 h-4" />
+                    Sign Out
+                  </button>
+                </div>
+              </>
+            ) : (
+              <div className="flex gap-2">
+                <button
+                  onClick={toggleTheme}
+                  className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl text-sm text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 transition-all font-medium"
+                >
+                  {isDark ? <Sun className="w-4 h-4 text-yellow-400" /> : <Moon className="w-4 h-4" />}
+                  {isDark ? 'Light' : 'Dark'}
+                </button>
+                <Link
+                  to="/login"
+                  className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl text-sm text-primary-600 hover:bg-primary-50 dark:hover:bg-primary-900/20 transition-all font-medium"
+                >
+                  <LogIn className="w-4 h-4" />
+                  Login
+                </Link>
               </div>
-              <div className="flex-1 min-w-0">
-                <p className="font-semibold text-gray-900 dark:text-white text-sm truncate">
-                  {profile?.full_name || 'Student'}
-                </p>
-                <p className="text-xs text-gray-500 dark:text-gray-400 truncate">
-                  {profile?.email || ''}
-                </p>
-              </div>
-            </div>
-            <div className="flex gap-2">
-              <button
-                onClick={toggleTheme}
-                className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl text-sm text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 transition-all font-medium"
-              >
-                {isDark ? <Sun className="w-4 h-4 text-yellow-400" /> : <Moon className="w-4 h-4" />}
-                {isDark ? 'Light' : 'Dark'}
-              </button>
-              <button
-                onClick={signOut}
-                className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl text-sm text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-all font-medium"
-              >
-                <LogOut className="w-4 h-4" />
-                Sign Out
-              </button>
-            </div>
+            )}
           </div>
         </div>
       </aside>

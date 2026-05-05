@@ -59,33 +59,33 @@ service cloud.firestore {
       allow read, write: if isAdmin();
     }
 
-    // ── Internships ───────────────────────────────────────────────────────────
+    // ── Internships — public read ─────────────────────────────────────────────
     match /internships/{id} {
-      allow read: if isAuth();
+      allow read: if true;
       allow write: if isAdmin() || isCompany();
     }
 
-    // ── Events ───────────────────────────────────────────────────────────────
+    // ── Events — public read ──────────────────────────────────────────────────
     match /events/{id} {
-      allow read: if isAuth();
+      allow read: if true;
       allow write: if isAdmin() || isCompany() || isStaff();
     }
 
-    // ── Courses ───────────────────────────────────────────────────────────────
+    // ── Courses — public read ─────────────────────────────────────────────────
     match /courses/{id} {
-      allow read: if isAuth();
+      allow read: if true;
       allow write: if isAdmin() || isStaff();
     }
 
-    // ── Roadmaps ──────────────────────────────────────────────────────────────
+    // ── Roadmaps — public read ────────────────────────────────────────────────
     match /roadmaps/{id} {
-      allow read: if isAuth();
+      allow read: if true;
       allow write: if isAdmin() || isStaff();
     }
 
-    // ── Mentors ───────────────────────────────────────────────────────────────
+    // ── Mentors — public read ─────────────────────────────────────────────────
     match /mentors/{id} {
-      allow read: if isAuth();
+      allow read: if true;
       allow write: if isAdmin();
     }
 
