@@ -100,11 +100,16 @@ const FeatureDisabledPage: React.FC<{ name: string }> = ({ name }) => (
 );
 
 // ── Route Guards ──────────────────────────────────────────────────────────────
+const Spinner = () => (
+  <div className="min-h-screen flex items-center justify-center dark:bg-gray-950">
+    <Loading size="lg" text="Loading..." />
+  </div>
+);
+
 const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { user, loading } = useAuth();
-  const { maintenanceMode, maintenanceMessage, isFeatureEnabled } = useAdminSettings();
-  void isFeatureEnabled;
-  if (loading) return <div className="min-h-screen flex items-center justify-center dark:bg-gray-950"><Loading size="lg" text="Loading..." /></div>;
+  const { maintenanceMode, maintenanceMessage } = useAdminSettings();
+  if (loading) return <Spinner />;
   if (!user) return <Navigate to="/login" replace />;
   if (maintenanceMode) return <MaintenancePage message={maintenanceMessage} />;
   return <>{children}</>;
@@ -120,18 +125,20 @@ const RoleRoute: React.FC<{ children: React.ReactNode; role: UserRole; loginPath
   const { user, profile, loading } = useAuth();
   const { maintenanceMode, maintenanceMessage } = useAdminSettings();
 
-  if (loading) return <div className="min-h-screen flex items-center justify-center dark:bg-gray-950"><Loading size="lg" text="Loading..." /></div>;
+  // Still fetching auth state — wait
+  if (loading) return <Spinner />;
 
-  // Must have a real Firebase session
+  // No Firebase user → go to login
   if (!user) return <Navigate to={loginPath} replace />;
 
-  // Firebase user authenticated but Firestore profile not yet loaded — wait to prevent race condition
-  if (!profile) return <div className="min-h-screen flex items-center justify-center dark:bg-gray-950"><Loading size="lg" text="Verifying access..." /></div>;
+  // Firebase user exists but Firestore profile hasn't returned yet — show brief spinner
+  // (AuthContext already awaits fetchProfile before setting loading=false, so this is a very short window)
+  if (!profile) return <Navigate to={loginPath} replace />;
 
-  // Wrong role → redirect to the correct login page
+  // Profile loaded but wrong role → redirect
   if (profile.role !== role) return <Navigate to={loginPath} replace />;
 
-  // Maintenance mode — admins bypass, everyone else sees maintenance screen
+  // Maintenance mode — admins bypass
   if (maintenanceMode && role !== 'admin') return <MaintenancePage message={maintenanceMessage} />;
 
   return <>{children}</>;
@@ -139,13 +146,13 @@ const RoleRoute: React.FC<{ children: React.ReactNode; role: UserRole; loginPath
 
 const PublicRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { user, profile, loading } = useAuth();
-  if (loading) return <div className="min-h-screen flex items-center justify-center dark:bg-gray-950"><Loading size="lg" text="Loading..." /></div>;
+  // Still initialising
+  if (loading) return <Spinner />;
   if (user) {
-    // Wait for profile to load before deciding where to redirect
-    if (!profile) return <div className="min-h-screen flex items-center justify-center dark:bg-gray-950"><Loading size="lg" text="Loading..." /></div>;
-    if (profile.role === 'company') return <Navigate to="/provider" replace />;
-    if (profile.role === 'admin') return <Navigate to="/admin" replace />;
-    if (profile.role === 'staff') return <Navigate to="/staff" replace />;
+    // Role-based redirect; fall back to /dashboard if profile is null
+    if (profile?.role === 'company') return <Navigate to="/provider" replace />;
+    if (profile?.role === 'admin') return <Navigate to="/admin" replace />;
+    if (profile?.role === 'staff') return <Navigate to="/staff" replace />;
     return <Navigate to="/dashboard" replace />;
   }
   return <>{children}</>;

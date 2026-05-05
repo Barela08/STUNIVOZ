@@ -65,9 +65,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const useAuth = () => {
   const context = useContext(AuthContext);
-  if (context === undefined) {
-    throw new Error('useAuth must be used within an AuthProvider');
-  }
+  if (context === undefined) throw new Error('useAuth must be used within an AuthProvider');
   return context;
 };
 
@@ -89,11 +87,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         getDocument('profiles', uid),
         getDocument('users', uid),
       ]);
-
       const found =
         (profilesResult.success && profilesResult.data ? profilesResult.data as Profile : null) ||
         (usersResult.success && usersResult.data ? usersResult.data as Profile : null);
-
       if (found) {
         setProfile(found);
         return found;
@@ -106,23 +102,33 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   useEffect(() => {
-    // Clear any stale localStorage sessions from old mock-login code
+    // Clear any stale mock sessions from old code
     localStorage.removeItem('stunivoz_admin_session');
 
-    const timeout = setTimeout(() => setLoading(false), 5000);
+    // Safety net — if Firebase never responds within 6 seconds, unblock the UI
+    const safetyTimer = setTimeout(() => setLoading(false), 6000);
 
     const unsubscribe = onAuthStateChangedListener(async (firebaseUser: User | null) => {
-      clearTimeout(timeout);
-      setUser(firebaseUser);
-      if (firebaseUser) {
-        await fetchProfile(firebaseUser.uid);
-      } else {
-        setProfile(null);
+      try {
+        setUser(firebaseUser);
+        if (firebaseUser) {
+          await fetchProfile(firebaseUser.uid);
+        } else {
+          setProfile(null);
+        }
+      } catch (err) {
+        console.error('Auth state change error:', err);
+      } finally {
+        // Always unblock loading after Firebase responds, regardless of Firestore result
+        clearTimeout(safetyTimer);
+        setLoading(false);
       }
-      setLoading(false);
     });
 
-    return () => { clearTimeout(timeout); unsubscribe(); };
+    return () => {
+      clearTimeout(safetyTimer);
+      unsubscribe();
+    };
   }, []);
 
   const signIn = async (email: string, password: string) => {
@@ -133,24 +139,25 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         const existing = await fetchProfile(result.user.uid);
 
         if (existing) {
-          // Existing user: ONLY update login metadata, never touch role
+          // Existing user — only update login metadata, NEVER touch role
           await setDocument('profiles', result.user.uid, {
             last_login: now,
             updated_at: now,
           });
         } else {
-          // Brand-new user with no profile: create as student
-          await setDocument('profiles', result.user.uid, {
+          // New user with no Firestore profile — create as student
+          const newProfile: Profile = {
             id: result.user.uid,
             email,
             full_name: email.split('@')[0],
-            role: 'student' as UserRole,
+            role: 'student',
             provider: 'email',
             created_at: now,
             last_login: now,
             updated_at: now,
-          });
-          await fetchProfile(result.user.uid);
+          };
+          await setDocument('profiles', result.user.uid, newProfile);
+          setProfile(newProfile);
         }
 
         await incrementLoginCount(result.user.uid);
@@ -208,8 +215,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const userCredential = await signInWithGoogle();
       const firebaseUser = userCredential.user;
       const now = new Date().toISOString();
-
       const existing = await fetchProfile(firebaseUser.uid);
+
       if (existing && existing.role && existing.role !== 'student') {
         await auth.signOut();
         return { error: { message: 'Google login is only available for students. Please use your portal login page.' } };
@@ -237,19 +244,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         const email = err?.customData?.email || '';
         const pendingCred = getCredentialFromError(err, 'google');
         let methods: string[] = [];
-        try {
-          if (email) methods = await getSignInMethodsForEmail(email);
-        } catch {}
+        try { if (email) methods = await getSignInMethodsForEmail(email); } catch {}
         if (pendingCred) pendingCredRef.current = pendingCred;
-        const linkInfo: PendingLinkInfo = { email, methods, provider: 'google' };
-        setPendingLinkInfo(linkInfo);
-        return {
-          error: {
-            code: 'auth/account-link-required',
-            email, methods, provider: 'google',
-            message: 'account-link-required',
-          }
-        };
+        setPendingLinkInfo({ email, methods, provider: 'google' });
+        return { error: { code: 'auth/account-link-required', email, methods, provider: 'google', message: 'account-link-required' } };
       }
       return { error: err };
     }
@@ -260,8 +258,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const userCredential = await signInWithGitHub();
       const firebaseUser = userCredential.user;
       const now = new Date().toISOString();
-
       const existing = await fetchProfile(firebaseUser.uid);
+
       if (existing && existing.role && existing.role !== 'student') {
         await auth.signOut();
         return { error: { message: 'GitHub login is only available for students. Please use your portal login page.' } };
@@ -289,19 +287,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         const email = err?.customData?.email || '';
         const pendingCred = getCredentialFromError(err, 'github');
         let methods: string[] = [];
-        try {
-          if (email) methods = await getSignInMethodsForEmail(email);
-        } catch {}
+        try { if (email) methods = await getSignInMethodsForEmail(email); } catch {}
         if (pendingCred) pendingCredRef.current = pendingCred;
-        const linkInfo: PendingLinkInfo = { email, methods, provider: 'github' };
-        setPendingLinkInfo(linkInfo);
-        return {
-          error: {
-            code: 'auth/account-link-required',
-            email, methods, provider: 'github',
-            message: 'account-link-required',
-          }
-        };
+        setPendingLinkInfo({ email, methods, provider: 'github' });
+        return { error: { code: 'auth/account-link-required', email, methods, provider: 'github', message: 'account-link-required' } };
       }
       return { error: err };
     }
@@ -338,8 +327,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       user, profile, loading,
       pendingLinkInfo, clearPendingLink,
       signIn, signUp,
-      signInWithGoogleOAuth,
-      signInWithGitHubOAuth,
+      signInWithGoogleOAuth, signInWithGitHubOAuth,
       signOut, updateProfile, fetchProfile,
     }}>
       {children}
