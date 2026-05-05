@@ -3,7 +3,7 @@ import { Link, useLocation } from 'react-router-dom';
 import {
   LayoutDashboard, Users, Building2, Briefcase, Calendar,
   BookOpen, Plug, Bot, UserCog, Megaphone, Palette,
-  Settings2, Bell, LineChart, Shield, Database, LogOut, Menu, X, Sun, Moon, KeyRound, Map, GraduationCap, MessageSquare
+  Settings2, Bell, LineChart, Shield, Database, LogOut, Menu, X, Sun, Moon, KeyRound, Map as MapIcon, GraduationCap, MessageSquare, SlidersHorizontal
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTheme } from '../../contexts/ThemeContext';
@@ -22,7 +22,7 @@ const navItems = [
   { path: '/admin/mentors', icon: GraduationCap, label: 'Mentors' },
   { path: '/admin/api', icon: Plug, label: 'API System' },
   { path: '/admin/ai', icon: Bot, label: 'AI Control' },
-  { path: '/admin/roadmaps', icon: Map, label: 'Roadmaps' },
+  { path: '/admin/roadmaps', icon: MapIcon, label: 'Roadmaps' },
   { path: '/admin/staff', icon: UserCog, label: 'Staff' },
   { path: '/admin/roles', icon: KeyRound, label: 'Roles & Permissions' },
   { path: '/admin/ads', icon: Megaphone, label: 'Ads System' },
@@ -32,6 +32,7 @@ const navItems = [
   { path: '/admin/analytics', icon: LineChart, label: 'Analytics' },
   { path: '/admin/security', icon: Shield, label: 'Security' },
   { path: '/admin/backup', icon: Database, label: 'Backup' },
+  { path: '/admin/env-config', icon: SlidersHorizontal, label: 'Env & Config' },
 ];
 
 export const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {

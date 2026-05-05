@@ -54,7 +54,7 @@ import {
   AIControlPage, StaffManagementPage, AdsSystemPage,
   UIControlPage, FeatureControlPage, AdminNotificationsPage,
   AnalyticsPage, SecurityPage, BackupPage, RoadmapManagementPage,
-  MentorsManagementPage
+  MentorsManagementPage, EnvConfigPage
 } from './pages/admin/AdminPages';
 import { RoadmapsPage } from './pages/roadmaps/RoadmapsPage';
 import { RolesPage } from './pages/admin/RolesPage';
@@ -208,6 +208,7 @@ const AppRoutes: React.FC = () => {
       <Route path="/admin/roles" element={<RoleRoute role="admin" loginPath="/admin/login"><AdminLayout><RolesPage /></AdminLayout></RoleRoute>} />
       <Route path="/admin/roadmaps" element={<RoleRoute role="admin" loginPath="/admin/login"><AdminLayout><RoadmapManagementPage /></AdminLayout></RoleRoute>} />
       <Route path="/admin/mentors" element={<RoleRoute role="admin" loginPath="/admin/login"><AdminLayout><MentorsManagementPage /></AdminLayout></RoleRoute>} />
+      <Route path="/admin/env-config" element={<RoleRoute role="admin" loginPath="/admin/login"><AdminLayout><EnvConfigPage /></AdminLayout></RoleRoute>} />
 
       {/* Default */}
       <Route path="/" element={<HomePage />} />

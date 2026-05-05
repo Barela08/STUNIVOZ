@@ -12,7 +12,7 @@ import {
   Globe, Link, Image, Video, Bell, Palette, Type, LayoutTemplate, Briefcase,
   Bot, Sparkles, FileText, ExternalLink, Copy, Calendar, Tag, Filter, SlidersHorizontal,
   BarChart2, PieChart as PieChartIcon, Info, ChevronDown, ChevronRight, Wrench,
-  ShieldCheck, User as UserIcon, Map, Upload, EyeOff, Layers
+  ShieldCheck, User as UserIcon, Map as MapIcon, Upload, EyeOff, Layers
 } from 'lucide-react';
 import { AssignRoleModal } from './RolesPage';
 import {
@@ -2609,7 +2609,7 @@ export const RoadmapManagementPage: React.FC = () => {
       <div className="flex items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
-            <Map className="w-6 h-6 text-primary-500" /> Career Roadmaps
+            <MapIcon className="w-6 h-6 text-primary-500" /> Career Roadmaps
           </h1>
           <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">Upload and manage career roadmaps for students by category</p>
         </div>
@@ -2624,7 +2624,7 @@ export const RoadmapManagementPage: React.FC = () => {
       {/* Stats */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
         {[
-          { label: 'Total Roadmaps', value: roadmaps.length, icon: Map, color: 'text-primary-500', bg: 'bg-primary-50 dark:bg-primary-900/20' },
+          { label: 'Total Roadmaps', value: roadmaps.length, icon: MapIcon, color: 'text-primary-500', bg: 'bg-primary-50 dark:bg-primary-900/20' },
           { label: 'Published', value: published, icon: Eye, color: 'text-green-500', bg: 'bg-green-50 dark:bg-green-900/20' },
           { label: 'Draft', value: roadmaps.length - published, icon: EyeOff, color: 'text-gray-500', bg: 'bg-gray-100 dark:bg-gray-800' },
           { label: 'Categories', value: new Set(roadmaps.map(r => r.category)).size, icon: Layers, color: 'text-violet-500', bg: 'bg-violet-50 dark:bg-violet-900/20' },
@@ -2674,7 +2674,7 @@ export const RoadmapManagementPage: React.FC = () => {
         ) : filtered.length === 0 ? (
           <div className="p-12 text-center">
             <div className="w-14 h-14 rounded-2xl bg-gray-100 dark:bg-gray-800 flex items-center justify-center mx-auto mb-4">
-              <Map className="w-7 h-7 text-gray-400" />
+              <MapIcon className="w-7 h-7 text-gray-400" />
             </div>
             <p className="font-semibold text-gray-900 dark:text-white mb-1">No roadmaps found</p>
             <p className="text-sm text-gray-500 dark:text-gray-400">Click "Add Roadmap" to create your first career roadmap</p>
@@ -2765,7 +2765,7 @@ export const RoadmapManagementPage: React.FC = () => {
             {/* Modal Header */}
             <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 dark:border-gray-800 flex-shrink-0">
               <div className="flex items-center gap-2">
-                <Map className="w-5 h-5 text-primary-500" />
+                <MapIcon className="w-5 h-5 text-primary-500" />
                 <h3 className="font-bold text-gray-900 dark:text-white">{editing ? 'Edit Roadmap' : 'Add New Roadmap'}</h3>
               </div>
               <button onClick={() => !saving && setShowForm(false)} className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-all">
@@ -5125,6 +5125,225 @@ export const MentorsManagementPage: React.FC = () => {
             ))}
           </div>
         )}
+      </Card>
+    </div>
+  );
+};
+
+// ── Env & Config Page ──────────────────────────────────────────────────────────
+interface ConfigEntry { id: string; key: string; value: string; description: string; updatedAt: string; }
+
+export const EnvConfigPage: React.FC = () => {
+  const [entries, setEntries] = useState<ConfigEntry[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [toast, setToast] = useState('');
+  const [showAdd, setShowAdd] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [form, setForm] = useState({ key: '', value: '', description: '' });
+  const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
+  const [showValues, setShowValues] = useState<Record<string, boolean>>({});
+
+  const firebaseEnvVars = [
+    { key: 'VITE_FIREBASE_API_KEY', value: import.meta.env.VITE_FIREBASE_API_KEY },
+    { key: 'VITE_FIREBASE_AUTH_DOMAIN', value: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN },
+    { key: 'VITE_FIREBASE_PROJECT_ID', value: import.meta.env.VITE_FIREBASE_PROJECT_ID },
+    { key: 'VITE_FIREBASE_STORAGE_BUCKET', value: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET },
+    { key: 'VITE_FIREBASE_MESSAGING_SENDER_ID', value: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID },
+    { key: 'VITE_FIREBASE_APP_ID', value: import.meta.env.VITE_FIREBASE_APP_ID },
+  ];
+
+  const showToast = (msg: string) => { setToast(msg); setTimeout(() => setToast(''), 3000); };
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const { getFirestore, collection, onSnapshot } = await import('firebase/firestore');
+        const fsdb = getFirestore();
+        onSnapshot(collection(fsdb, 'app_config'), (snap) => {
+          const data = snap.docs.map(d => ({ id: d.id, ...d.data() } as ConfigEntry));
+          setEntries(data.sort((a, b) => a.key.localeCompare(b.key)));
+          setLoading(false);
+        });
+      } catch {
+        setLoading(false);
+      }
+    })();
+  }, []);
+
+  const handleSave = async () => {
+    if (!form.key.trim() || !form.value.trim()) { showToast('Key and value are required'); return; }
+    setSaving(true);
+    try {
+      const { getFirestore, doc, setDoc, collection, addDoc } = await import('firebase/firestore');
+      const fsdb = getFirestore();
+      const now = new Date().toISOString();
+      if (editingId) {
+        await setDoc(doc(fsdb, 'app_config', editingId), { key: form.key.trim(), value: form.value.trim(), description: form.description.trim(), updatedAt: now }, { merge: true });
+        showToast('Config updated successfully');
+      } else {
+        await addDoc(collection(fsdb, 'app_config'), { key: form.key.trim(), value: form.value.trim(), description: form.description.trim(), updatedAt: now });
+        showToast('Config added successfully');
+      }
+      setForm({ key: '', value: '', description: '' });
+      setShowAdd(false);
+      setEditingId(null);
+    } catch (e: any) {
+      showToast('Error: ' + (e.message || 'Failed to save'));
+    }
+    setSaving(false);
+  };
+
+  const handleDelete = async (id: string) => {
+    try {
+      const { getFirestore, doc, deleteDoc } = await import('firebase/firestore');
+      await deleteDoc(doc(getFirestore(), 'app_config', id));
+      showToast('Config deleted');
+      setDeleteConfirm(null);
+    } catch { showToast('Failed to delete'); }
+  };
+
+  const openEdit = (entry: ConfigEntry) => {
+    setForm({ key: entry.key, value: entry.value, description: entry.description || '' });
+    setEditingId(entry.id);
+    setShowAdd(true);
+  };
+
+  const cancelForm = () => { setForm({ key: '', value: '', description: '' }); setEditingId(null); setShowAdd(false); };
+
+  return (
+    <div className="space-y-6">
+      {toast && (
+        <div className="fixed top-6 right-6 z-50 bg-green-600 text-white px-5 py-3 rounded-2xl shadow-xl font-medium flex items-center gap-2">
+          <CheckCircle className="w-4 h-4" /> {toast}
+        </div>
+      )}
+
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Env &amp; Config</h1>
+          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Manage runtime app configuration stored in Firestore</p>
+        </div>
+        <button onClick={() => { cancelForm(); setShowAdd(true); }} className="flex items-center gap-2 px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-xl font-medium text-sm transition-colors">
+          <Plus className="w-4 h-4" /> Add Config
+        </button>
+      </div>
+
+      {showAdd && (
+        <Card className="p-6 border-2 border-red-200 dark:border-red-800">
+          <h3 className="font-semibold text-gray-900 dark:text-white mb-4">{editingId ? 'Edit Config Entry' : 'Add Config Entry'}</h3>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">Key *</label>
+              <input
+                value={form.key} onChange={e => setForm(p => ({ ...p, key: e.target.value }))}
+                placeholder="e.g. RAZORPAY_KEY_ID" disabled={!!editingId}
+                className="w-full px-3 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-red-500 outline-none font-mono disabled:opacity-60"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">Value *</label>
+              <input
+                value={form.value} onChange={e => setForm(p => ({ ...p, value: e.target.value }))}
+                placeholder="Enter value"
+                className="w-full px-3 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-red-500 outline-none"
+              />
+            </div>
+            <div className="sm:col-span-2">
+              <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">Description</label>
+              <input
+                value={form.description} onChange={e => setForm(p => ({ ...p, description: e.target.value }))}
+                placeholder="What this config is used for"
+                className="w-full px-3 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-red-500 outline-none"
+              />
+            </div>
+          </div>
+          <div className="flex gap-2 mt-4">
+            <button onClick={handleSave} disabled={saving} className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-xl font-medium text-sm transition-colors disabled:opacity-60 flex items-center gap-1.5">
+              <Save className="w-4 h-4" /> {saving ? 'Saving…' : (editingId ? 'Update' : 'Save')}
+            </button>
+            <button onClick={cancelForm} className="px-4 py-2 bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 rounded-xl font-medium text-sm hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors">
+              Cancel
+            </button>
+          </div>
+        </Card>
+      )}
+
+      <Card className="p-6">
+        <div className="flex items-center gap-2 mb-4">
+          <SlidersHorizontal className="w-5 h-5 text-red-500" />
+          <h2 className="font-semibold text-gray-900 dark:text-white">Custom App Config</h2>
+          <span className="ml-auto text-xs bg-gray-100 dark:bg-gray-800 text-gray-500 px-2 py-0.5 rounded-full">{entries.length} entries</span>
+        </div>
+        {loading ? (
+          <div className="py-12 flex items-center justify-center text-gray-400 text-sm">Loading…</div>
+        ) : entries.length === 0 ? (
+          <div className="py-12 text-center text-gray-400 text-sm">No config entries yet. Click "Add Config" to create one.</div>
+        ) : (
+          <div className="space-y-2">
+            {entries.map(entry => (
+              <div key={entry.id} className="relative flex items-center gap-3 p-3 rounded-xl bg-gray-50 dark:bg-gray-800/50 border border-gray-100 dark:border-gray-800">
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="font-mono text-xs font-bold text-red-600 dark:text-red-400">{entry.key}</span>
+                    {entry.description && <span className="text-xs text-gray-400 dark:text-gray-500">— {entry.description}</span>}
+                  </div>
+                  <div className="flex items-center gap-1 mt-1">
+                    <span className="font-mono text-xs text-gray-600 dark:text-gray-300 truncate max-w-xs">
+                      {showValues[entry.id] ? entry.value : '•'.repeat(Math.min(entry.value.length, 24))}
+                    </span>
+                    <button onClick={() => setShowValues(p => ({ ...p, [entry.id]: !p[entry.id] }))} className="p-0.5 hover:text-gray-700 dark:hover:text-gray-200 text-gray-400">
+                      {showValues[entry.id] ? <EyeOff className="w-3 h-3" /> : <Eye className="w-3 h-3" />}
+                    </button>
+                  </div>
+                  {entry.updatedAt && <p className="text-[10px] text-gray-400 mt-0.5">Updated {new Date(entry.updatedAt).toLocaleString('en-IN')}</p>}
+                </div>
+                <div className="flex items-center gap-1 flex-shrink-0">
+                  <button onClick={() => { navigator.clipboard.writeText(entry.value); showToast('Value copied!'); }} className="p-1.5 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-colors">
+                    <Copy className="w-3.5 h-3.5" />
+                  </button>
+                  <button onClick={() => openEdit(entry)} className="p-1.5 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-400 hover:text-blue-600 transition-colors">
+                    <Edit className="w-3.5 h-3.5" />
+                  </button>
+                  <button onClick={() => setDeleteConfirm(entry.id)} className="p-1.5 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-400 hover:text-red-600 transition-colors">
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+                {deleteConfirm === entry.id && (
+                  <div className="absolute right-2 top-10 z-10 bg-white dark:bg-gray-900 border border-red-200 dark:border-red-800 rounded-xl shadow-xl p-3 flex items-center gap-2">
+                    <span className="text-xs text-gray-700 dark:text-gray-300">Delete?</span>
+                    <button onClick={() => handleDelete(entry.id)} className="text-xs px-2 py-1 bg-red-600 text-white rounded-lg">Yes</button>
+                    <button onClick={() => setDeleteConfirm(null)} className="text-xs px-2 py-1 bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 rounded-lg">No</button>
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+      </Card>
+
+      <Card className="p-6">
+        <div className="flex items-center gap-2 mb-1">
+          <Shield className="w-5 h-5 text-blue-500" />
+          <h2 className="font-semibold text-gray-900 dark:text-white">Firebase Build-time Variables</h2>
+        </div>
+        <p className="text-xs text-gray-400 dark:text-gray-500 mb-4">
+          These are baked at build time from your <code className="bg-gray-100 dark:bg-gray-800 px-1 rounded">.env</code> file or Vercel project settings.
+          To change them, update them in <strong>Vercel → Project → Settings → Environment Variables</strong> then redeploy.
+        </p>
+        <div className="space-y-2">
+          {firebaseEnvVars.map(ev => (
+            <div key={ev.key} className="flex items-center gap-3 p-3 rounded-xl bg-blue-50 dark:bg-blue-900/10 border border-blue-100 dark:border-blue-900/30">
+              <span className="font-mono text-xs font-bold text-blue-700 dark:text-blue-400 flex-1 truncate">{ev.key}</span>
+              <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${ev.value ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400' : 'bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400'}`}>
+                {ev.value ? 'Set ✓' : 'Missing ✗'}
+              </span>
+            </div>
+          ))}
+        </div>
+        <div className="mt-4 p-3 rounded-xl bg-yellow-50 dark:bg-yellow-900/10 border border-yellow-200 dark:border-yellow-800/40 text-xs text-yellow-700 dark:text-yellow-400">
+          <strong>Note:</strong> Build-time variables cannot be changed at runtime. After updating them in Vercel, trigger a new deployment for changes to take effect.
+        </div>
       </Card>
     </div>
   );
