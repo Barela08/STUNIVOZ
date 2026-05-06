@@ -63,6 +63,7 @@ import {
 import { RoadmapsPage } from './pages/roadmaps/RoadmapsPage';
 import { RolesPage } from './pages/admin/RolesPage';
 
+import { GlobalAdsPlayer } from './components/ads/GlobalAdsPlayer';
 import { Loading } from './components/common';
 import type { UserRole } from './contexts/AuthContext';
 
@@ -253,6 +254,7 @@ const App: React.FC = () => {
           <AuthProvider>
             <PermissionsProvider>
               <AppRoutes />
+              <GlobalAdsPlayer />
             </PermissionsProvider>
           </AuthProvider>
         </AdminSettingsProvider>

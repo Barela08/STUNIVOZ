@@ -1,9 +1,16 @@
 const SETTINGS_KEY = 'stunivoz_admin_settings';
 const FEATURE_API_KEY = 'stunivoz_feature_apis';
 const API_RECORDS_KEY = 'stunivoz_api_records';
+const SMART_API_KEY = 'stunivoz_smart_apis_v2';
+const FEATURE_ASSIGN_KEY = 'stunivoz_feature_assign_v2';
 
 function getAIConfig(): { provider: string; model: string; apiKey: string; endpoint?: string } {
   try {
+    const smartApis = JSON.parse(localStorage.getItem(SMART_API_KEY) || '[]') as any[];
+    if (smartApis.length > 0) {
+      const ready = smartApis.find(e => e.status === 'ready');
+      if (ready) return { provider: ready.platform, model: ready.selectedModel, apiKey: ready.apiKey };
+    }
     const raw = localStorage.getItem(SETTINGS_KEY);
     if (raw) {
       const parsed = JSON.parse(raw);
@@ -19,18 +26,20 @@ function getAIConfig(): { provider: string; model: string; apiKey: string; endpo
 
 function getFeatureConfig(feature: string): { provider: string; model: string; apiKey: string; endpoint?: string } {
   try {
+    const featureAssign = JSON.parse(localStorage.getItem(FEATURE_ASSIGN_KEY) || '{}');
+    const assignedId = featureAssign[feature];
+    if (assignedId) {
+      const smartApis = JSON.parse(localStorage.getItem(SMART_API_KEY) || '[]') as any[];
+      const api = smartApis.find(e => e.id === assignedId && e.status === 'ready');
+      if (api) return { provider: api.platform, model: api.selectedModel, apiKey: api.apiKey };
+    }
     const featureApis = JSON.parse(localStorage.getItem(FEATURE_API_KEY) || '{}');
     const featureApiId = featureApis[feature];
     if (featureApiId !== undefined && featureApiId !== '') {
       const apis = JSON.parse(localStorage.getItem(API_RECORDS_KEY) || '[]');
       const api = apis.find((a: any) => String(a.id) === String(featureApiId));
       if (api && api.apiKey) {
-        return {
-          provider: api.platform || 'gemini',
-          model: api.model || 'gemini-2.0-flash',
-          apiKey: api.apiKey,
-          endpoint: api.endpoint,
-        };
+        return { provider: api.platform || 'gemini', model: api.model || 'gemini-2.0-flash', apiKey: api.apiKey, endpoint: api.endpoint };
       }
     }
   } catch {}
@@ -49,22 +58,17 @@ async function callGemini(prompt: string, model: string, apiKey: string): Promis
   });
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
-    throw new Error(err?.error?.message || `API error: ${res.status}`);
+    throw new Error(err?.error?.message || `Gemini API error: ${res.status}`);
   }
   const data = await res.json();
   return data.candidates?.[0]?.content?.parts?.[0]?.text || '';
 }
 
-async function callOpenAI(prompt: string, model: string, apiKey: string): Promise<string> {
-  const res = await fetch('https://api.openai.com/v1/chat/completions', {
+async function callOpenAICompat(prompt: string, model: string, apiKey: string, baseUrl: string = 'https://api.openai.com/v1'): Promise<string> {
+  const res = await fetch(`${baseUrl}/chat/completions`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${apiKey}` },
-    body: JSON.stringify({
-      model,
-      messages: [{ role: 'user', content: prompt }],
-      max_tokens: 4096,
-      temperature: 0.7,
-    }),
+    body: JSON.stringify({ model, messages: [{ role: 'user', content: prompt }], max_tokens: 4096, temperature: 0.7 }),
   });
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
@@ -77,20 +81,12 @@ async function callOpenAI(prompt: string, model: string, apiKey: string): Promis
 async function callClaude(prompt: string, model: string, apiKey: string): Promise<string> {
   const res = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'x-api-key': apiKey,
-      'anthropic-version': '2023-06-01',
-    },
-    body: JSON.stringify({
-      model,
-      max_tokens: 4096,
-      messages: [{ role: 'user', content: prompt }],
-    }),
+    headers: { 'Content-Type': 'application/json', 'x-api-key': apiKey, 'anthropic-version': '2023-06-01' },
+    body: JSON.stringify({ model, max_tokens: 4096, messages: [{ role: 'user', content: prompt }] }),
   });
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
-    throw new Error(err?.error?.message || `API error: ${res.status}`);
+    throw new Error(err?.error?.message || `Claude API error: ${res.status}`);
   }
   const data = await res.json();
   return data.content?.[0]?.text || '';
@@ -98,55 +94,32 @@ async function callClaude(prompt: string, model: string, apiKey: string): Promis
 
 export async function callAI(prompt: string, feature?: string): Promise<string> {
   const config = feature ? getFeatureConfig(feature) : getAIConfig();
-  const { provider, model, apiKey } = config;
+  const { provider, model, apiKey, endpoint } = config;
   if (!apiKey) throw new Error('No API key configured. Please set your AI API key in Admin → AI Settings.');
-  if (provider === 'openai') return callOpenAI(prompt, model, apiKey);
+  if (provider === 'gemini') return callGemini(prompt, model, apiKey);
+  if (provider === 'openai') return callOpenAICompat(prompt, model, apiKey);
+  if (provider === 'groq') return callOpenAICompat(prompt, model, apiKey, 'https://api.groq.com/openai/v1');
+  if (provider === 'openrouter') return callOpenAICompat(prompt, model, apiKey, endpoint || 'https://openrouter.ai/api/v1');
   if (provider === 'claude') return callClaude(prompt, model, apiKey);
   return callGemini(prompt, model, apiKey);
 }
 
 export interface DiscoveredInternship {
-  title: string;
-  company: string;
-  location: string;
-  type: string;
-  stipend: string;
-  duration: string;
-  skills: string;
-  description: string;
-  applyUrl: string;
-  expiresAt: string;
-  isScam: boolean;
-  scamReason?: string;
+  title: string; company: string; location: string; type: string;
+  stipend: string; duration: string; skills: string; description: string;
+  applyUrl: string; expiresAt: string; isScam: boolean; scamReason?: string;
 }
 
 export interface DiscoveredEvent {
-  title: string;
-  host: string;
-  date: string;
-  location: string;
-  type: string;
-  description: string;
-  link: string;
-  expiresAt: string;
-  isScam: boolean;
-  scamReason?: string;
-  bannerKeyword: string;
+  title: string; host: string; date: string; location: string; type: string;
+  description: string; link: string; expiresAt: string; isScam: boolean;
+  scamReason?: string; bannerKeyword: string;
 }
 
 export interface DiscoveredCourse {
-  title: string;
-  instructor: string;
-  platform: string;
-  category: string;
-  duration: string;
-  level: string;
-  description: string;
-  link: string;
-  isFree: boolean;
-  price: string;
-  isScam: boolean;
-  scamReason?: string;
+  title: string; instructor: string; platform: string; category: string;
+  duration: string; level: string; description: string; link: string;
+  isFree: boolean; price: string; isScam: boolean; scamReason?: string;
 }
 
 export async function discoverInternships(topic: string, count: number = 5): Promise<DiscoveredInternship[]> {
@@ -257,9 +230,20 @@ Include a mix of free and paid courses, different platforms, and difficulty leve
 }
 
 export async function careerChatReply(userMessage: string, history: {role: string; text: string}[]): Promise<string> {
-  const historyText = history.slice(-6).map(m => `${m.role === 'bot' ? 'Assistant' : 'User'}: ${m.text}`).join('\n');
+  let assistantName = 'Career Advisor';
+  try {
+    const { db } = await import('./firebase');
+    const { doc, getDoc } = await import('firebase/firestore');
+    const snap = await getDoc(doc(db, 'system_config', 'ai_settings'));
+    if (snap.exists()) {
+      const d = snap.data();
+      if (d.assistantName) assistantName = d.assistantName;
+    }
+  } catch {}
 
-  const prompt = `You are a helpful AI Career Advisor for STUNIVOZ, a student career development platform for Indian college students.
+  const historyText = history.slice(-6).map(m => `${m.role === 'bot' ? assistantName : 'User'}: ${m.text}`).join('\n');
+
+  const prompt = `You are ${assistantName}, a helpful AI Career Advisor for STUNIVOZ, a student career development platform for Indian college students.
 
 You help students with:
 - Finding and applying for internships
@@ -275,7 +259,7 @@ Previous conversation:
 ${historyText}
 
 User: ${userMessage}
-Assistant:`;
+${assistantName}:`;
 
   return await callAI(prompt, 'career_chat');
 }

@@ -26,7 +26,7 @@ import {
 import { discoverInternships, discoverEvents, discoverCourses } from '../../services/aiService';
 import { db } from '../../services/firebase';
 import { uploadFile as cloudinaryUpload } from '../../services/uploadService';
-import { collection, onSnapshot, doc, addDoc, updateDoc, deleteDoc } from 'firebase/firestore';
+import { collection, onSnapshot, doc, addDoc, updateDoc, deleteDoc, setDoc } from 'firebase/firestore';
 
 // ── CSV Export Utility ────────────────────────────────────────────────────────
 function exportToCSV(rows: Record<string, unknown>[], filename: string) {
@@ -3072,8 +3072,46 @@ export const AIControlPage: React.FC = () => {
   const [toast, setToast] = useState('');
   const [testingId, setTestingId] = useState<string | null>(null);
   const [testResults, setTestResults] = useState<Record<string, { ok: boolean; msg: string }>>({});
+  const [assistantName, setAssistantName] = useState('Career Advisor');
+  const [assistantPersonality, setAssistantPersonality] = useState('');
+  const [aiEnabled, setAiEnabled] = useState(true);
+  const [aiSettingsSaving, setAiSettingsSaving] = useState(false);
+  const [aiSettingsSaved, setAiSettingsSaved] = useState(false);
+
+  useEffect(() => {
+    import('../../services/firebase').then(({ db: firestoreDb }) => {
+      import('firebase/firestore').then(({ doc, getDoc }) => {
+        getDoc(doc(firestoreDb, 'system_config', 'ai_settings')).then(snap => {
+          if (snap.exists()) {
+            const d = snap.data();
+            if (d.assistantName) setAssistantName(d.assistantName);
+            if (d.personality) setAssistantPersonality(d.personality);
+            if (typeof d.enabled === 'boolean') setAiEnabled(d.enabled);
+          }
+        }).catch(() => {});
+      });
+    });
+  }, []);
 
   const showToast = (msg: string) => { setToast(msg); setTimeout(() => setToast(''), 3000); };
+
+  const saveAssistantSettings = async () => {
+    setAiSettingsSaving(true);
+    try {
+      const { db: firestoreDb } = await import('../../services/firebase');
+      const { doc, setDoc: fsSetDoc } = await import('firebase/firestore');
+      await fsSetDoc(doc(firestoreDb, 'system_config', 'ai_settings'), {
+        assistantName: assistantName.trim() || 'Career Advisor',
+        personality: assistantPersonality.trim(),
+        enabled: aiEnabled,
+        updatedAt: new Date().toISOString(),
+      }, { merge: true });
+      setAiSettingsSaved(true);
+      showToast('AI assistant settings saved to Firestore!');
+      setTimeout(() => setAiSettingsSaved(false), 3000);
+    } catch (e: any) { showToast(`Save failed: ${e?.message}`); }
+    setAiSettingsSaving(false);
+  };
 
   const persistEntries = (updated: SmartApiEntry[]) => {
     setEntries(updated);
@@ -3252,6 +3290,58 @@ export const AIControlPage: React.FC = () => {
           </Card>
         ))}
       </div>
+
+      {/* AI Assistant Settings */}
+      <Card>
+        <div className="p-4 border-b border-gray-100 dark:border-gray-800 flex items-center gap-2">
+          <Bot className="w-5 h-5 text-purple-500" />
+          <div className="flex-1">
+            <h3 className="font-bold text-gray-900 dark:text-white text-sm">AI Assistant Settings</h3>
+            <p className="text-xs text-gray-500 dark:text-gray-400">Configure the career chatbot's name and personality — synced to Firestore in real-time</p>
+          </div>
+          <button onClick={() => { setAiEnabled(!aiEnabled); }} className={`transition-colors ${aiEnabled ? 'text-purple-500' : 'text-gray-400'}`}>
+            {aiEnabled ? <ToggleRight className="w-9 h-9" /> : <ToggleLeft className="w-9 h-9" />}
+          </button>
+        </div>
+        <div className="p-4 space-y-4">
+          <div className="grid sm:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1.5">Assistant Name</label>
+              <input
+                value={assistantName}
+                onChange={e => setAssistantName(e.target.value)}
+                placeholder="Career Advisor"
+                className="w-full px-3 py-2 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm text-gray-900 dark:text-white focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20 transition-all"
+              />
+              <p className="text-[10px] text-gray-400 mt-1">Shown to students in the chatbot</p>
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1.5">Personality / Custom Instructions</label>
+              <textarea
+                value={assistantPersonality}
+                onChange={e => setAssistantPersonality(e.target.value)}
+                placeholder="e.g. Be friendly and motivating. Focus on tech careers. Always end with a follow-up question."
+                rows={3}
+                className="w-full px-3 py-2 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm text-gray-900 dark:text-white focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20 transition-all resize-none"
+              />
+            </div>
+          </div>
+          <div className="flex items-center justify-between">
+            <div className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium ${aiEnabled ? 'bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400' : 'bg-gray-100 dark:bg-gray-800 text-gray-500'}`}>
+              <span className={`w-1.5 h-1.5 rounded-full ${aiEnabled ? 'bg-green-500' : 'bg-gray-400'}`} />
+              AI Career Chatbot is {aiEnabled ? 'Enabled' : 'Disabled'}
+            </div>
+            <button
+              onClick={saveAssistantSettings}
+              disabled={aiSettingsSaving}
+              className="flex items-center gap-2 px-4 py-2 rounded-xl bg-purple-600 hover:bg-purple-700 disabled:opacity-50 text-white font-semibold text-sm transition-all"
+            >
+              {aiSettingsSaving ? <RefreshCw className="w-4 h-4 animate-spin" /> : aiSettingsSaved ? <CheckCircle className="w-4 h-4" /> : <Save className="w-4 h-4" />}
+              {aiSettingsSaving ? 'Saving...' : aiSettingsSaved ? 'Saved!' : 'Save to Firestore'}
+            </button>
+          </div>
+        </div>
+      </Card>
 
       {/* Smart Key Entry */}
       <Card>
@@ -4156,6 +4246,12 @@ export const AdsSystemPage: React.FC = () => {
   const [toast, setToast] = useState('');
   const showToast = (msg: string) => { setToast(msg); setTimeout(() => setToast(''), 3000); };
 
+  const [activeBroadcast, setActiveBroadcast] = useState<{ active: boolean; adId?: string; title?: string } | null>(null);
+  const [broadcastMode, setBroadcastMode] = useState<'popup' | 'overlay' | 'fullscreen'>('popup');
+  const [broadcastSkippable, setBroadcastSkippable] = useState(true);
+  const [broadcastSkipAfter, setBroadcastSkipAfter] = useState(5);
+  const [broadcastLoading, setBroadcastLoading] = useState(false);
+
   useEffect(() => {
     const unsub = onSnapshot(collection(db, 'advertisements'), snap => {
       const list: AdRecord[] = snap.docs.map(d => ({ firestoreId: d.id, ...d.data() } as AdRecord));
@@ -4164,6 +4260,45 @@ export const AdsSystemPage: React.FC = () => {
     });
     return unsub;
   }, []);
+
+  useEffect(() => {
+    const ref = doc(db, 'system_config', 'active_broadcast');
+    const unsub = onSnapshot(ref, snap => {
+      if (snap.exists()) setActiveBroadcast(snap.data() as { active: boolean; adId?: string; title?: string });
+      else setActiveBroadcast(null);
+    }, () => {});
+    return unsub;
+  }, []);
+
+  const broadcastNow = async (ad: AdRecord) => {
+    if (!ad.firestoreId) return;
+    setBroadcastLoading(true);
+    try {
+      await setDoc(doc(db, 'system_config', 'active_broadcast'), {
+        active: true, adId: ad.firestoreId,
+        title: ad.title, advertiser: ad.advertiser,
+        mediaType: ad.mediaType,
+        imageUrl: ad.imageUrl || '', videoUrl: ad.videoUrl || '',
+        textContent: ad.textContent || '', targetUrl: ad.targetUrl || '',
+        ctaLabel: ad.ctaLabel || 'Learn More',
+        displayMode: broadcastMode,
+        skippable: broadcastSkippable,
+        skipAfter: broadcastSkipAfter,
+        broadcastedAt: Date.now(),
+      });
+      showToast(`Broadcasting "${ad.title}" to ALL users right now!`);
+    } catch (e: any) { showToast(`Broadcast failed: ${e?.message}`); }
+    setBroadcastLoading(false);
+  };
+
+  const stopBroadcast = async () => {
+    setBroadcastLoading(true);
+    try {
+      await setDoc(doc(db, 'system_config', 'active_broadcast'), { active: false });
+      showToast('Broadcast stopped — ad dismissed from all users.');
+    } catch (e: any) { showToast(`Failed to stop: ${e?.message}`); }
+    setBroadcastLoading(false);
+  };
 
   const toggleStatus = async (ad: AdRecord) => {
     if (!ad.firestoreId) return;
@@ -4199,6 +4334,93 @@ export const AdsSystemPage: React.FC = () => {
       <TableHeader title="Ads Management" subtitle="Create and manage platform advertisements in real-time."
         actions={<button onClick={() => setShowCreate(true)} className="flex items-center gap-2 px-3 py-2 text-sm text-white bg-red-600 rounded-xl hover:bg-red-700 transition-all font-semibold"><Plus className="w-4 h-4" /> Create Ad</button>}
       />
+
+      {/* Live Broadcast Control */}
+      <Card>
+        <div className="p-4 border-b border-gray-100 dark:border-gray-800 flex items-center gap-2">
+          <Megaphone className="w-5 h-5 text-red-500" />
+          <div className="flex-1">
+            <h3 className="font-bold text-gray-900 dark:text-white text-sm">Live Broadcast Control</h3>
+            <p className="text-xs text-gray-500 dark:text-gray-400">Instantly push an ad to ALL users on any page — no refresh needed</p>
+          </div>
+          {activeBroadcast?.active && (
+            <span className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 text-xs font-bold animate-pulse">
+              <span className="w-1.5 h-1.5 rounded-full bg-red-500" /> LIVE
+            </span>
+          )}
+        </div>
+        <div className="p-4 space-y-4">
+          {activeBroadcast?.active && (
+            <div className="flex items-center gap-3 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl">
+              <Megaphone className="w-5 h-5 text-red-500 animate-pulse flex-shrink-0" />
+              <div className="flex-1">
+                <p className="font-semibold text-red-700 dark:text-red-300 text-sm">Broadcasting: {activeBroadcast.title}</p>
+                <p className="text-xs text-red-500 dark:text-red-400">All online users are seeing this ad right now</p>
+              </div>
+              <button onClick={stopBroadcast} disabled={broadcastLoading}
+                className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-red-600 hover:bg-red-700 disabled:opacity-50 text-white font-bold text-xs transition-all">
+                {broadcastLoading ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <X className="w-3.5 h-3.5" />} Stop
+              </button>
+            </div>
+          )}
+          <div className="grid sm:grid-cols-3 gap-3">
+            <div>
+              <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5">Display Mode</label>
+              <div className="flex gap-1.5">
+                {(['popup', 'overlay', 'fullscreen'] as const).map(m => (
+                  <button key={m} onClick={() => setBroadcastMode(m)}
+                    className={`flex-1 px-2 py-1.5 rounded-lg text-xs font-semibold capitalize border transition-all ${broadcastMode === m ? 'bg-orange-500 border-orange-500 text-white' : 'border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 hover:border-orange-300'}`}>
+                    {m}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5">Skippable</label>
+              <div className="flex gap-1.5">
+                {([true, false] as const).map(v => (
+                  <button key={String(v)} onClick={() => setBroadcastSkippable(v)}
+                    className={`flex-1 px-2 py-1.5 rounded-lg text-xs font-semibold border transition-all ${broadcastSkippable === v ? 'bg-orange-500 border-orange-500 text-white' : 'border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 hover:border-orange-300'}`}>
+                    {v ? 'Yes' : 'No (forced)'}
+                  </button>
+                ))}
+              </div>
+            </div>
+            {broadcastSkippable && (
+              <div>
+                <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5">Skip After (sec)</label>
+                <input type="number" min={3} max={60} value={broadcastSkipAfter} onChange={e => setBroadcastSkipAfter(Number(e.target.value))}
+                  className="w-full px-3 py-1.5 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm text-gray-900 dark:text-white focus:outline-none focus:border-orange-500 transition-all" />
+              </div>
+            )}
+          </div>
+          {ads.filter(a => a.status === 'Active').length === 0 && (
+            <p className="text-xs text-gray-400 dark:text-gray-600">No active ads yet. Create and activate an ad to broadcast it.</p>
+          )}
+          {ads.filter(a => a.status === 'Active').length > 0 && (
+            <div>
+              <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Active Ads — click to broadcast instantly</p>
+              <div className="space-y-2">
+                {ads.filter(a => a.status === 'Active').map(ad => (
+                  <div key={ad.firestoreId} className={`flex items-center gap-3 p-3 rounded-xl border transition-all ${activeBroadcast?.active && activeBroadcast.adId === ad.firestoreId ? 'border-red-300 dark:border-red-700 bg-red-50/50 dark:bg-red-900/10' : 'border-gray-200 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-800/30 hover:border-orange-300'}`}>
+                    {ad.imageUrl && <img src={ad.imageUrl} alt="" className="w-10 h-10 rounded-lg object-cover flex-shrink-0" onError={e => (e.currentTarget.style.display = 'none')} />}
+                    {!ad.imageUrl && <div className="w-10 h-10 rounded-lg bg-orange-100 dark:bg-orange-900/20 flex items-center justify-center flex-shrink-0"><Megaphone className="w-4 h-4 text-orange-500" /></div>}
+                    <div className="flex-1 min-w-0">
+                      <p className="font-semibold text-gray-900 dark:text-white text-sm truncate">{ad.title}</p>
+                      <p className="text-xs text-gray-400">{ad.advertiser} · {ad.mediaType} · {ad.placement}</p>
+                    </div>
+                    <button onClick={() => broadcastNow(ad)} disabled={broadcastLoading}
+                      className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl font-semibold text-xs transition-all disabled:opacity-50 ${activeBroadcast?.active && activeBroadcast.adId === ad.firestoreId ? 'bg-red-600 hover:bg-red-700 text-white' : 'bg-orange-600 hover:bg-orange-700 text-white'}`}>
+                      {broadcastLoading ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Send className="w-3.5 h-3.5" />}
+                      {activeBroadcast?.active && activeBroadcast.adId === ad.firestoreId ? 'Broadcasting' : 'Broadcast Now'}
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      </Card>
 
       {featuredAd && (
         <div className="p-4 rounded-2xl bg-gradient-to-r from-orange-500 to-red-500 text-white flex items-center justify-between">

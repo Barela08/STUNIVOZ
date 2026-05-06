@@ -1,0 +1,125 @@
+You are a senior Next.js + Vercel + Cloudinary developer.
+
+My project is already deployed on Vercel and currently PDF upload is failing with:
+"Unauthorized: Invalid or expired token"
+
+I want you to completely REMOVE Firebase Storage and replace it with Cloudinary professionally.
+
+IMPORTANT:
+Do everything automatically without asking me to manually code feature-by-feature.
+
+========================
+CLOUDINARY SETUP
+================
+
+I already created a Cloudinary unsigned upload preset:
+
+Preset Name:
+pdf_upload
+
+Asset Folder:
+upload
+
+Mode:
+Unsigned
+
+Now do the remaining setup automatically.
+
+========================
+REQUIREMENTS
+============
+
+1. Remove Firebase Storage completely.
+
+2. Integrate Cloudinary for:
+
+* PDF uploads
+* Image uploads
+* Ads uploads
+* Mentor profile uploads
+* Roadmap uploads
+
+3. Use:
+   resource_type: "auto"
+
+to ensure PDFs upload correctly.
+
+4. Create reusable upload system:
+
+* uploadService.js
+* reusable upload function
+* common API route
+
+5. Create secure upload API for Vercel.
+
+6. Add proper:
+
+* upload progress
+* loading states
+* success/error toast
+* validation
+* file size limit
+* file type validation
+
+7. Admin-only uploads:
+
+* only admin/staff can upload
+* users cannot upload
+
+8. Save Cloudinary secure_url in MongoDB.
+
+9. Add PDF preview support.
+
+10. Replace all existing Firebase upload code automatically.
+
+========================
+VERCEL ENV VARIABLES
+====================
+
+Create and use these:
+
+CLOUDINARY_CLOUD_NAME=
+CLOUDINARY_API_KEY=
+CLOUDINARY_API_SECRET=
+NEXT_PUBLIC_CLOUDINARY_PRESET=pdf_upload
+
+========================
+REALTIME SYSTEM
+===============
+
+If admin uploads:
+
+* roadmap PDF
+* ad
+* image
+
+Then users should instantly see updates without refresh.
+
+========================
+FIX ALL ERRORS
+==============
+
+Fix:
+
+* expired token issue
+* unauthorized upload
+* failed PDF uploads
+* Vercel upload issues
+* Firebase Storage conflicts
+
+========================
+OUTPUT
+======
+
+Provide:
+
+* complete backend code
+* frontend upload component
+* upload API
+* upload service
+* Cloudinary config
+* Vercel setup
+* admin upload protection
+* reusable implementation
+
+Make everything production-ready and fully working automatically.

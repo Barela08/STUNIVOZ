@@ -5,7 +5,11 @@ const API_BASE = import.meta.env.VITE_API_URL || '/api';
 async function getAuthToken(): Promise<string> {
   const user = auth.currentUser;
   if (!user) throw new Error('You must be logged in to upload files.');
-  return await user.getIdToken();
+  try {
+    return await user.getIdToken(true);
+  } catch {
+    return await user.getIdToken(false);
+  }
 }
 
 export interface UploadResult {
