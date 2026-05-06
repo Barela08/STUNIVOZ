@@ -5,6 +5,8 @@ import {
   RotateCcw, ChevronDown, AlertCircle
 } from 'lucide-react';
 import { careerChatReply } from '../../services/aiService';
+import { db } from '../../services/firebase';
+import { doc, onSnapshot } from 'firebase/firestore';
 
 interface Message {
   id: string;
@@ -13,6 +15,22 @@ interface Message {
   ts: Date;
 }
 
+interface AiSettings {
+  assistantName: string;
+  greeting: string;
+  logoUrl: string;
+  themeColor: string;
+  enabled: boolean;
+}
+
+const DEFAULT_SETTINGS: AiSettings = {
+  assistantName: 'STUNIVOZ AI',
+  greeting: 'How can I help you today?',
+  logoUrl: '',
+  themeColor: '#000000',
+  enabled: true,
+};
+
 const SUGGESTIONS = [
   { icon: Briefcase,     text: 'How do I find internships as a 2nd year CS student?' },
   { icon: FileText,      text: 'Give me ATS resume tips for tech jobs.' },
@@ -20,7 +38,6 @@ const SUGGESTIONS = [
   { icon: GraduationCap, text: 'Give me a 6-month full-stack developer roadmap.' },
 ];
 
-/* ── Markdown-lite renderer ── */
 function renderContent(text: string) {
   const lines = text.split('\n');
   const out: React.ReactNode[] = [];
@@ -30,7 +47,6 @@ function renderContent(text: string) {
   while (i < lines.length) {
     const line = lines[i];
 
-    // Code block
     if (line.trimStart().startsWith('```')) {
       const lang = line.replace(/```/g, '').trim();
       const codeLines: string[] = [];
@@ -55,14 +71,12 @@ function renderContent(text: string) {
       continue;
     }
 
-    // Heading
     if (/^#{1,3}\s/.test(line)) {
       const content = line.replace(/^#+\s/, '');
       out.push(<p key={key++} className="font-bold text-gray-900 dark:text-white text-base mt-4 mb-1">{inlineFormat(content)}</p>);
       i++; continue;
     }
 
-    // Bullet
     if (/^[\-\*•]\s/.test(line.trimStart())) {
       const content = line.replace(/^[\s\-\*•]+/, '');
       out.push(
@@ -74,7 +88,6 @@ function renderContent(text: string) {
       i++; continue;
     }
 
-    // Numbered list
     const numMatch = line.match(/^(\d+)\.\s(.*)/);
     if (numMatch) {
       out.push(
@@ -86,13 +99,11 @@ function renderContent(text: string) {
       i++; continue;
     }
 
-    // Empty line
     if (!line.trim()) {
       out.push(<div key={key++} className="h-2" />);
       i++; continue;
     }
 
-    // Normal paragraph
     out.push(<p key={key++} className="leading-relaxed text-gray-800 dark:text-gray-200 my-0.5">{inlineFormat(line)}</p>);
     i++;
   }
@@ -113,7 +124,6 @@ function inlineFormat(text: string): React.ReactNode {
   });
 }
 
-/* ── Typing dots ── */
 function TypingDots() {
   return (
     <div className="flex gap-1 items-center py-1 px-1">
@@ -128,7 +138,6 @@ function TypingDots() {
   );
 }
 
-/* ── Copy button ── */
 function CopyBtn({ text }: { text: string }) {
   const [copied, setCopied] = useState(false);
   const copy = () => {
@@ -147,10 +156,31 @@ function CopyBtn({ text }: { text: string }) {
   );
 }
 
-/* ══════════════════════════════════════════════
-   MAIN COMPONENT
-══════════════════════════════════════════════ */
+function AiAvatar({ settings, size = 'md' }: { settings: AiSettings; size?: 'sm' | 'md' | 'lg' }) {
+  const sz = size === 'lg' ? 'w-14 h-14' : size === 'md' ? 'w-8 h-8' : 'w-7 h-7';
+  const iconSz = size === 'lg' ? 'w-7 h-7' : size === 'md' ? 'w-4 h-4' : 'w-4 h-4';
+
+  if (settings.logoUrl) {
+    return (
+      <img
+        src={settings.logoUrl}
+        alt={settings.assistantName}
+        className={`${sz} rounded-full object-cover flex-shrink-0 shadow-sm`}
+      />
+    );
+  }
+  return (
+    <div
+      className={`${sz} rounded-full flex items-center justify-center flex-shrink-0 shadow-sm`}
+      style={{ backgroundColor: settings.themeColor || '#000000' }}
+    >
+      <Bot className={`${iconSz} text-white`} />
+    </div>
+  );
+}
+
 export const AiHelpPage: React.FC = () => {
+  const [aiSettings, setAiSettings] = useState<AiSettings>(DEFAULT_SETTINGS);
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
@@ -159,6 +189,26 @@ export const AiHelpPage: React.FC = () => {
   const bottomRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const unsub = onSnapshot(
+      doc(db, 'system_config', 'ai_settings'),
+      (snap) => {
+        if (snap.exists()) {
+          const d = snap.data();
+          setAiSettings({
+            assistantName: d.assistantName || DEFAULT_SETTINGS.assistantName,
+            greeting: d.greeting || DEFAULT_SETTINGS.greeting,
+            logoUrl: d.logoUrl || '',
+            themeColor: d.themeColor || DEFAULT_SETTINGS.themeColor,
+            enabled: typeof d.enabled === 'boolean' ? d.enabled : true,
+          });
+        }
+      },
+      () => {}
+    );
+    return () => unsub();
+  }, []);
 
   const scrollToBottom = (smooth = true) =>
     bottomRef.current?.scrollIntoView({ behavior: smooth ? 'smooth' : 'auto' });
@@ -212,17 +262,16 @@ export const AiHelpPage: React.FC = () => {
   };
 
   const isEmpty = messages.length === 0 && !loading;
+  const bgColor = aiSettings.themeColor || '#000000';
 
   return (
     <div className="flex flex-col h-[calc(100vh-4rem)] -m-4 lg:-m-6 bg-white dark:bg-[#212121]">
 
-      {/* ── Top bar ── */}
+      {/* Top bar */}
       <div className="flex items-center justify-between px-4 py-2.5 border-b border-gray-200 dark:border-gray-800 bg-white dark:bg-[#212121] flex-shrink-0">
         <div className="flex items-center gap-2">
-          <div className="w-7 h-7 rounded-lg bg-black dark:bg-white flex items-center justify-center">
-            <Bot className="w-4 h-4 text-white dark:text-black" />
-          </div>
-          <span className="font-semibold text-gray-900 dark:text-white text-sm">ChatGPT</span>
+          <AiAvatar settings={aiSettings} size="sm" />
+          <span className="font-semibold text-gray-900 dark:text-white text-sm">{aiSettings.assistantName}</span>
           <span className="text-xs text-gray-400 bg-gray-100 dark:bg-gray-800 px-2 py-0.5 rounded-full">STUNIVOZ AI</span>
         </div>
         {messages.length > 0 && (
@@ -236,7 +285,7 @@ export const AiHelpPage: React.FC = () => {
         )}
       </div>
 
-      {/* ── Messages area ── */}
+      {/* Messages area */}
       <div
         ref={scrollAreaRef}
         onScroll={onScroll}
@@ -245,11 +294,9 @@ export const AiHelpPage: React.FC = () => {
         {/* Welcome screen */}
         {isEmpty && (
           <div className="flex flex-col items-center justify-center min-h-full px-4 py-12 gap-6">
-            <div className="w-14 h-14 rounded-2xl bg-black dark:bg-white flex items-center justify-center shadow-lg">
-              <Sparkles className="w-7 h-7 text-white dark:text-black" />
-            </div>
+            <AiAvatar settings={aiSettings} size="lg" />
             <div className="text-center">
-              <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">How can I help you?</h1>
+              <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">{aiSettings.greeting}</h1>
               <p className="text-sm text-gray-500 dark:text-gray-400">Ask anything about internships, resumes, interviews, or your career.</p>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 w-full max-w-lg">
@@ -272,15 +319,13 @@ export const AiHelpPage: React.FC = () => {
           {messages.map(msg => (
             <div key={msg.id} className={`flex gap-3 group ${msg.role === 'user' ? 'flex-row-reverse' : ''}`}>
               {/* Avatar */}
-              <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 shadow-sm ${
-                msg.role === 'assistant'
-                  ? 'bg-black dark:bg-white'
-                  : 'bg-primary-600'
-              }`}>
-                {msg.role === 'assistant'
-                  ? <Bot className="w-4 h-4 text-white dark:text-black" />
-                  : <User className="w-4 h-4 text-white" />}
-              </div>
+              {msg.role === 'assistant' ? (
+                <AiAvatar settings={aiSettings} size="md" />
+              ) : (
+                <div className="w-8 h-8 rounded-full bg-primary-600 flex items-center justify-center flex-shrink-0 mt-0.5 shadow-sm">
+                  <User className="w-4 h-4 text-white" />
+                </div>
+              )}
 
               {/* Bubble */}
               <div className={`flex-1 max-w-[85%] ${msg.role === 'user' ? 'flex flex-col items-end' : ''}`}>
@@ -294,7 +339,6 @@ export const AiHelpPage: React.FC = () => {
                     : <p className="leading-relaxed whitespace-pre-wrap">{msg.content}</p>}
                 </div>
 
-                {/* Actions row */}
                 <div className={`flex items-center gap-1 mt-1 opacity-0 group-hover:opacity-100 transition-opacity ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
                   <CopyBtn text={msg.content} />
                   <span className="text-xs text-gray-400">
@@ -308,9 +352,7 @@ export const AiHelpPage: React.FC = () => {
           {/* Typing indicator */}
           {loading && (
             <div className="flex gap-3">
-              <div className="w-8 h-8 rounded-full bg-black dark:bg-white flex items-center justify-center flex-shrink-0 shadow-sm">
-                <Bot className="w-4 h-4 text-white dark:text-black" />
-              </div>
+              <AiAvatar settings={aiSettings} size="md" />
               <div className="px-4 py-3 rounded-2xl rounded-tl-sm bg-gray-50 dark:bg-[#2f2f2f] border border-gray-200 dark:border-gray-700 shadow-sm">
                 <TypingDots />
               </div>
@@ -321,13 +363,11 @@ export const AiHelpPage: React.FC = () => {
           {error && (
             <div className="flex items-start gap-2 p-3 rounded-xl bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800">
               <AlertCircle className="w-4 h-4 text-red-500 flex-shrink-0 mt-0.5" />
-              <div>
-                <p className="text-sm text-red-600 dark:text-red-400">
-                  {error.includes('API key') || error.includes('No API key')
-                    ? 'AI Assistant is currently unavailable. Please try again shortly or contact support.'
-                    : error}
-                </p>
-              </div>
+              <p className="text-sm text-red-600 dark:text-red-400">
+                {error.includes('API key') || error.includes('No API key')
+                  ? 'AI Assistant is currently unavailable. Please try again shortly or contact support.'
+                  : error}
+              </p>
             </div>
           )}
 
@@ -335,7 +375,7 @@ export const AiHelpPage: React.FC = () => {
         </div>
       </div>
 
-      {/* Scroll to bottom button */}
+      {/* Scroll to bottom */}
       {showScrollBtn && (
         <button
           onClick={() => scrollToBottom()}
@@ -345,7 +385,7 @@ export const AiHelpPage: React.FC = () => {
         </button>
       )}
 
-      {/* ── Input area ── */}
+      {/* Input area */}
       <div className="flex-shrink-0 px-4 pb-4 pt-2 bg-white dark:bg-[#212121]">
         <div className="max-w-3xl mx-auto">
           <div className="flex items-end gap-3 bg-gray-100 dark:bg-[#2f2f2f] rounded-2xl px-4 py-3 border border-gray-200 dark:border-gray-700 focus-within:border-gray-400 dark:focus-within:border-gray-500 transition-all shadow-sm">
@@ -354,7 +394,7 @@ export const AiHelpPage: React.FC = () => {
               value={input}
               onChange={e => { setInput(e.target.value); resizeTextarea(); }}
               onKeyDown={handleKey}
-              placeholder="Message ChatGPT..."
+              placeholder={`Message ${aiSettings.assistantName}...`}
               rows={1}
               disabled={loading}
               className="flex-1 resize-none bg-transparent text-sm text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none leading-relaxed"
@@ -363,7 +403,8 @@ export const AiHelpPage: React.FC = () => {
             <button
               onClick={() => send(input)}
               disabled={!input.trim() || loading}
-              className="p-2 rounded-xl bg-black dark:bg-white disabled:opacity-30 disabled:cursor-not-allowed text-white dark:text-black transition-all flex-shrink-0 self-end hover:opacity-80"
+              className="p-2 rounded-xl disabled:opacity-30 disabled:cursor-not-allowed text-white transition-all flex-shrink-0 self-end hover:opacity-80"
+              style={{ backgroundColor: bgColor }}
             >
               {loading
                 ? <RefreshCw className="w-4 h-4 animate-spin" />
@@ -371,7 +412,7 @@ export const AiHelpPage: React.FC = () => {
             </button>
           </div>
           <p className="text-center text-xs text-gray-400 dark:text-gray-600 mt-2">
-            ChatGPT can make mistakes. Verify important info. &nbsp;·&nbsp; <kbd className="font-mono text-[10px] px-1 py-0.5 rounded bg-gray-100 dark:bg-gray-800">Enter</kbd> to send
+            {aiSettings.assistantName} can make mistakes. Verify important info. &nbsp;·&nbsp; <kbd className="font-mono text-[10px] px-1 py-0.5 rounded bg-gray-100 dark:bg-gray-800">Enter</kbd> to send
           </p>
         </div>
       </div>

@@ -3074,6 +3074,9 @@ export const AIControlPage: React.FC = () => {
   const [testResults, setTestResults] = useState<Record<string, { ok: boolean; msg: string }>>({});
   const [assistantName, setAssistantName] = useState('Career Advisor');
   const [assistantPersonality, setAssistantPersonality] = useState('');
+  const [assistantGreeting, setAssistantGreeting] = useState('');
+  const [assistantLogoUrl, setAssistantLogoUrl] = useState('');
+  const [assistantThemeColor, setAssistantThemeColor] = useState('#6366f1');
   const [aiEnabled, setAiEnabled] = useState(true);
   const [aiSettingsSaving, setAiSettingsSaving] = useState(false);
   const [aiSettingsSaved, setAiSettingsSaved] = useState(false);
@@ -3086,6 +3089,9 @@ export const AIControlPage: React.FC = () => {
             const d = snap.data();
             if (d.assistantName) setAssistantName(d.assistantName);
             if (d.personality) setAssistantPersonality(d.personality);
+            if (d.greeting) setAssistantGreeting(d.greeting);
+            if (d.logoUrl) setAssistantLogoUrl(d.logoUrl);
+            if (d.themeColor) setAssistantThemeColor(d.themeColor);
             if (typeof d.enabled === 'boolean') setAiEnabled(d.enabled);
           }
         }).catch(() => {});
@@ -3103,11 +3109,14 @@ export const AIControlPage: React.FC = () => {
       await fsSetDoc(doc(firestoreDb, 'system_config', 'ai_settings'), {
         assistantName: assistantName.trim() || 'Career Advisor',
         personality: assistantPersonality.trim(),
+        greeting: assistantGreeting.trim(),
+        logoUrl: assistantLogoUrl.trim(),
+        themeColor: assistantThemeColor || '#6366f1',
         enabled: aiEnabled,
         updatedAt: new Date().toISOString(),
       }, { merge: true });
       setAiSettingsSaved(true);
-      showToast('AI assistant settings saved to Firestore!');
+      showToast('AI assistant settings saved — changes apply instantly across the platform!');
       setTimeout(() => setAiSettingsSaved(false), 3000);
     } catch (e: any) { showToast(`Save failed: ${e?.message}`); }
     setAiSettingsSaving(false);
@@ -3304,6 +3313,7 @@ export const AIControlPage: React.FC = () => {
           </button>
         </div>
         <div className="p-4 space-y-4">
+          {/* Row 1: Name + Theme Color */}
           <div className="grid sm:grid-cols-2 gap-4">
             <div>
               <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1.5">Assistant Name</label>
@@ -3313,20 +3323,72 @@ export const AIControlPage: React.FC = () => {
                 placeholder="Career Advisor"
                 className="w-full px-3 py-2 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm text-gray-900 dark:text-white focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20 transition-all"
               />
-              <p className="text-[10px] text-gray-400 mt-1">Shown to students in the chatbot</p>
+              <p className="text-[10px] text-gray-400 mt-1">Shown to students in both AI chat pages</p>
             </div>
             <div>
-              <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1.5">Personality / Custom Instructions</label>
-              <textarea
-                value={assistantPersonality}
-                onChange={e => setAssistantPersonality(e.target.value)}
-                placeholder="e.g. Be friendly and motivating. Focus on tech careers. Always end with a follow-up question."
-                rows={3}
-                className="w-full px-3 py-2 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm text-gray-900 dark:text-white focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20 transition-all resize-none"
-              />
+              <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1.5">Theme Color</label>
+              <div className="flex items-center gap-2">
+                <input
+                  type="color"
+                  value={assistantThemeColor}
+                  onChange={e => setAssistantThemeColor(e.target.value)}
+                  className="w-10 h-10 rounded-lg border border-gray-200 dark:border-gray-700 cursor-pointer bg-white dark:bg-gray-800 flex-shrink-0"
+                />
+                <input
+                  value={assistantThemeColor}
+                  onChange={e => setAssistantThemeColor(e.target.value)}
+                  placeholder="#6366f1"
+                  className="flex-1 px-3 py-2 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm text-gray-900 dark:text-white focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20 transition-all font-mono"
+                />
+              </div>
+              <p className="text-[10px] text-gray-400 mt-1">Sets the AI avatar background and send button color</p>
             </div>
           </div>
-          <div className="flex items-center justify-between">
+
+          {/* Row 2: Logo URL */}
+          <div>
+            <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1.5">AI Logo / Avatar URL</label>
+            <div className="flex items-center gap-3">
+              {assistantLogoUrl && (
+                <img src={assistantLogoUrl} alt="AI Logo preview" className="w-10 h-10 rounded-full object-cover border border-gray-200 dark:border-gray-700 flex-shrink-0" />
+              )}
+              <input
+                value={assistantLogoUrl}
+                onChange={e => setAssistantLogoUrl(e.target.value)}
+                placeholder="https://... (leave blank to use default icon)"
+                className="flex-1 px-3 py-2 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm text-gray-900 dark:text-white focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20 transition-all"
+              />
+            </div>
+            <p className="text-[10px] text-gray-400 mt-1">Upload an image via any page's file uploader then paste the URL here</p>
+          </div>
+
+          {/* Row 3: Greeting */}
+          <div>
+            <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1.5">Welcome / Greeting Message</label>
+            <textarea
+              value={assistantGreeting}
+              onChange={e => setAssistantGreeting(e.target.value)}
+              placeholder={"Hi! I'm your AI Career Advisor 👋\n\nWhat would you like to know?"}
+              rows={3}
+              className="w-full px-3 py-2 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm text-gray-900 dark:text-white focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20 transition-all resize-none"
+            />
+            <p className="text-[10px] text-gray-400 mt-1">First message shown when a user opens the chat. Leave blank for default.</p>
+          </div>
+
+          {/* Row 4: Personality */}
+          <div>
+            <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1.5">AI Personality / Behaviour Instructions</label>
+            <textarea
+              value={assistantPersonality}
+              onChange={e => setAssistantPersonality(e.target.value)}
+              placeholder="e.g. Be friendly and motivating. Focus on tech careers. Always end with a follow-up question."
+              rows={3}
+              className="w-full px-3 py-2 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm text-gray-900 dark:text-white focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20 transition-all resize-none"
+            />
+            <p className="text-[10px] text-gray-400 mt-1">Admin-only system instructions — never shown to users</p>
+          </div>
+
+          <div className="flex items-center justify-between pt-1">
             <div className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium ${aiEnabled ? 'bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400' : 'bg-gray-100 dark:bg-gray-800 text-gray-500'}`}>
               <span className={`w-1.5 h-1.5 rounded-full ${aiEnabled ? 'bg-green-500' : 'bg-gray-400'}`} />
               AI Career Chatbot is {aiEnabled ? 'Enabled' : 'Disabled'}
@@ -3337,7 +3399,7 @@ export const AIControlPage: React.FC = () => {
               className="flex items-center gap-2 px-4 py-2 rounded-xl bg-purple-600 hover:bg-purple-700 disabled:opacity-50 text-white font-semibold text-sm transition-all"
             >
               {aiSettingsSaving ? <RefreshCw className="w-4 h-4 animate-spin" /> : aiSettingsSaved ? <CheckCircle className="w-4 h-4" /> : <Save className="w-4 h-4" />}
-              {aiSettingsSaving ? 'Saving...' : aiSettingsSaved ? 'Saved!' : 'Save to Firestore'}
+              {aiSettingsSaving ? 'Saving...' : aiSettingsSaved ? 'Saved to Firestore!' : 'Save to Firestore'}
             </button>
           </div>
         </div>

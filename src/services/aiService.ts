@@ -231,6 +231,7 @@ Include a mix of free and paid courses, different platforms, and difficulty leve
 
 export async function careerChatReply(userMessage: string, history: {role: string; text: string}[]): Promise<string> {
   let assistantName = 'Career Advisor';
+  let personality = '';
   try {
     const { db } = await import('./firebase');
     const { doc, getDoc } = await import('firebase/firestore');
@@ -238,10 +239,15 @@ export async function careerChatReply(userMessage: string, history: {role: strin
     if (snap.exists()) {
       const d = snap.data();
       if (d.assistantName) assistantName = d.assistantName;
+      if (d.personality) personality = d.personality;
     }
   } catch {}
 
   const historyText = history.slice(-6).map(m => `${m.role === 'bot' ? assistantName : 'User'}: ${m.text}`).join('\n');
+
+  const personalitySection = personality
+    ? `\nAdditional behaviour instructions:\n${personality}\n`
+    : '';
 
   const prompt = `You are ${assistantName}, a helpful AI Career Advisor for STUNIVOZ, a student career development platform for Indian college students.
 
@@ -254,7 +260,7 @@ You help students with:
 - College-to-career transitions
 
 Be specific, practical, and encouraging. Use Indian context (companies, stipends in ₹, Indian job portals like Internshala, LinkedIn, Naukri). Format responses with bullet points and headers where helpful. Keep responses concise but valuable (150-250 words max).
-
+${personalitySection}
 Previous conversation:
 ${historyText}
 

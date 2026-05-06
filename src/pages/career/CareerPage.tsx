@@ -1,9 +1,27 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { MessageCircle, Send, X, Bot, User, Loader, AlertCircle, Sparkles } from 'lucide-react';
+import { Send, X, User, Loader, AlertCircle, Sparkles } from 'lucide-react';
 import { Button } from '../../components/common';
 import { careerChatReply } from '../../services/aiService';
+import { db } from '../../services/firebase';
+import { doc, onSnapshot } from 'firebase/firestore';
 
 type Message = { role: 'bot' | 'user'; text: string };
+
+interface AiSettings {
+  assistantName: string;
+  greeting: string;
+  logoUrl: string;
+  themeColor: string;
+  enabled: boolean;
+}
+
+const DEFAULT_SETTINGS: AiSettings = {
+  assistantName: 'AI Career Advisor',
+  greeting: "Hi! I'm your AI Career Advisor 👋\n\nI can help you with:\n• Internship hunting tips\n• Resume and ATS advice\n• Interview preparation\n• Skills to learn in 2026\n• Salary and stipend benchmarks\n\nWhat would you like to know?",
+  logoUrl: '',
+  themeColor: '#6366f1',
+  enabled: true,
+};
 
 const FALLBACK_RESPONSES: Record<string, string> = {
   internship: "Here are tips to land your first internship:\n\n1. **Update your resume** with all projects and skills\n2. **Apply to 5–10 companies per week** — consistency matters\n3. **Use LinkedIn actively** — connect with recruiters\n4. **Practise DSA** on LeetCode (aim for Easy/Medium)\n5. **Build 2–3 solid projects** to showcase on GitHub\n\nStart applying to smaller startups first — they hire more interns and give more responsibility!",
@@ -44,15 +62,66 @@ const quickQuestions = [
   'Tips for LinkedIn profile?',
 ];
 
+function AiAvatar({ settings, size = 'md' }: { settings: AiSettings; size?: 'sm' | 'md' }) {
+  const sz = size === 'md' ? 'w-10 h-10' : 'w-8 h-8';
+  const iconSz = size === 'md' ? 'w-5 h-5' : 'w-4 h-4';
+  if (settings.logoUrl) {
+    return (
+      <img
+        src={settings.logoUrl}
+        alt={settings.assistantName}
+        className={`${sz} rounded-xl object-cover flex-shrink-0 shadow-lg`}
+      />
+    );
+  }
+  return (
+    <div
+      className={`${sz} rounded-xl flex items-center justify-center shadow-lg flex-shrink-0`}
+      style={{ background: `linear-gradient(135deg, ${settings.themeColor || '#6366f1'}, ${settings.themeColor || '#4f46e5'})` }}
+    >
+      <svg className={`${iconSz} text-white`} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+        <path d="M12 2a2 2 0 0 1 2 2c0 .74-.4 1.39-1 1.73V7h1a7 7 0 0 1 7 7h1a1 1 0 0 1 1 1v3a1 1 0 0 1-1 1h-1v1a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-1H2a1 1 0 0 1-1-1v-3a1 1 0 0 1 1-1h1a7 7 0 0 1 7-7h1V5.73c-.6-.34-1-.99-1-1.73a2 2 0 0 1 2-2z"/>
+      </svg>
+    </div>
+  );
+}
+
 export const CareerPage: React.FC = () => {
-  const [messages, setMessages] = useState<Message[]>([
-    { role: 'bot', text: "Hi! I'm your AI Career Advisor 👋\n\nI can help you with:\n• Internship hunting tips\n• Resume and ATS advice\n• Interview preparation\n• Skills to learn in 2026\n• Salary and stipend benchmarks\n\nWhat would you like to know?" },
-  ]);
+  const [aiSettings, setAiSettings] = useState<AiSettings>(DEFAULT_SETTINGS);
+  const [messages, setMessages] = useState<Message[]>([]);
   const [inputText, setInputText] = useState('');
   const [typing, setTyping] = useState(false);
   const [aiError, setAiError] = useState('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  useEffect(() => {
+    const unsub = onSnapshot(
+      doc(db, 'system_config', 'ai_settings'),
+      (snap) => {
+        if (snap.exists()) {
+          const d = snap.data();
+          const newSettings: AiSettings = {
+            assistantName: d.assistantName || DEFAULT_SETTINGS.assistantName,
+            greeting: d.greeting || DEFAULT_SETTINGS.greeting,
+            logoUrl: d.logoUrl || '',
+            themeColor: d.themeColor || DEFAULT_SETTINGS.themeColor,
+            enabled: typeof d.enabled === 'boolean' ? d.enabled : true,
+          };
+          setAiSettings(newSettings);
+          setMessages([{ role: 'bot', text: newSettings.greeting }]);
+        }
+      },
+      () => {}
+    );
+    return () => unsub();
+  }, []);
+
+  useEffect(() => {
+    if (messages.length === 0) {
+      setMessages([{ role: 'bot', text: aiSettings.greeting }]);
+    }
+  }, []);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -89,21 +158,21 @@ export const CareerPage: React.FC = () => {
   };
 
   const clearChat = () => {
-    setMessages([{ role: 'bot', text: "Hi! I'm your AI Career Advisor 👋\n\nI can help you with:\n• Internship hunting tips\n• Resume and ATS advice\n• Interview preparation\n• Skills to learn in 2026\n• Salary and stipend benchmarks\n\nWhat would you like to know?" }]);
+    setMessages([{ role: 'bot', text: aiSettings.greeting }]);
     setAiError('');
     setInputText('');
   };
+
+  const themeColor = aiSettings.themeColor || '#6366f1';
 
   return (
     <div className="flex flex-col h-[calc(100vh-6rem)] -m-4 lg:-m-6 animate-fade-in">
       {/* Header */}
       <div className="flex items-center justify-between px-4 lg:px-6 py-4 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800 flex-shrink-0">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary-500 to-primary-600 flex items-center justify-center shadow-lg shadow-primary-500/30">
-            <Bot className="w-5 h-5 text-white" />
-          </div>
+          <AiAvatar settings={aiSettings} size="md" />
           <div>
-            <h1 className="font-bold text-gray-900 dark:text-white text-base">AI Career Advisor</h1>
+            <h1 className="font-bold text-gray-900 dark:text-white text-base">{aiSettings.assistantName}</h1>
             <p className="text-xs text-green-500 flex items-center gap-1">
               <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
               Online · Ready to help
@@ -132,10 +201,16 @@ export const CareerPage: React.FC = () => {
       <div className="flex-1 overflow-y-auto px-4 lg:px-6 py-4 space-y-4 min-h-0 bg-gray-50 dark:bg-gray-950">
         {messages.map((msg, i) => (
           <div key={i} className={`flex gap-3 ${msg.role === 'user' ? 'flex-row-reverse' : ''}`}>
-            <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${msg.role === 'bot' ? 'bg-gradient-to-br from-primary-500 to-primary-600' : 'bg-gray-200 dark:bg-gray-700'}`}>
-              {msg.role === 'bot' ? <Bot className="w-4 h-4 text-white" /> : <User className="w-4 h-4 text-gray-600 dark:text-gray-300" />}
-            </div>
-            <div className={`max-w-[80%] rounded-2xl px-4 py-3 ${msg.role === 'bot' ? 'bg-white dark:bg-gray-800 shadow-sm rounded-tl-none border border-gray-100 dark:border-gray-700' : 'bg-primary-500 text-white rounded-tr-none'}`}>
+            {msg.role === 'bot' ? (
+              <AiAvatar settings={aiSettings} size="sm" />
+            ) : (
+              <div className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 bg-gray-200 dark:bg-gray-700">
+                <User className="w-4 h-4 text-gray-600 dark:text-gray-300" />
+              </div>
+            )}
+            <div className={`max-w-[80%] rounded-2xl px-4 py-3 ${msg.role === 'bot' ? 'bg-white dark:bg-gray-800 shadow-sm rounded-tl-none border border-gray-100 dark:border-gray-700' : 'text-white rounded-tr-none'}`}
+              style={msg.role === 'user' ? { backgroundColor: themeColor } : undefined}
+            >
               {msg.role === 'bot' ? (
                 <div className="space-y-0.5">{formatMessage(msg.text)}</div>
               ) : (
@@ -147,11 +222,9 @@ export const CareerPage: React.FC = () => {
 
         {typing && (
           <div className="flex gap-3">
-            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-primary-500 to-primary-600 flex items-center justify-center flex-shrink-0">
-              <Bot className="w-4 h-4 text-white" />
-            </div>
+            <AiAvatar settings={aiSettings} size="sm" />
             <div className="bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 shadow-sm rounded-2xl rounded-tl-none px-4 py-3 flex items-center gap-2">
-              <Loader className="w-4 h-4 text-primary-500 animate-spin" />
+              <Loader className="w-4 h-4 animate-spin" style={{ color: themeColor }} />
               <span className="text-xs text-gray-500 dark:text-gray-400">Thinking...</span>
             </div>
           </div>
@@ -170,7 +243,8 @@ export const CareerPage: React.FC = () => {
               <button
                 key={i}
                 onClick={() => sendMessage(q)}
-                className="text-xs px-3 py-1.5 rounded-full bg-white dark:bg-gray-800 text-primary-600 dark:text-primary-400 border border-primary-200 dark:border-primary-800 hover:bg-primary-50 dark:hover:bg-primary-900/30 transition-all shadow-sm"
+                className="text-xs px-3 py-1.5 rounded-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 transition-all shadow-sm"
+                style={{ color: themeColor, borderColor: `${themeColor}40` }}
               >
                 {q}
               </button>
@@ -187,14 +261,16 @@ export const CareerPage: React.FC = () => {
             value={inputText}
             onChange={e => setInputText(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder="Ask anything about your career..."
+            placeholder={`Ask ${aiSettings.assistantName} anything about your career...`}
             rows={1}
-            className="flex-1 px-4 py-2.5 rounded-xl border dark:border-gray-700 border-gray-200 dark:bg-gray-800 bg-gray-50 dark:text-white text-gray-900 text-sm focus:outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 transition-all resize-none"
+            className="flex-1 px-4 py-2.5 rounded-xl border dark:border-gray-700 border-gray-200 dark:bg-gray-800 bg-gray-50 dark:text-white text-gray-900 text-sm focus:outline-none focus:ring-2 transition-all resize-none"
+            style={{ '--tw-ring-color': `${themeColor}33` } as any}
           />
           <button
             onClick={() => sendMessage()}
             disabled={!inputText.trim() || typing}
-            className="w-10 h-10 rounded-xl bg-primary-500 hover:bg-primary-600 disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center transition-all shadow-lg shadow-primary-500/25 flex-shrink-0"
+            className="w-10 h-10 rounded-xl disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center transition-all shadow-lg flex-shrink-0"
+            style={{ backgroundColor: themeColor }}
           >
             <Send className="w-4 h-4 text-white" />
           </button>

@@ -45,11 +45,9 @@ router.post('/file', requireAuth, upload.single('file'), async (req, res) => {
     const ext = isPdf ? '.pdf' : '';
     const publicId = `${req.user.uid}_${Date.now()}${ext}`;
 
-    const resourceType = isPdf ? 'raw' : isVideo ? 'video' : 'image';
-
     const result = await cloudinary.uploader.upload(dataUri, {
       folder,
-      resource_type: resourceType,
+      resource_type: 'auto',
       public_id: publicId,
       use_filename: false,
       unique_filename: false,

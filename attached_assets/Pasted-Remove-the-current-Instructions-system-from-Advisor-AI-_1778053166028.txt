@@ -1,0 +1,115 @@
+Remove the current "Instructions" system from Advisor AI completely and rebuild the AI system using a centralized global API architecture.
+
+Requirements:
+
+1. REMOVE INSTRUCTIONS SYSTEM
+
+* Remove all visible "instructions" sections from Advisor AI.
+* Users should NOT see any instruction/config text.
+* Advisor should behave like a clean professional AI assistant.
+
+2. GLOBAL AI API SYSTEM
+   Create ONE global AI API configuration system.
+
+Admin should be able to:
+
+* Add AI API key
+* Change API provider
+* Change AI model
+* Enable/disable AI
+* Change AI assistant name
+* Change AI logo/icon
+* Change AI welcome message
+
+from admin panel WITHOUT coding.
+
+3. AI PROVIDER SUPPORT
+   Support:
+
+* OpenAI
+* Gemini
+* Claude
+* Groq
+* OpenRouter
+
+System should:
+
+* auto-detect provider from API key
+* auto-select best supported model automatically
+* validate API key
+* show API connection status
+
+4. AI HELP SYSTEM
+   The AI Help widget should:
+
+* use separate API configuration
+* have editable:
+
+  * AI name
+  * AI logo
+  * AI colors
+  * AI greeting
+* allow admin to fully customize branding
+
+Remove old link-based AI setup completely.
+
+Do NOT use external AI links anymore.
+Use direct API integration only.
+
+5. ADVISOR AI SYSTEM
+   Advisor AI should:
+
+* use the GLOBAL AI API automatically
+* no separate instructions system
+* no manual prompt editor visible
+* clean AI assistant interface
+* realtime AI responses
+
+6. DYNAMIC BRANDING
+   Admin can change:
+
+* AI logo
+* AI name
+* AI icon
+* AI theme
+* support branding
+
+without touching code.
+
+7. REALTIME UPDATE
+   If admin changes:
+
+* API key
+* AI name
+* logo
+* model
+* provider
+
+Then updates should apply instantly across website WITHOUT refresh.
+
+8. SECURITY
+
+* Store API keys securely
+* Never expose secret keys on frontend
+* Protect admin settings routes
+* Encrypt sensitive configs
+
+9. DATABASE SYSTEM
+   Store:
+
+* AI settings
+* provider configs
+* branding
+* logos
+* model configs
+
+in database dynamically.
+
+10. FINAL GOAL
+    Create a fully dynamic centralized AI platform where:
+
+* AI Help
+* Advisor AI
+* support assistant
+
+all work from the same global AI API system professionally without instructions or hardcoded configs.

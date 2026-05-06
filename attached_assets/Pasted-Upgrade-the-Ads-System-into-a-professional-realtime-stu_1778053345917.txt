@@ -1,0 +1,100 @@
+Upgrade the Ads System into a professional realtime student-only advertising system.
+
+Requirements:
+
+1. STUDENT-ONLY ADS
+   Ads should ONLY appear for:
+
+* students/users
+
+Ads should NOT appear for:
+
+* admin
+* staff
+* mentors
+* providers
+
+Use role-based visibility system.
+
+2. SMART AD DISPLAY SYSTEM
+   If uploaded ad is:
+
+* banner image/video → show beautifully in fullscreen responsive layout
+* short/small image → show only in original proportional size
+
+Do NOT stretch small images unnaturally.
+
+System should automatically detect:
+
+* image size
+* video size
+* orientation
+* aspect ratio
+
+and display ads professionally.
+
+3. FULLSCREEN MODE
+   If admin enables fullscreen:
+
+* ad should appear as professional fullscreen overlay
+* centered properly
+* responsive on mobile + desktop
+* smooth animations
+
+4. NORMAL MODE
+   If fullscreen disabled:
+
+* show ad in clean popup/modal/card layout
+* auto-size based on media dimensions
+
+5. REALTIME AD BROADCAST
+   When admin clicks:
+   "Show Ad"
+
+Then:
+
+* all students instantly see ad
+* no refresh required
+* works on any page
+
+Use:
+
+* Socket.io
+* Firebase realtime
+* WebSockets
+
+6. AD CONTROL PANEL
+   Admin should be able to:
+
+* upload image/video ads
+* choose fullscreen or normal mode
+* set duration in seconds
+* choose skippable/non-skippable
+* start ad manually
+* stop ad anytime
+* preview ad before publishing
+
+7. PROFESSIONAL UI
+   Ads should:
+
+* look modern
+* have smooth transitions
+* mobile responsive
+* centered correctly
+* support dark/light themes
+
+8. PERFORMANCE
+
+* preload ads
+* optimize images/videos
+* prevent lag
+* smooth realtime sync
+
+9. SECURITY
+
+* only admin can control ads
+* students cannot bypass forced ads
+* providers/staff/admin should never receive ads
+
+10. FINAL GOAL
+    Create a realtime professional ad broadcasting system where admin can instantly display fullscreen or responsive ads only to students across the website without refresh.
