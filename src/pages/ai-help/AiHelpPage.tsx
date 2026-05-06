@@ -322,12 +322,11 @@ export const AiHelpPage: React.FC = () => {
             <div className="flex items-start gap-2 p-3 rounded-xl bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800">
               <AlertCircle className="w-4 h-4 text-red-500 flex-shrink-0 mt-0.5" />
               <div>
-                <p className="text-sm text-red-600 dark:text-red-400">{error}</p>
-                {error.includes('API key') && (
-                  <p className="text-xs text-red-400 mt-1">
-                    Admin → AI Settings → API Keys mein key set karo. Gemini free mein milti hai: aistudio.google.com
-                  </p>
-                )}
+                <p className="text-sm text-red-600 dark:text-red-400">
+                  {error.includes('API key') || error.includes('No API key')
+                    ? 'AI Assistant is currently unavailable. Please try again shortly or contact support.'
+                    : error}
+                </p>
               </div>
             </div>
           )}

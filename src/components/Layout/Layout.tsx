@@ -65,7 +65,7 @@ const FloatingAiChat: React.FC = () => {
       setMessages(prev => [...prev, { role: 'bot', text: reply }]);
     } catch (err: any) {
       const m = err?.message || '';
-      setError(m.includes('No API key') ? 'AI not configured. Ask admin to set API key.' : 'Could not respond. Try again.');
+      setError(m.includes('No API key') ? 'AI Assistant is temporarily unavailable. Please try again later.' : 'Could not respond. Try again.');
       setMessages(prev => [...prev, { role: 'bot', text: "Sorry, I couldn't respond right now. Try the AI Help page for more options." }]);
     } finally {
       setTyping(false);
@@ -75,7 +75,7 @@ const FloatingAiChat: React.FC = () => {
   return (
     <>
       {/* Panel */}
-      <div className={`fixed bottom-24 right-4 sm:right-6 z-50 w-[calc(100vw-2rem)] sm:w-96 max-w-sm transition-all duration-300 origin-bottom-right ${open ? 'scale-100 opacity-100 pointer-events-auto' : 'scale-90 opacity-0 pointer-events-none'}`}>
+      <div className={`fixed bottom-[8.5rem] right-4 sm:right-6 z-50 w-[calc(100vw-2rem)] sm:w-96 max-w-sm transition-all duration-300 origin-bottom-right ${open ? 'scale-100 opacity-100 pointer-events-auto' : 'scale-90 opacity-0 pointer-events-none'}`}>
         <div className="flex flex-col bg-white dark:bg-gray-900 rounded-2xl shadow-2xl border border-gray-200 dark:border-gray-700 overflow-hidden" style={{ height: '480px' }}>
 
           {/* Header */}
@@ -163,7 +163,7 @@ const FloatingAiChat: React.FC = () => {
       {/* Toggle button */}
       <button
         onClick={() => setOpen(o => !o)}
-        className={`fixed bottom-6 right-20 sm:right-24 z-50 w-14 h-14 rounded-2xl shadow-xl flex items-center justify-center transition-all duration-300 hover:scale-110 ${open ? 'bg-gray-700 hover:bg-gray-800' : 'bg-gradient-to-br from-primary-500 to-accent-500 hover:shadow-primary-500/30 hover:shadow-2xl'}`}
+        className={`fixed bottom-[5.25rem] right-6 z-50 w-14 h-14 rounded-2xl shadow-xl flex items-center justify-center transition-all duration-300 hover:scale-110 ${open ? 'bg-gray-700 hover:bg-gray-800' : 'bg-gradient-to-br from-primary-500 to-accent-500 hover:shadow-primary-500/30 hover:shadow-2xl'}`}
         title="AI Career Advisor"
       >
         {open
