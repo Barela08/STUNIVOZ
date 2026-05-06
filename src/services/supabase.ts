@@ -1,7 +1,76 @@
-// Removed Supabase - migrated to Firebase
-// This file now only contains database types/models
+import { createClient } from '@supabase/supabase-js';
 
-// Database types
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL as string;
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY as string;
+
+if (!supabaseUrl || !supabaseAnonKey) {
+  throw new Error('Missing VITE_SUPABASE_URL or VITE_SUPABASE_ANON_KEY environment variables');
+}
+
+export const supabase = createClient(supabaseUrl, supabaseAnonKey);
+
+// ─── Storage ─────────────────────────────────────────────────────────────────
+
+export type StorageBucket = 'images' | 'pdfs' | 'videos' | 'texts';
+
+const ALLOWED_TYPES: Record<StorageBucket, string[]> = {
+  images: ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/svg+xml'],
+  pdfs:   ['application/pdf'],
+  videos: ['video/mp4', 'video/webm', 'video/ogg', 'video/quicktime'],
+  texts:  ['text/plain', 'text/csv', 'text/html', 'text/markdown', 'application/json'],
+};
+
+export function getBucketForFile(file: File): StorageBucket | null {
+  for (const [bucket, types] of Object.entries(ALLOWED_TYPES) as [StorageBucket, string[]][]) {
+    if (types.includes(file.type)) return bucket;
+  }
+  return null;
+}
+
+export interface UploadResult {
+  url: string;
+  path: string;
+  bucket: StorageBucket;
+  fileName: string;
+}
+
+export async function uploadToSupabase(
+  file: File,
+  bucket: StorageBucket,
+  folder = ''
+): Promise<UploadResult> {
+  const ext = file.name.split('.').pop();
+  const uniqueName = `${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+  const filePath = folder ? `${folder}/${uniqueName}` : uniqueName;
+
+  const { error } = await supabase.storage
+    .from(bucket)
+    .upload(filePath, file, { upsert: false, contentType: file.type });
+
+  if (error) throw new Error(`Upload failed: ${error.message}`);
+
+  const { data } = supabase.storage.from(bucket).getPublicUrl(filePath);
+
+  return { url: data.publicUrl, path: filePath, bucket, fileName: file.name };
+}
+
+export async function uploadAutoDetect(file: File, folder = ''): Promise<UploadResult> {
+  const bucket = getBucketForFile(file);
+  if (!bucket) {
+    throw new Error(
+      `Unsupported file type: ${file.type}. Supported: images, PDFs, videos, text files.`
+    );
+  }
+  return uploadToSupabase(file, bucket, folder);
+}
+
+export async function deleteFromSupabase(bucket: StorageBucket, path: string): Promise<void> {
+  const { error } = await supabase.storage.from(bucket).remove([path]);
+  if (error) throw new Error(`Delete failed: ${error.message}`);
+}
+
+// ─── Database types (Firebase/Firestore models) ───────────────────────────────
+
 export interface Profile {
   id: string;
   email: string;
@@ -220,7 +289,6 @@ export interface RoadmapStep {
   resources?: string[];
 }
 
-// Auth types
 export interface AuthUser {
   id: string;
   email: string;

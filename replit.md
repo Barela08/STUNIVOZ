@@ -16,6 +16,7 @@ An all-in-one student career platform — helps students find internships, cours
 - `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, `CLOUDINARY_API_SECRET` — Cloudinary file/media uploads (secrets)
 - `EMAIL_USER`, `EMAIL_PASS` — Gmail SMTP for password reset emails (secrets)
 - `ADMIN_SETUP_KEY` — One-time key for provisioning admin accounts (shared env var)
+- `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY` — Supabase Storage client config (shared env vars)
 
 ## Stack
 
@@ -24,7 +25,7 @@ An all-in-one student career platform — helps students find internships, cours
 - **Styling**: Tailwind CSS + PostCSS
 - **Auth**: Firebase Auth (email/password, Google, GitHub)
 - **Database**: Firestore (via Firebase)
-- **Storage**: Firebase Storage (client) + Cloudinary (server-side uploads via API)
+- **Storage**: Cloudinary (server-side uploads via API) + Supabase Storage (images, PDFs, videos, text files — client-side)
 - **Email**: Nodemailer + Gmail SMTP
 
 ## Where things live
