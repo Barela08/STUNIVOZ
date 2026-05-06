@@ -1,0 +1,198 @@
+Upgrade the website into a fully dynamic AI-powered realtime platform with advanced admin controls.
+
+Requirements:
+
+========================
+AI SYSTEM (DYNAMIC)
+===================
+
+Create separate AI Settings section in admin panel.
+
+Admin should be able to:
+
+* Add AI API Key manually
+* Change AI provider/model anytime
+* Change AI assistant name
+* Enable/disable AI
+* Change AI personality/help text
+* Select model automatically based on API
+
+IMPORTANT:
+When admin enters API key:
+
+* System should automatically detect supported AI model/provider
+* Auto configure model intelligently
+* No manual coding required
+
+Examples:
+
+* OpenAI
+* Gemini
+* Claude
+* Groq
+* OpenRouter
+
+System should:
+
+* auto-detect provider
+* auto-select best model
+* validate API key
+* show connection status
+
+Also:
+
+* Admin can change AI assistant name anytime
+* Name updates everywhere instantly without refresh
+
+========================
+REALTIME ADS SYSTEM
+===================
+
+Create a professional realtime ads broadcasting system.
+
+Admin should be able to:
+
+* Upload image/video ads
+* Add ad title/description
+* Select ad duration (seconds)
+* Start ad manually anytime
+* Stop ad anytime
+* Enable/disable ads
+* Choose skippable or non-skippable
+* Schedule ads
+
+IMPORTANT:
+When admin clicks:
+"SHOW AD"
+
+Then:
+
+* ALL users instantly see ad popup/player
+* Works on ANY page
+* No refresh required
+* Realtime broadcast system
+
+Admin controls:
+
+* Show now
+* Stop now
+* Replay ad
+* Force fullscreen ad
+* Overlay mode
+* Popup mode
+
+Users:
+
+* should instantly receive ad live
+* even while browsing another page
+
+Use:
+
+* WebSockets / Socket.io / Firebase realtime
+
+========================
+PDF FIX (IMPORTANT)
+===================
+
+PDF upload currently broken.
+
+Fix permanently:
+
+* Remove Firebase Storage
+* Use Cloudinary signed uploads
+* PDF upload must work on Vercel
+* Only admin can upload PDFs
+* Reusable upload service everywhere
+* Upload progress
+* Proper validation
+* PDF preview
+* Save secure_url in database
+
+Fix:
+
+* token expiration
+* unauthorized errors
+* upload failures
+
+Also:
+
+* PDFs should update everywhere instantly without refresh
+
+========================
+DYNAMIC ADMIN CONTROL
+=====================
+
+Admin should control everything WITHOUT coding:
+
+* AI settings
+* API keys
+* Ads
+* PDFs
+* Website text
+* Support info
+* Mentor settings
+* Arabic content
+* Notifications
+* Homepage sections
+
+Everything should sync instantly globally.
+
+========================
+REALTIME GLOBAL SYNC
+====================
+
+If admin changes ANYTHING:
+
+* all users should instantly see updates
+* no refresh
+* no redeploy
+* no manual cache clear
+
+========================
+SECURITY
+========
+
+* Only admin can upload/manage
+* Staff permissions
+* User restrictions
+* Secure API routes
+* Signed uploads only
+* Validate all uploads
+
+========================
+VERCEL COMPATIBILITY
+====================
+
+Everything must work perfectly on:
+
+* Vercel
+* MongoDB
+* Firebase Auth
+* Cloudinary
+
+Do NOT use:
+
+* local filesystem
+* Firebase Storage
+* hardcoded configs
+
+========================
+FINAL OUTPUT
+============
+
+Provide:
+
+* complete architecture
+* backend APIs
+* frontend components
+* realtime implementation
+* admin dashboard code
+* ads system code
+* AI settings system
+* PDF upload fix
+* Cloudinary setup
+* environment variables
+* production-ready implementation
+* testing instructions
+
+Ensure everything is scalable, realtime, dynamic, secure, and production-ready.
