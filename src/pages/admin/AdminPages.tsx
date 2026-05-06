@@ -3466,41 +3466,104 @@ export const AIControlPage: React.FC = () => {
   );
 };
 
-const AiHelpUrlCard: React.FC = () => (
-  <Card>
-    <CardHeader
-      title="AI Help — Built-in Career Advisor"
-      subtitle="Students access the AI Career Advisor from the sidebar (AI Help) or the floating chat button on every page."
-    />
-    <CardContent>
-      <div className="space-y-3">
-        <div className="p-4 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-700 rounded-xl flex items-start gap-3">
-          <CheckCircle className="w-5 h-5 text-green-500 flex-shrink-0 mt-0.5" />
+const AiHelpUrlCard: React.FC = () => {
+  const [url, setUrl] = useState('');
+  const [saving, setSaving] = useState(false);
+  const [saved, setSaved] = useState(false);
+  const [toast, setToastMsg] = useState('');
+
+  useEffect(() => {
+    import('../../services/firebase').then(({ getAiHelpConfig }) => {
+      getAiHelpConfig().then(res => {
+        if (res.success && res.data?.embedUrl) setUrl(res.data.embedUrl);
+      });
+    });
+  }, []);
+
+  const handleSave = async () => {
+    setSaving(true);
+    try {
+      const { saveAiHelpConfig } = await import('../../services/firebase');
+      await saveAiHelpConfig(url.trim());
+      setSaved(true);
+      setToastMsg('Link saved!');
+      setTimeout(() => { setSaved(false); setToastMsg(''); }, 3000);
+    } catch {
+      setToastMsg('Save failed. Check permissions.');
+      setTimeout(() => setToastMsg(''), 3000);
+    }
+    setSaving(false);
+  };
+
+  const handleClear = async () => {
+    setUrl('');
+    setSaving(true);
+    try {
+      const { saveAiHelpConfig } = await import('../../services/firebase');
+      await saveAiHelpConfig('');
+      setToastMsg('Link cleared!');
+      setTimeout(() => setToastMsg(''), 3000);
+    } catch {}
+    setSaving(false);
+  };
+
+  return (
+    <Card>
+      {toast && (
+        <div className="fixed bottom-6 right-6 z-50 flex items-center gap-2 px-4 py-3 bg-gray-900 dark:bg-gray-100 text-white dark:text-gray-900 text-sm font-medium rounded-xl shadow-xl">
+          <CheckCircle className="w-4 h-4 text-green-400" /> {toast}
+        </div>
+      )}
+      <CardHeader
+        title="AI Help — Link"
+        subtitle="Jo bhi link yahan set karoge, woh AI Help page pe seedha browser ki tarah khulegi."
+      />
+      <CardContent>
+        <div className="space-y-3">
           <div>
-            <p className="text-sm font-semibold text-green-700 dark:text-green-400 mb-1">AI is fully working</p>
-            <p className="text-xs text-green-600 dark:text-green-300 leading-relaxed">
-              The built-in AI Career Advisor is active and running natively inside STUNIVOZ. No external site needed — no broken iframes.
-            </p>
+            <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-2">
+              Link (koi bhi URL)
+            </label>
+            <input
+              type="url"
+              value={url}
+              onChange={e => { setUrl(e.target.value); setSaved(false); }}
+              placeholder="https://example.com"
+              className="w-full px-3 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-sm focus:outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 transition-all"
+            />
           </div>
+          <div className="flex gap-2">
+            <button
+              onClick={handleSave}
+              disabled={saving || !url.trim()}
+              className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-primary-600 hover:bg-primary-700 disabled:opacity-50 text-white font-semibold text-sm transition-all"
+            >
+              {saving ? <RefreshCw className="w-4 h-4 animate-spin" /> : saved ? <CheckCircle className="w-4 h-4" /> : null}
+              {saving ? 'Saving...' : saved ? 'Saved!' : 'Save Link'}
+            </button>
+            {url && (
+              <button
+                onClick={handleClear}
+                disabled={saving}
+                className="px-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800 text-sm font-medium transition-all"
+              >
+                Clear
+              </button>
+            )}
+          </div>
+          {url && (
+            <div className="p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-xl flex items-center gap-2">
+              <CheckCircle className="w-4 h-4 text-blue-500 flex-shrink-0" />
+              <p className="text-xs text-blue-600 dark:text-blue-300 truncate">
+                AI Help page pe yeh link khulegi: <strong className="break-all">{url}</strong>
+              </p>
+            </div>
+          )}
         </div>
-        <div className="p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-xl">
-          <p className="text-xs font-semibold text-blue-700 dark:text-blue-400 mb-1">How it works</p>
-          <ul className="text-xs text-blue-600 dark:text-blue-300 leading-relaxed space-y-1">
-            <li>• Students click <strong>AI Help</strong> in the sidebar → full AI chat page</li>
-            <li>• Or use the floating <strong>Bot button</strong> on any page → instant chat panel</li>
-            <li>• AI uses the API key you configure below in <strong>API Keys</strong></li>
-          </ul>
-        </div>
-        <div className="p-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-xl">
-          <p className="text-xs font-semibold text-amber-700 dark:text-amber-400 mb-1">Why not ChatGPT / Claude / Gemini website?</p>
-          <p className="text-xs text-amber-700 dark:text-amber-300 leading-relaxed">
-            These sites block embedding in any other website (browser security — their rule, not ours). The built-in AI uses their <strong>API directly</strong>, giving the same intelligence inside STUNIVOZ with no external redirects.
-          </p>
-        </div>
-      </div>
-    </CardContent>
-  </Card>
-);
+      </CardContent>
+    </Card>
+  );
+};
 
 // ── Add Staff Modal ───────────────────────────────────────────────────────────
 interface StaffRecord {
