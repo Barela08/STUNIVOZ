@@ -1,0 +1,165 @@
+You are a senior full-stack developer and browser-embedding expert.
+
+The STUNIVOZ website has an "AI Help / AI Browser" feature.
+
+Current problem:
+When opening ChatGPT inside the website, this error appears:
+
+"chatgpt.com refused to connect"
+
+Reason:
+
+- ChatGPT blocks iframe embedding using X-Frame-Options and CSP security policies.
+- Direct iframe embedding of chat.openai.com does NOT work.
+
+=================================
+MAIN GOAL
+
+I do NOT want:
+
+- external browser opening
+- new tab opening
+- popup window
+- iframe error screen
+
+I WANT:
+
+- a REAL browser-like page INSIDE my website
+- AI should open INSIDE STUNIVOZ itself
+- It should feel like an internal browser/app page
+- User should stay on my website
+
+=================================
+IMPORTANT UNDERSTANDING
+
+DO NOT use:
+
+<iframe src="https://chat.openai.com">
+
+because ChatGPT blocks iframe embedding.
+
+=================================
+CORRECT SOLUTION
+
+Create an INTERNAL AI BROWSER PAGE inside STUNIVOZ.
+
+Route example:
+
+- /ai-browser
+- /ai-assistant
+- /browser
+
+When user clicks:
+"AI Help"
+or
+"Open AI"
+
+THEN:
+
+- open internal browser page
+- NOT external tab
+
+=================================
+HOW TO BUILD IT
+
+Build a CUSTOM CHATGPT-LIKE INTERFACE using OpenAI API.
+
+DO NOT embed ChatGPT website directly.
+
+Instead:
+
+1. Create browser-style UI
+2. Add URL/search bar on top
+3. Add chat area
+4. Connect backend to OpenAI API
+5. Responses appear inside STUNIVOZ
+
+=================================
+UI REQUIREMENTS
+
+The page should look like a mini browser:
+
+TOP BAR:
+
+- back button
+- refresh button
+- fake URL bar
+- STUNIVOZ branding
+
+BODY:
+
+- ChatGPT-style chat interface
+- messages
+- typing animation
+- scrollable chat
+
+BOTTOM:
+
+- input box
+- send button
+
+=================================
+TECHNICAL FIX
+
+Frontend:
+
+- React / Next.js
+
+Backend:
+
+- Node.js API route
+
+Create endpoint:
+POST /api/ai/chat
+
+Flow:
+User message
+→ backend
+→ OpenAI API
+→ response
+→ display in chat window
+
+=================================
+IMPORTANT
+
+Do NOT:
+
+- use iframe for ChatGPT
+- use window.open()
+- use target="_blank"
+
+Because ChatGPT blocks embedding.
+
+=================================
+WHAT I ACTUALLY WANT
+
+I want:
+
+- ChatGPT EXPERIENCE
+- INSIDE MY WEBSITE
+- in browser style
+- without leaving website
+
+=================================
+TESTING REQUIREMENT
+
+After implementation:
+
+- test mobile responsiveness
+- test Android browser
+- test inside Replit
+- ensure no "refused to connect" error appears
+
+=================================
+FINAL RESULT
+
+When user clicks AI Help:
+
+- internal browser page opens
+- looks like browser
+- works like ChatGPT
+- stays inside STUNIVOZ
+- no external redirect
+- no iframe error
+
+Fix everything completely step-by-step.
