@@ -4312,7 +4312,9 @@ export const AdsSystemPage: React.FC = () => {
   const [broadcastMode, setBroadcastMode] = useState<'popup' | 'overlay' | 'fullscreen'>('popup');
   const [broadcastSkippable, setBroadcastSkippable] = useState(true);
   const [broadcastSkipAfter, setBroadcastSkipAfter] = useState(5);
+  const [broadcastDuration, setBroadcastDuration] = useState(15);
   const [broadcastLoading, setBroadcastLoading] = useState(false);
+  const MAX_BROADCAST_DURATION = 30;
 
   useEffect(() => {
     const unsub = onSnapshot(collection(db, 'advertisements'), snap => {
@@ -4336,6 +4338,8 @@ export const AdsSystemPage: React.FC = () => {
     if (!ad.firestoreId) return;
     setBroadcastLoading(true);
     try {
+      const safeDuration = Math.min(broadcastDuration, MAX_BROADCAST_DURATION);
+      const safeSkipAfter = Math.min(broadcastSkipAfter, safeDuration);
       await setDoc(doc(db, 'system_config', 'active_broadcast'), {
         active: true, adId: ad.firestoreId,
         title: ad.title, advertiser: ad.advertiser,
@@ -4345,10 +4349,11 @@ export const AdsSystemPage: React.FC = () => {
         ctaLabel: ad.ctaLabel || 'Learn More',
         displayMode: broadcastMode,
         skippable: broadcastSkippable,
-        skipAfter: broadcastSkipAfter,
+        skipAfter: safeSkipAfter,
+        duration: safeDuration,
         broadcastedAt: Date.now(),
       });
-      showToast(`Broadcasting "${ad.title}" to ALL users right now!`);
+      showToast(`Broadcasting "${ad.title}" to students — auto-stops in ${safeDuration}s!`);
     } catch (e: any) { showToast(`Broadcast failed: ${e?.message}`); }
     setBroadcastLoading(false);
   };
@@ -4425,7 +4430,7 @@ export const AdsSystemPage: React.FC = () => {
               </button>
             </div>
           )}
-          <div className="grid sm:grid-cols-3 gap-3">
+          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-3">
             <div>
               <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5">Display Mode</label>
               <div className="flex gap-1.5">
@@ -4443,19 +4448,43 @@ export const AdsSystemPage: React.FC = () => {
                 {([true, false] as const).map(v => (
                   <button key={String(v)} onClick={() => setBroadcastSkippable(v)}
                     className={`flex-1 px-2 py-1.5 rounded-lg text-xs font-semibold border transition-all ${broadcastSkippable === v ? 'bg-orange-500 border-orange-500 text-white' : 'border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 hover:border-orange-300'}`}>
-                    {v ? 'Yes' : 'No (forced)'}
+                    {v ? 'Yes' : 'No'}
                   </button>
                 ))}
               </div>
             </div>
+            <div>
+              <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5">
+                Duration: <span className="text-orange-500 font-bold">{broadcastDuration}s</span>
+                <span className="ml-1 text-[10px] text-gray-400">(max 30s)</span>
+              </label>
+              <input type="range" min={5} max={30} step={1}
+                value={broadcastDuration}
+                onChange={e => {
+                  const v = Number(e.target.value);
+                  setBroadcastDuration(v);
+                  if (broadcastSkipAfter > v) setBroadcastSkipAfter(v);
+                }}
+                className="w-full accent-orange-500"
+              />
+            </div>
             {broadcastSkippable && (
               <div>
-                <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5">Skip After (sec)</label>
-                <input type="number" min={3} max={60} value={broadcastSkipAfter} onChange={e => setBroadcastSkipAfter(Number(e.target.value))}
-                  className="w-full px-3 py-1.5 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm text-gray-900 dark:text-white focus:outline-none focus:border-orange-500 transition-all" />
+                <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5">
+                  Skip After: <span className="text-orange-500 font-bold">{broadcastSkipAfter}s</span>
+                </label>
+                <input type="range" min={3} max={broadcastDuration}
+                  value={broadcastSkipAfter}
+                  onChange={e => setBroadcastSkipAfter(Number(e.target.value))}
+                  className="w-full accent-orange-500"
+                />
               </div>
             )}
           </div>
+          <p className="text-[10px] text-gray-400 flex items-center gap-1">
+            <span className="w-1.5 h-1.5 rounded-full bg-blue-400" />
+            Ads are shown to <strong>students only</strong> — admin, staff, and providers never see broadcasts. All ads auto-dismiss after the set duration (max 30s).
+          </p>
           {ads.filter(a => a.status === 'Active').length === 0 && (
             <p className="text-xs text-gray-400 dark:text-gray-600">No active ads yet. Create and activate an ad to broadcast it.</p>
           )}
